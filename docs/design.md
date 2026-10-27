@@ -68,7 +68,7 @@ Three inputs, matching the picture above. Claude fetches the first one through t
 | claude.ai spend export | Each person's extra usage | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
 | People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Kept by hand or by Claude |
 
-Settings (seat prices, seats bought, who sees person detail, alert thresholds) live in one small file.
+Settings (seat prices, seats bought, who sees person detail, alert thresholds) live in one small JSON file, `aicfo-spend.json`. It's JSON because Python 3.10 can't read TOML without an add-on package.
 
 **Ramp holds the Admin keys, and the tool never touches one.** The tool doesn't call Claude or Ramp either: it reads files in a folder, which Claude fills through the Ramp connector or a person fills with exports from Ramp.
 
@@ -80,7 +80,7 @@ Settings (seat prices, seats bought, who sees person detail, alert thresholds) l
 
 ```text
 <workspace>/
-  aicfo-spend.toml   settings: seat prices, seats bought, visibility, alert thresholds
+  aicfo-spend.json   settings: seat prices, seats bought, visibility, alert thresholds
   people.csv         seat type, plus anyone not in Ramp
   raw/<YYYY-MM>/     every download, saved once, never edited
   out/<YYYY-MM>/     spend.csv, forecast.json, dashboard data
@@ -155,7 +155,7 @@ Shared outputs show teams; whoever runs the tool can turn on the person view.
 The tool uses only what comes with Python 3.10 or later, with no add-on packages, because Claude's cloud routines can't install add-ons but can run code from a repo they're given (tested 2026-10-26).
 
 - **Cloud routines** attach the tool's repo, pinned to a release, and run it in place.
-- **Cowork and the plugin:** CI copies a pinned release into the skill folder. It's revisited once the Cowork install test is in.
+- **Cowork and the plugin:** the skill installs the pinned release from GitHub when it runs. The Cowork install test passed on 2026-10-27 in Cowork's cloud shell and its local shell (Python 3.10). Outside users need this repo to be public, so the cut-over comes after it is.
 - **People and Macs:** `uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@vX.Y.Z`.
 - **Optional:** `[excel]` adds Excel workbooks.
 
@@ -171,9 +171,9 @@ Five milestones, each ending at a gate.
 | M1 · September numbers | Readers for Ramp, the spend export and the people list; the two lookups; the monthly report | Done criterion 1 |
 | M2 · Forecast | This month and next, change from last month, the two alerts, the Aug 31 backtest | Done criterion 2 |
 | M3 · OpenAI | The adding-a-vendor guide and ChatGPT seats | Done criterion 3 |
-| M4 · Cut-over | A tagged release; the plugin copies it in; the skill becomes the thin wrapper | A real month matches v0.3.0's numbers, then `legacy/` is deleted |
+| M4 · Cut-over | A tagged release; the skill installs it from GitHub and becomes the thin wrapper | A real month matches v0.3.0's numbers, then `legacy/` is deleted |
 
-The test and release workflows, and the plugin's copy job, need a code owner's approval.
+The test and release workflows need a code owner's approval.
 
 **History.** This repo's history was moved from `aircfo/claude-startup-finance` on 2026-10-27, keeping every author and date. References like `aircfo/claude-startup-finance#11` point to the original pull requests.
 
@@ -196,6 +196,8 @@ The test and release workflows, and the plugin's copy job, need a code owner's a
 | Alert thresholds | Spike over twice the 28-day median and $25 above it; pace 25% over the forecast; all editable in settings |
 | Names | Package `aicfo-spend-analysis`, import `aicfo_spend`, command `aicfo-spend` |
 | Excel workbooks | An optional `[excel]` extra |
+| How the plugin gets the tool | Installs the pinned release from GitHub when the skill runs |
+| Settings file | JSON (`aicfo-spend.json`), readable by Python 3.10 with no add-ons |
 | Marketplace listing | Added to the marketplace README in the pull request that makes this repo public |
 
 ## Risks
