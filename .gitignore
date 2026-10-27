@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Editor cruft
+*.swp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# A company's spend data and keys live in its own workspace, never in this repo
+.secrets/
+workspace/
