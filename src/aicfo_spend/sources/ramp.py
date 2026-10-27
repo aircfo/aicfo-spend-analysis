@@ -1,4 +1,4 @@
-"""Read the Ramp answers the skill saves: per-key API spend and the people list."""
+"""Read the Ramp answers the skill saves: per-key API spend, each vendor's total, and the people list."""
 
 from __future__ import annotations
 
@@ -35,6 +35,10 @@ def read_people(path: Path) -> dict[str, RampPerson]:
 
 def read_key_spend(path: Path) -> list[KeySpend]:
     return parse_key_spend(load_json(path), path.name)
+
+
+def read_provider_totals(path: Path) -> dict[str, Decimal]:
+    return parse_provider_totals(load_json(path), path.name)
 
 
 def load_json(path: Path) -> object:
@@ -85,6 +89,32 @@ def parse_key_spend(document: object, label: str) -> list[KeySpend]:
             )
         )
     return spend
+
+
+def parse_provider_totals(document: object, label: str) -> dict[str, Decimal]:
+    """Ramp's own API spend total for each vendor over the file's dates, keyed by vendor.
+
+    It comes from Ramp's AI spend summary (cost, grouped by provider). Unlike the per-key
+    answer, it includes spend Ramp can't tie to a current key, such as a key deleted
+    during the month.
+    """
+    cost = document.get("cost") if isinstance(document, dict) else None
+    rows = cost.get("data") if isinstance(cost, dict) else None
+    if not isinstance(rows, list):
+        raise InputError(f'{label} should be Ramp\'s AI spend summary, with a "cost" object holding a "data" list')
+    totals: dict[str, Decimal] = {}
+    for entry in rows:
+        row = _object(entry, label)
+        vendor = _text(row.get("provider")).lower()
+        if not vendor:
+            raise InputError(f"{label} has a row with no provider; ask Ramp for the cost grouped by provider")
+        amount = row.get("total_cost")
+        if amount is None:
+            amount = 0
+        if isinstance(amount, bool) or not isinstance(amount, (int, Decimal)) or not Decimal(amount).is_finite():
+            raise InputError(f"{label} has a total_cost for {vendor} that isn't a number of dollars")
+        totals[vendor] = totals.get(vendor, Decimal(0)) + Decimal(amount)
+    return totals
 
 
 def _key_amount(cost: object, where: str) -> Decimal:

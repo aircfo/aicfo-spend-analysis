@@ -19,16 +19,17 @@ from pathlib import Path
 
 from aicfo_spend.errors import InputError
 from aicfo_spend.months import Month
-from aicfo_spend.sources.ramp import parse_key_spend, parse_people
+from aicfo_spend.sources.ramp import parse_key_spend, parse_people, parse_provider_totals
 from aicfo_spend.vendors.anthropic.spend_export import parse_spend_export
 
 RAMP_API_KEYS = "ramp-api-keys"
+RAMP_PROVIDER_TOTALS = "ramp-provider-totals"
 RAMP_PEOPLE = "ramp-people"
 CLAUDE_SPEND_EXPORT = "claude-spend-export"
 
-EXTENSIONS = {RAMP_API_KEYS: "json", RAMP_PEOPLE: "json", CLAUDE_SPEND_EXPORT: "csv"}
+EXTENSIONS = {RAMP_API_KEYS: "json", RAMP_PROVIDER_TOTALS: "json", RAMP_PEOPLE: "json", CLAUDE_SPEND_EXPORT: "csv"}
 SOURCES = tuple(EXTENSIONS)
-MONTH_TO_DATE_SOURCES = (RAMP_API_KEYS, CLAUDE_SPEND_EXPORT)
+MONTH_TO_DATE_SOURCES = (RAMP_API_KEYS, RAMP_PROVIDER_TOTALS, CLAUDE_SPEND_EXPORT)
 
 SPEND_EXPORT_REQUIRED_COLUMNS = ("user_email", "model", "total_net_spend_usd")
 
@@ -89,6 +90,12 @@ def saved_files(workspace: Path, source: str, month: Month | None = None) -> lis
     return found
 
 
+def partner_for(chosen: SavedFile, files: list[SavedFile]) -> SavedFile | None:
+    """The last-saved file from another source that covers exactly the same days as chosen."""
+    same_days = [saved for saved in files if (saved.start, saved.end) == (chosen.start, chosen.end)]
+    return max(same_days, key=lambda saved: saved.saved_at, default=None)
+
+
 def fullest_in_month(files: list[SavedFile], month: Month) -> SavedFile | None:
     """For month-to-date sources: the file reaching furthest into the month, the last-saved on a tie."""
     in_month = [saved for saved in files if Month.of(saved.start) == month]
@@ -135,6 +142,8 @@ def _check_content(source: str, content: bytes) -> None:
         # Read it the way the report will, so a file that would break the report is refused now.
         if source == RAMP_PEOPLE:
             parse_people(document, label)
+        elif source == RAMP_PROVIDER_TOTALS:
+            parse_provider_totals(document, label)
         else:
             parse_key_spend(document, label)
         return

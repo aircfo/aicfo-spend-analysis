@@ -10,12 +10,13 @@ from aicfo_spend.raw_store import (
     CLAUDE_SPEND_EXPORT,
     RAMP_API_KEYS,
     RAMP_PEOPLE,
+    RAMP_PROVIDER_TOTALS,
     fullest_in_month,
     save_raw,
     saved_files,
     snapshot_for,
 )
-from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, spend_export
+from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_totals_answer, spend_export
 
 SEPTEMBER = Month(2026, 9)
 SEPT_1 = date(2026, 9, 1)
@@ -53,6 +54,11 @@ def test_a_second_download_becomes_a_new_file(tmp_path: Path) -> None:
         (RAMP_API_KEYS, SEPT_1, SEPT_1, b"not json", "isn't valid JSON"),
         (RAMP_API_KEYS, SEPT_1, SEPT_1, ramp_keys_answer(ramp_key("app", 100, currency="EUR")), "only USD"),
         (RAMP_API_KEYS, SEPT_1, SEPT_1, b'{"data": ["not a key"]}', "isn't a JSON object"),
+        (RAMP_PROVIDER_TOTALS, date(2026, 9, 2), date(2026, 9, 3), ramp_totals_answer(), "starts on the 1st"),
+        (RAMP_PROVIDER_TOTALS, SEPT_1, SEPT_1, ramp_keys_answer(), "AI spend summary"),
+        (RAMP_PROVIDER_TOTALS, SEPT_1, SEPT_1, b'{"cost": {"data": [{"total_cost": 1.5}]}}', "no provider"),
+        (RAMP_PROVIDER_TOTALS, SEPT_1, SEPT_1, b'{"cost": {"data": [{"provider": "OPENAI", "total_cost": "1.5"}]}}',
+         "isn't a number of dollars"),
         (CLAUDE_SPEND_EXPORT, SEPT_1, SEPT_1, b"email,spend\n", "missing the columns"),
         (
             CLAUDE_SPEND_EXPORT,

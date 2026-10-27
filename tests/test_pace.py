@@ -11,10 +11,10 @@ from aicfo_spend.daily import daily_usage
 from aicfo_spend.errors import InputError
 from aicfo_spend.months import Month
 from aicfo_spend.pace import pace_of
-from aicfo_spend.raw_store import RAMP_API_KEYS, save_raw
+from aicfo_spend.raw_store import RAMP_API_KEYS, RAMP_PROVIDER_TOTALS, save_raw
 from aicfo_spend.settings import load_settings
 from aicfo_spend.spend_table import PRODUCT_API, UNASSIGNED
-from tests.factories import ramp_key, ramp_keys_answer
+from tests.factories import ramp_key, ramp_keys_answer, ramp_totals_answer
 from tests.workspaces import SAVED_AT, SEPTEMBER, new_workspace, save_month
 
 OCTOBER = Month(2026, 10)
@@ -24,6 +24,11 @@ TODAY = date(2026, 10, 22)
 def save_october_api(folder: Path, through_day: int, cents: int, saved_at: datetime = SAVED_AT) -> None:
     keys = ramp_keys_answer(ramp_key("backend", cents, "sam.cho@example.com"))
     save_raw(folder, RAMP_API_KEYS, OCTOBER.first_day, date(2026, 10, through_day), keys, saved_at=saved_at)
+
+
+def save_october_totals(folder: Path, through_day: int, cents: int) -> None:
+    totals = ramp_totals_answer(ANTHROPIC=f"{cents / 100}")
+    save_raw(folder, RAMP_PROVIDER_TOTALS, OCTOBER.first_day, date(2026, 10, through_day), totals, saved_at=SAVED_AT)
 
 
 @pytest.fixture
@@ -186,6 +191,31 @@ def test_pace_command_rewrites_the_alert_drafts_every_time(
 
     assert main(["pace", str(workspace), "2026-12"]) == 0
     assert (workspace / "out/2026-12/alerts.txt").read_text(encoding="utf-8") == "No alerts.\n"
+
+
+def test_spend_no_current_key_carries_counts_in_the_pace_and_can_spike(workspace: Path) -> None:
+    """Ramp's total matches the keys until the 21st, when $150 lands on a key since deleted."""
+    keys_total = 0
+    for day in range(1, 22):
+        keys_total += 1000 if day <= 14 else 4000
+        save_october_totals(workspace, day, keys_total + (15000 if day == 21 else 0))
+
+    pace = pace_of(workspace, load_settings(workspace), OCTOBER, TODAY)
+
+    assert pace.so_far[UNASSIGNED] == Decimal("175.00")  # the empty seat and the untied $150
+    assert "Spike: Unassigned spent $150.00 on 2026-10-21, against a usual day of $0.00." in pace.alerts
+
+
+def test_a_download_without_provider_totals_keeps_the_last_untied_amount(workspace: Path) -> None:
+    keys_total = 0
+    for day in range(1, 11):
+        keys_total += 1000
+        save_october_totals(workspace, day, keys_total + 2000)
+
+    pace = pace_of(workspace, load_settings(workspace), OCTOBER, TODAY)
+
+    assert pace.so_far[UNASSIGNED] == Decimal("45.00")  # the empty seat and the $20 untied by the 10th
+    assert not any("shows less than the download before it" in note for note in pace.notes)
 
 
 def test_saved_on_is_today_not_the_month(tmp_path: Path) -> None:

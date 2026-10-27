@@ -162,6 +162,51 @@ def fill_august(folder: Path) -> None:
     save_month(folder, AUGUST, backend_cents=15000, extra_usage=(("pat.lee@example.com", "claude-opus", "60"),))
 
 
+def test_api_spend_no_current_key_carries_is_unassigned_with_its_reason(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, SEPTEMBER, backend_cents=30000, untied_cents=19236)
+
+    spend = build_month(folder, SEPTEMBER, load_settings(folder))
+
+    [untied] = [row for row in spend.rows if row.reason == "API spend not tied to a current key"]
+    assert (untied.team, untied.vendor, untied.product, untied.amount_usd) == (UNASSIGNED, "anthropic", "api", Decimal("192.36"))
+    assert untied.source_file.startswith("raw/2026-09/ramp-provider-totals_2026-09-01_2026-09-30_saved-")
+    assert "  API spend not tied to a current key: $192.36" in summarize(spend)
+
+
+def test_keys_adding_up_to_clearly_more_than_ramps_total_earn_a_note(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, SEPTEMBER, backend_cents=30000, untied_cents=-500)
+
+    spend = build_month(folder, SEPTEMBER, load_settings(folder))
+
+    assert any("anthropic's keys add up to $5.00 more than Ramp's total" in note for note in spend.notes)
+    assert not any(row.reason == "API spend not tied to a current key" for row in spend.rows)
+
+
+def test_a_cent_of_rounding_between_keys_and_ramps_total_is_ignored(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, SEPTEMBER, backend_cents=30000, untied_cents=-1)
+
+    spend = build_month(folder, SEPTEMBER, load_settings(folder))
+
+    assert not any("Ramp's total" in note for note in spend.notes)
+    assert not any(row.reason == "API spend not tied to a current key" for row in spend.rows)
+
+
+def test_says_so_when_no_provider_totals_are_saved(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    keys = ramp_keys_answer(ramp_key("backend", 30000, "sam.cho@example.com"))
+    save_raw(folder, RAMP_API_KEYS, SEPTEMBER.first_day, SEPTEMBER.last_day, keys)
+
+    spend = build_month(folder, SEPTEMBER, load_settings(folder))
+
+    assert (
+        "no Ramp provider totals are saved for 2026-09-01 to 2026-09-30, so API spend Ramp can't tie to a key isn't counted"
+        in spend.notes
+    )
+
+
 def test_change_from_last_month_shows_each_teams_move(workspace: Path) -> None:
     fill_august(workspace)
     settings = load_settings(workspace)
