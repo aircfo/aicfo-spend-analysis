@@ -6,11 +6,11 @@ from pathlib import Path
 import pytest
 
 from aicfo_spend.cli import main
-from aicfo_spend.raw_store import RAMP_API_KEYS, RAMP_PEOPLE, save_raw
+from aicfo_spend.raw_store import RAMP_API_KEYS, RAMP_PEOPLE, RAMP_PROVIDER_TOTALS, save_raw
 from aicfo_spend.report import build_month, describe_change, summarize
 from aicfo_spend.settings import load_settings
 from aicfo_spend.spend_table import UNASSIGNED
-from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_user, spend_export
+from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_totals_answer, ramp_user, spend_export
 from tests.workspaces import SEPTEMBER, fill_september, new_workspace, save_month
 
 SEPT_1 = SEPTEMBER.first_day
@@ -205,6 +205,20 @@ def test_says_so_when_no_provider_totals_are_saved(tmp_path: Path) -> None:
         "no Ramp provider totals are saved for 2026-09-01 to 2026-09-30, so API spend Ramp can't tie to a key isn't counted"
         in spend.notes
     )
+
+
+def test_a_vendor_with_spend_in_ramps_total_but_no_spending_key_earns_a_note(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    keys = ramp_keys_answer(ramp_key("backend", 30000, "sam.cho@example.com"))
+    save_raw(folder, RAMP_API_KEYS, SEPTEMBER.first_day, SEPTEMBER.last_day, keys)
+    totals = ramp_totals_answer(ANTHROPIC="300", OPENAI="12.5")
+    save_raw(folder, RAMP_PROVIDER_TOTALS, SEPTEMBER.first_day, SEPTEMBER.last_day, totals)
+
+    spend = build_month(folder, SEPTEMBER, load_settings(folder))
+
+    assert any("has $12.50 of openai spend and none of its keys spent" in note for note in spend.notes)
+    [untied] = [row for row in spend.rows if row.reason == "API spend not tied to a current key"]
+    assert (untied.vendor, untied.amount_usd) == ("openai", Decimal("12.50"))
 
 
 def test_change_from_last_month_shows_each_teams_move(workspace: Path) -> None:

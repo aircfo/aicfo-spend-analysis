@@ -25,7 +25,7 @@ from aicfo_spend.raw_store import (
 )
 from aicfo_spend.settings import Settings
 from aicfo_spend.sources.people import PeopleFileRow, read_people_file
-from aicfo_spend.sources.ramp import read_key_spend, read_people, read_provider_totals
+from aicfo_spend.sources.ramp import KeySpend, read_key_spend, read_people, read_provider_totals
 from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
 from aicfo_spend.vendors.anthropic.spend_export import read_spend_export
 
@@ -44,6 +44,9 @@ class MonthSpend:
     notes: list[str]
     # For each usage product, the dates its download covered; a product with no download is absent.
     coverage: dict[str, tuple[date, date]] = field(default_factory=dict)
+    # True when API spend was saved without Ramp's vendor totals beside it, so spend no current
+    # key carries is missing from it.
+    untied_unknown: bool = False
 
 
 def build_month(workspace: Path, month: Month, settings: Settings) -> MonthSpend:
@@ -60,7 +63,18 @@ def build_month(workspace: Path, month: Month, settings: Settings) -> MonthSpend
         rows.extend(product_rows)
         if used is not None:
             coverage[product] = (used.start, used.end)
-    return MonthSpend(month, rows, notes, coverage)
+    untied_unknown = keys is not None and _totals_beside(workspace, month, keys) is None
+    return MonthSpend(month, rows, notes, coverage, untied_unknown)
+
+
+def untied_so_far(workspace: Path, month: Month) -> tuple[Decimal, list[str]]:
+    """The month's API spend no current key carries, by the same rule as the report: from the
+    newest per-key download and Ramp's totals saved for exactly its days, else nothing."""
+    saved = fullest_in_month(saved_files(workspace, RAMP_API_KEYS, month), month)
+    if saved is None:
+        return ZERO, []
+    rows, notes = _untied_rows(workspace, month, saved, read_key_spend(saved.path))
+    return sum((row.amount_usd for row in rows), ZERO), notes
 
 
 def month_directory(workspace: Path, month: Month, people_file: list[PeopleFileRow], notes: list[str]) -> Directory:
@@ -178,29 +192,40 @@ def _api_rows(
                 api_key=key.key_name,
             )
         )
-    totals = partner_for(saved, saved_files(workspace, RAMP_PROVIDER_TOTALS, month))
+    untied, untied_notes = _untied_rows(workspace, month, saved, keys)
+    notes.extend(untied_notes)
+    return rows + untied, saved
+
+
+def _totals_beside(workspace: Path, month: Month, keys_download: SavedFile) -> SavedFile | None:
+    return partner_for(keys_download, saved_files(workspace, RAMP_PROVIDER_TOTALS, month))
+
+
+def _untied_rows(
+    workspace: Path, month: Month, saved: SavedFile, keys: list[KeySpend]
+) -> tuple[list[SpendRow], list[str]]:
+    """Unassigned rows for each vendor's spend Ramp counts but no current key carries."""
+    totals = _totals_beside(workspace, month, saved)
     if totals is None:
-        notes.append(
+        return [], [
             f"no Ramp provider totals are saved for {saved.start} to {saved.end}, "
             "so API spend Ramp can't tie to a key isn't counted"
+        ]
+    untied, notes = untied_api_spend(keys, read_provider_totals(totals.path), totals.path.name)
+    rows = [
+        SpendRow(
+            start_date=totals.start,
+            end_date=totals.end,
+            vendor=vendor,
+            product=PRODUCT_API,
+            amount_usd=amount,
+            source_file=totals.path.relative_to(workspace).as_posix(),
+            team=UNASSIGNED,
+            reason=REASON_NOT_TIED_TO_A_KEY,
         )
-        return rows, saved
-    untied, untied_notes = untied_api_spend(keys, read_provider_totals(totals.path), totals.path.name)
-    notes.extend(untied_notes)
-    for vendor, amount in untied.items():
-        rows.append(
-            SpendRow(
-                start_date=totals.start,
-                end_date=totals.end,
-                vendor=vendor,
-                product=PRODUCT_API,
-                amount_usd=amount,
-                source_file=totals.path.relative_to(workspace).as_posix(),
-                team=UNASSIGNED,
-                reason=REASON_NOT_TIED_TO_A_KEY,
-            )
-        )
-    return rows, saved
+        for vendor, amount in untied.items()
+    ]
+    return rows, notes
 
 
 def _note_if_shrunk(

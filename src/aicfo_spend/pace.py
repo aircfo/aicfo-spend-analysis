@@ -1,6 +1,7 @@
 """Where this month is heading: spend so far, the month-end projection, and the two alerts.
 
-This month = seats + usage so far + the last 14 days' average daily usage × days left.
+This month = seats + usage so far + the last 14 days' average daily usage × days left, plus
+any API spend no current key carries, counted as it stands and not projected.
 It's compared with the month's plan: the forecast for it made as of the last day of the
 month before, saved the first time the month's pace is checked so it never moves.
 """
@@ -23,7 +24,7 @@ from aicfo_spend.errors import InputError
 from aicfo_spend.forecast import USAGE_PRODUCTS, forecast_after
 from aicfo_spend.months import Month
 from aicfo_spend.raw_store import saved_files
-from aicfo_spend.report import ZERO, aligned, dollars, month_directory, total
+from aicfo_spend.report import ZERO, aligned, dollars, month_directory, total, untied_so_far
 from aicfo_spend.settings import AlertThresholds, Settings
 from aicfo_spend.sources.people import read_people_file
 from aicfo_spend.spend_table import UNASSIGNED
@@ -101,6 +102,13 @@ def pace_of(
             average = sum((history[day].get(team, ZERO) for day in window), ZERO) / len(window)
             so_far[team] += series.latest.get(team, ZERO)
             projected[team] += series.latest.get(team, ZERO) + average * days_left
+    # Counted in full but never projected or checked for spikes: it's mostly spend on keys
+    # deleted during the month, which moves out of a team's numbers rather than adding to them.
+    untied, untied_notes = untied_so_far(workspace, month)
+    notes.extend(untied_notes)
+    if untied:
+        so_far[name_of(UNASSIGNED)] += untied
+        projected[name_of(UNASSIGNED)] += untied
     if len(set(through.values())) > 1:
         reached = ", ".join(f"{product} through {end}" for product, end in through.items())
         notes.append(f"the downloads reach different days ({reached}), so spikes are checked up to the earlier one")
