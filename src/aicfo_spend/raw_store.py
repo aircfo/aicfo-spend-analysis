@@ -1,8 +1,9 @@
 """Save each download once, untouched, and find the right saved files for a month.
 
 Files land in raw/<YYYY-MM>/ as <source>_<start>_<end>_saved-<UTC time>.<ext> and are
-made read-only. A re-download is a new file, never an edit; when two files cover the
-same days from the same source, the one saved last counts.
+made read-only. Spend downloads cover the month to date, so they start on the 1st and
+the one reaching furthest into the month counts; a re-download is a new file, never an
+edit. The Ramp people list is a snapshot of one day.
 """
 
 from __future__ import annotations
@@ -13,10 +14,12 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 from aicfo_spend.errors import InputError
 from aicfo_spend.months import Month
+from aicfo_spend.sources.ramp import parse_key_spend, parse_people
 
 RAMP_API_KEYS = "ramp-api-keys"
 RAMP_PEOPLE = "ramp-people"
@@ -24,6 +27,7 @@ CLAUDE_SPEND_EXPORT = "claude-spend-export"
 
 EXTENSIONS = {RAMP_API_KEYS: "json", RAMP_PEOPLE: "json", CLAUDE_SPEND_EXPORT: "csv"}
 SOURCES = tuple(EXTENSIONS)
+MONTH_TO_DATE_SOURCES = (RAMP_API_KEYS, CLAUDE_SPEND_EXPORT)
 
 SPEND_EXPORT_REQUIRED_COLUMNS = ("user_email", "model", "total_net_spend_usd")
 
@@ -47,13 +51,9 @@ def save_raw(
 ) -> Path:
     if source not in EXTENSIONS:
         raise InputError(f"unknown source {source!r}; it can be one of {list(SOURCES)}")
-    if end < start:
-        raise InputError(f"the end date {end} is before the start date {start}")
-    if Month.of(start) != Month.of(end):
-        raise InputError("a saved file has to cover days within one month; save each month separately")
-    if source != CLAUDE_SPEND_EXPORT and start != end:
-        # One day per file keeps re-downloads from overlapping and double counting.
-        raise InputError(f"{source} is saved one day at a time; use the same start and end date")
+    problem = _range_problem(source, start, end)
+    if problem:
+        raise InputError(problem)
     _check_content(source, content)
 
     stamp = (saved_at or datetime.now(timezone.utc)).strftime("%Y%m%dT%H%M%SZ")
@@ -73,38 +73,47 @@ def saved_files(workspace: Path, source: str) -> list[SavedFile]:
         match = FILE_NAME.match(path.name)
         if match is None or match.group("source") != source:
             continue
-        found.append(
-            SavedFile(
-                path=path,
-                source=source,
-                start=date.fromisoformat(match.group("start")),
-                end=date.fromisoformat(match.group("end")),
-                saved_at=match.group("saved"),
-            )
-        )
+        where = f"raw/{path.parent.name}/{path.name}"
+        try:
+            start = date.fromisoformat(match.group("start"))
+            end = date.fromisoformat(match.group("end"))
+        except ValueError:
+            raise InputError(f"{where} has a date in its name that doesn't exist; rename or remove it") from None
+        problem = _range_problem(source, start, end)
+        if problem:
+            raise InputError(f"{where} doesn't follow the saving rules ({problem}); remove it and save it again")
+        found.append(SavedFile(path, source, start, end, match.group("saved")))
     return found
 
 
-def newest_per_day(files: list[SavedFile], month: Month) -> dict[date, SavedFile]:
-    """For one-day sources: the last-saved file for each day of the month that has one."""
-    chosen: dict[date, SavedFile] = {}
-    for saved in files:
-        if Month.of(saved.start) != month:
-            continue
-        current = chosen.get(saved.start)
-        if current is None or saved.saved_at > current.saved_at:
-            chosen[saved.start] = saved
-    return dict(sorted(chosen.items()))
-
-
 def fullest_in_month(files: list[SavedFile], month: Month) -> SavedFile | None:
-    """For range sources: the file reaching latest into the month, the last-saved one on a tie."""
+    """For month-to-date sources: the file reaching furthest into the month, the last-saved on a tie."""
     in_month = [saved for saved in files if Month.of(saved.start) == month]
     return max(in_month, key=lambda saved: (saved.end, saved.saved_at), default=None)
 
 
-def newest(files: list[SavedFile]) -> SavedFile | None:
-    return max(files, key=lambda saved: saved.saved_at, default=None)
+def snapshot_for(files: list[SavedFile], month: Month) -> SavedFile | None:
+    """The people list to use for a month: the first one saved once it ended, else the newest.
+
+    Choosing the first snapshot after the month keeps a past month's teams the same no
+    matter how many later snapshots are saved.
+    """
+    after = [saved for saved in files if saved.start >= month.last_day]
+    if after:
+        return min(after, key=lambda saved: (saved.start, saved.saved_at))
+    return max(files, key=lambda saved: (saved.start, saved.saved_at), default=None)
+
+
+def _range_problem(source: str, start: date, end: date) -> str:
+    if end < start:
+        return f"the end date {end} is before the start date {start}"
+    if Month.of(start) != Month.of(end):
+        return "a saved file has to cover days within one month; save each month separately"
+    if source in MONTH_TO_DATE_SOURCES and start.day != 1:
+        return f"{source} covers the month to date, so it starts on the 1st ({Month.of(start).first_day})"
+    if source == RAMP_PEOPLE and start != end:
+        return f"{source} is a snapshot of one day; use the same start and end date"
+    return ""
 
 
 def _check_content(source: str, content: bytes) -> None:
@@ -112,17 +121,17 @@ def _check_content(source: str, content: bytes) -> None:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError:
         raise InputError(f"the {source} data isn't UTF-8 text") from None
+    label = f"the {source} data"
     if EXTENSIONS[source] == "json":
         try:
-            parsed: object = json.loads(text)
+            document: object = json.loads(text, parse_float=Decimal)
         except json.JSONDecodeError as error:
-            raise InputError(f"the {source} data isn't valid JSON: {error.msg}") from None
-        expected = "users" if source == RAMP_PEOPLE else "data"
-        if not isinstance(parsed, dict) or not isinstance(parsed.get(expected), list):
-            raise InputError(
-                f'the {source} data should be Ramp\'s answer with a "{expected}" list '
-                "(join every page into that one list before saving)"
-            )
+            raise InputError(f"{label} isn't valid JSON: {error.msg}") from None
+        # Read it the way the report will, so a file that would break the report is refused now.
+        if source == RAMP_PEOPLE:
+            parse_people(document, label)
+        else:
+            parse_key_spend(document, label)
         return
     header = next(csv.reader(io.StringIO(text)), [])
     missing = [column for column in SPEND_EXPORT_REQUIRED_COLUMNS if column not in header]

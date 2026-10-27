@@ -34,7 +34,7 @@ Claude gathers the inputs and presents the answers; the open-source tool does th
 | Unassigned | $0 | $40 | $25 | $65 |
 | **Total** | **$900** | **$955** | **$435** | **$2,290** |
 
-- **Unassigned:** $40 of extra usage from someone not on the people list, and $25 from an API key with no team.
+- **Unassigned:** $40 of extra usage from someone with no team on the people list, and $25 from an API key with no team.
 - **Forecast:** this month is on pace for $2,400, 5% above last month.
 - **Alerts:** one spike, Engineering's API spend on the 14th at three times a normal day, drafted for someone to send.
 
@@ -74,7 +74,7 @@ Settings (seat prices, seats bought, who sees person detail, alert thresholds) l
 
 **Without Ramp** (described here, built later): the tool would read the Anthropic and OpenAI Admin APIs directly, with an Admin key kept on the company's own machine, and a short keys file would name each key's owner. The v0.3.0 Anthropic fetcher in `legacy/` is a starting point.
 
-**Downloads are saved once and never edited.** Claude hands each download to `aicfo-spend save`, which files it in the folder for the month it covers as `<source>_<start>_<end>_saved-<time>` and makes it read-only. Ramp's per-key spend is saved one day per file. A rerun rebuilds every number from these files, so any number traces back to one. Each run re-pulls the last 7 days, because vendors revise them; when two files cover the same days from the same source, the one saved last counts and the older one stays for the record.
+**Downloads are saved once and never edited.** Claude hands each download to `aicfo-spend save`, which checks it, files it in the folder for the month it covers as `<source>_<start>_<end>_saved-<time>`, and makes it read-only. Ramp's per-key spend and the claude.ai export are saved month to date, starting on the 1st, and each run re-pulls the month so far because vendors revise recent days. The download reaching furthest into the month counts; the older ones stay for the record, and if a newer one shows less than an older one, the report says so. A rerun rebuilds every number from these files, so any number traces back to one. A month uses the first Ramp people list saved after it ended, so re-running a past month gives the same teams.
 
 **One plain table.** Every input becomes rows of `spend.csv`: start date, end date, vendor, product (seats, extra usage or API), person, team, reason (for Unassigned rows), API key, model, amount in USD and source file. Daily data has the same start and end date; the claude.ai export covers its whole period. For API rows, the person is the key's owner. `aicfo-spend report <folder> <month>` writes the table and prints totals by team. Each company's files live in one folder, outside any git repo:
 
@@ -95,7 +95,7 @@ Two lookups place almost every dollar, and whatever they can't place shows as Un
 
 **Unassigned has three reasons**, each on its own line:
 
-- **Not on the people list:** someone in the spend export who is in neither Ramp nor the people file.
+- **No team on the people list:** someone in the spend export the people list doesn't place on a team, either because they're in neither Ramp nor the people file or because they're listed with no team.
 - **Key with no team:** no department tag and no owner. The fix is made in Ramp, where the key lives.
 - **Empty seat:** settings say how many seats were bought, and fewer people hold one. It's the signal to reclaim them.
 

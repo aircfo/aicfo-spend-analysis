@@ -5,7 +5,7 @@ import pytest
 from aicfo_spend.assign import (
     REASON_EMPTY_SEAT,
     REASON_KEY_WITH_NO_TEAM,
-    REASON_NOT_ON_PEOPLE_LIST,
+    REASON_NO_TEAM_ON_PEOPLE_LIST,
     Directory,
     Placement,
     seat_rows,
@@ -37,16 +37,25 @@ def test_a_team_in_the_people_file_overrides_ramp() -> None:
     assert directory.place_person("pat.lee@example.com") == Placement("Partnerships")
 
 
-def test_someone_no_list_places_is_unassigned() -> None:
-    placement = Directory.build(RAMP_PEOPLE, []).place_person("new.hire@example.com")
+def test_someone_no_list_places_on_a_team_is_unassigned() -> None:
+    no_department = {"max.ito@example.com": RampPerson("max.ito@example.com", "Max Ito", "", True)}
+    directory = Directory.build({**RAMP_PEOPLE, **no_department}, [])
 
-    assert placement == Placement(UNASSIGNED, REASON_NOT_ON_PEOPLE_LIST)
+    assert directory.place_person("new.hire@example.com") == Placement(UNASSIGNED, REASON_NO_TEAM_ON_PEOPLE_LIST)
+    assert directory.place_person("max.ito@example.com") == Placement(UNASSIGNED, REASON_NO_TEAM_ON_PEOPLE_LIST)
 
 
 def test_a_key_goes_to_its_department_tag_first() -> None:
     directory = Directory.build(RAMP_PEOPLE, [])
 
     assert directory.place_key("Operations", "sam.cho@example.com") == Placement("Operations")
+
+
+def test_team_names_match_whatever_their_capitalization() -> None:
+    directory = Directory.build(RAMP_PEOPLE, [seat("max.ito@example.com", team="SALES")])
+
+    assert directory.place_key("sales", "") == Placement("Sales")
+    assert directory.place_person("max.ito@example.com") == Placement("Sales")
 
 
 def test_a_key_without_a_tag_goes_to_its_owners_team() -> None:

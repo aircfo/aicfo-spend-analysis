@@ -31,6 +31,9 @@ def read_people_file(workspace: Path) -> list[PeopleFileRow]:
             raise InputError(f"{PEOPLE_FILE_NAME} is missing the columns {missing}")
         rows: list[PeopleFileRow] = []
         for line_number, record in enumerate(reader, start=2):
+            # Spreadsheets often leave trailing lines of empty cells; they aren't mistakes.
+            if not any((value or "").strip() for value in record.values() if isinstance(value, str)):
+                continue
             row = PeopleFileRow(
                 email=(record["email"] or "").strip().lower(),
                 name=(record["name"] or "").strip(),

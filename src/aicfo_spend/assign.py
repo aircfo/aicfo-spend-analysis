@@ -13,7 +13,9 @@ from aicfo_spend.sources.ramp import RampPerson
 from aicfo_spend.spend_table import PRODUCT_SEATS, UNASSIGNED, SpendRow
 from aicfo_spend.workspace import PEOPLE_FILE_NAME
 
-REASON_NOT_ON_PEOPLE_LIST = "not on the people list"
+# Covers someone missing from both lists and someone listed with no team: either way the
+# fix is the same, give them a team on the people list.
+REASON_NO_TEAM_ON_PEOPLE_LIST = "no team on the people list"
 REASON_KEY_WITH_NO_TEAM = "key with no team"
 REASON_EMPTY_SEAT = "empty seat"
 
@@ -29,22 +31,27 @@ class Directory:
     """Each known person's team: Ramp's department, unless people.csv names a team for them."""
 
     teams: Mapping[str, str]
+    # Team names are matched without regard to case; the first spelling seen is the one shown.
+    spellings: Mapping[str, str]
 
     @classmethod
     def build(cls, ramp_people: Mapping[str, RampPerson], people_file: Sequence[PeopleFileRow]) -> Directory:
-        teams = {email: person.team for email, person in ramp_people.items() if person.team}
-        for row in people_file:
-            if row.team:
-                teams[row.email] = row.team
-        return cls(teams)
+        spellings: dict[str, str] = {}
+        teams: dict[str, str] = {}
+        named = [(email, person.team) for email, person in ramp_people.items()]
+        named += [(row.email, row.team) for row in people_file]
+        for email, team in named:
+            if team:
+                teams[email] = spellings.setdefault(team.casefold(), team)
+        return cls(teams, spellings)
 
     def place_person(self, email: str) -> Placement:
         team = self.teams.get(email.lower(), "")
-        return Placement(team) if team else Placement(UNASSIGNED, REASON_NOT_ON_PEOPLE_LIST)
+        return Placement(team) if team else Placement(UNASSIGNED, REASON_NO_TEAM_ON_PEOPLE_LIST)
 
     def place_key(self, department_tag: str, owner_email: str) -> Placement:
         if department_tag:
-            return Placement(department_tag)
+            return Placement(self.spellings.get(department_tag.casefold(), department_tag))
         team = self.teams.get(owner_email.lower(), "") if owner_email else ""
         return Placement(team) if team else Placement(UNASSIGNED, REASON_KEY_WITH_NO_TEAM)
 
