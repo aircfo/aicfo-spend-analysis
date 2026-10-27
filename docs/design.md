@@ -108,8 +108,8 @@ The same table gives both views, by team and by person. In the person view, API 
 The forecast is arithmetic anyone can redo by hand, and it stands in for a budget. Usage here means extra usage plus API; seats are a fixed monthly fee and are never averaged. A day's usage is the difference between that day's month-to-date download and the previous one, so the skill saves both spend downloads every day; a gap of several days is spread evenly across them.
 
 - **This month:** seats + usage so far + the last 14 days' average daily usage × days left.
-- **Next month:** seats × price + each team's average monthly usage over the last 3 months, or over as many months as exist.
-- **Change from last month:** by team and model, and by person where the person view is on.
+- **Next month:** seats × price + each team's average monthly usage over the last 3 complete months. Extra usage and API are averaged separately, each over the months that have a whole month of it, so a source saved only recently isn't diluted by months it wasn't saved for. `aicfo-spend forecast <folder>` prints it.
+- **Change from last month:** by team and model, and by person where the person view is on. `aicfo-spend report` prints it under the month's totals, with a note when last month is missing a download.
 
 **Two alerts**, always drafted, never sent:
 

@@ -6,50 +6,20 @@ from pathlib import Path
 import pytest
 
 from aicfo_spend.cli import main
-from aicfo_spend.months import Month
-from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, RAMP_API_KEYS, RAMP_PEOPLE, save_raw
-from aicfo_spend.report import build_month, summarize
-from aicfo_spend.settings import SETTINGS_FILE_NAME, load_settings
+from aicfo_spend.raw_store import RAMP_API_KEYS, save_raw
+from aicfo_spend.report import build_month, describe_change, summarize
+from aicfo_spend.settings import load_settings
 from aicfo_spend.spend_table import UNASSIGNED
-from aicfo_spend.workspace import PEOPLE_FILE_NAME, create_workspace
-from tests.factories import (
-    ramp_key,
-    ramp_keys_answer,
-    ramp_people_answer,
-    ramp_user,
-    spend_export,
-)
+from tests.factories import ramp_key, ramp_keys_answer, spend_export
+from tests.workspaces import SEPTEMBER, fill_september, new_workspace, save_month
 
-SEPTEMBER = Month(2026, 9)
 SEPT_1 = SEPTEMBER.first_day
 SEPT_30 = SEPTEMBER.last_day
-PEOPLE_CSV_HEADER = "email,name,team,vendor,seat_type\n"
-TWO_SEATS = "pat.lee@example.com,,,anthropic,standard\nsam.cho@example.com,,,anthropic,standard\n"
+AUGUST = SEPTEMBER.previous_month()
 
 
 def saved_at(hour: int) -> datetime:
     return datetime(2026, 10, 1, hour, 0, 0, tzinfo=timezone.utc)
-
-
-def new_workspace(tmp_path: Path, people_csv: str = TWO_SEATS) -> Path:
-    folder = tmp_path / "acme"
-    create_workspace(folder, "Acme")
-    (folder / SETTINGS_FILE_NAME).write_text(
-        '{"company_name": "Acme", "seats": {"anthropic": {"standard": {"price_usd": 25, "bought": 3}}}}',
-        encoding="utf-8",
-    )
-    (folder / PEOPLE_FILE_NAME).write_text(PEOPLE_CSV_HEADER + people_csv, encoding="utf-8")
-    return folder
-
-
-def fill_september(folder: Path) -> None:
-    people = ramp_people_answer(ramp_user("pat.lee@example.com", "Sales"), ramp_user("sam.cho@example.com", "Engineering"))
-    october_first = date(2026, 10, 1)
-    save_raw(folder, RAMP_PEOPLE, october_first, october_first, people, saved_at=saved_at(9))
-    export = spend_export(("pat.lee@example.com", "claude-opus", "100.50"), ("new.hire@example.com", "claude-sonnet", "4.50"))
-    save_raw(folder, CLAUDE_SPEND_EXPORT, SEPT_1, SEPT_30, export, saved_at=saved_at(9))
-    keys = ramp_keys_answer(ramp_key("backend", 30000, "sam.cho@example.com"), ramp_key("orphan", 300))
-    save_raw(folder, RAMP_API_KEYS, SEPT_1, SEPT_30, keys, saved_at=saved_at(9))
 
 
 @pytest.fixture
@@ -104,7 +74,7 @@ def test_summary_lists_biggest_teams_first_and_unassigned_by_reason(workspace: P
 
 
 def test_notes_say_which_inputs_are_missing_or_partial(tmp_path: Path) -> None:
-    folder = new_workspace(tmp_path)
+    folder = new_workspace(tmp_path, with_ramp_people=False)
     keys = ramp_keys_answer(ramp_key("backend", 100))
     save_raw(folder, RAMP_API_KEYS, SEPT_1, date(2026, 9, 16), keys, saved_at=saved_at(9))
 
@@ -185,3 +155,53 @@ def test_save_command_refuses_a_folder_that_isnt_a_workspace(
     assert main(["save", str(tmp_path), "ramp-api-keys", "--start", "2026-09-01", "--file", "x.json"]) == 1
 
     assert "isn't a workspace" in capsys.readouterr().err
+
+
+def fill_august(folder: Path) -> None:
+    """Engineering $175 (seat + $150 of API), Sales $85 (seat + $60 extra usage), Unassigned $25."""
+    save_month(folder, AUGUST, backend_cents=15000, extra_usage=(("pat.lee@example.com", "claude-opus", "60"),))
+
+
+def test_change_from_last_month_shows_each_teams_move(workspace: Path) -> None:
+    fill_august(workspace)
+    settings = load_settings(workspace)
+
+    change = describe_change(build_month(workspace, SEPTEMBER, settings), build_month(workspace, AUGUST, settings), False)
+
+    lines = change.splitlines()
+    assert lines[0] == "Change from 2026-08"
+    assert next(line for line in lines if line.startswith("Engineering")).split() == [
+        "Engineering", "$175.00", "$325.00", "+$150.00", "(+86%)"
+    ]
+    assert next(line for line in lines if line.startswith("Total")).split() == [
+        "Total", "$285.00", "$483.00", "+$198.00", "(+69%)"
+    ]
+    assert "  claude-opus: $60.00 to $100.50, +$40.50 (+68%)" in lines
+    assert "  claude-sonnet: $0.00 to $4.50, +$4.50 (new)" in lines
+    assert "By person" not in change
+
+
+def test_change_by_person_appears_only_in_the_person_view(workspace: Path) -> None:
+    fill_august(workspace)
+    settings = load_settings(workspace)
+
+    change = describe_change(build_month(workspace, SEPTEMBER, settings), build_month(workspace, AUGUST, settings), True)
+
+    assert "  sam.cho@example.com: $175.00 to $325.00, +$150.00 (+86%)" in change.splitlines()
+
+
+def test_change_warns_when_last_month_is_missing_a_download(workspace: Path) -> None:
+    save_month(workspace, AUGUST, backend_cents=15000)
+    settings = load_settings(workspace)
+
+    change = describe_change(build_month(workspace, SEPTEMBER, settings), build_month(workspace, AUGUST, settings), False)
+
+    assert "  - 2026-08 has no extra usage saved, so the change overstates growth" in change.splitlines()
+
+
+def test_change_says_so_when_last_month_has_no_usage(workspace: Path) -> None:
+    settings = load_settings(workspace)
+
+    change = describe_change(build_month(workspace, SEPTEMBER, settings), build_month(workspace, AUGUST, settings), False)
+
+    assert change == "No usage is saved for 2026-08, so there's no change from last month to show."

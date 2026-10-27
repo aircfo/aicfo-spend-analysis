@@ -39,3 +39,9 @@ class Month:
     @property
     def last_day(self) -> date:
         return date(self.year, self.number, calendar.monthrange(self.year, self.number)[1])
+
+    def next_month(self) -> Month:
+        return Month(self.year + 1, 1) if self.number == 12 else Month(self.year, self.number + 1)
+
+    def previous_month(self) -> Month:
+        return Month(self.year - 1, 12) if self.number == 1 else Month(self.year, self.number - 1)

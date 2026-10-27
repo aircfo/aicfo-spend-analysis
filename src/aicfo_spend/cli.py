@@ -10,9 +10,10 @@ from pathlib import Path
 
 from aicfo_spend import __version__
 from aicfo_spend.errors import InputError, UserError
+from aicfo_spend.forecast import describe_forecast, describe_score, forecast_after
 from aicfo_spend.months import Month
 from aicfo_spend.raw_store import SOURCES, save_raw
-from aicfo_spend.report import build_month, summarize
+from aicfo_spend.report import build_month, describe_change, summarize
 from aicfo_spend.settings import SETTINGS_FILE_NAME, Settings, load_settings
 from aicfo_spend.spend_table import write_spend_csv
 from aicfo_spend.workspace import create_workspace
@@ -25,6 +26,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "settings": _run_settings,
         "save": _run_save,
         "report": _run_report,
+        "forecast": _run_forecast,
     }
     try:
         return commands[args.command](args)
@@ -79,6 +81,11 @@ def _parser() -> argparse.ArgumentParser:
     report = commands.add_parser("report", help="build a month's spend table and summarize it by team")
     report.add_argument("folder", help="the workspace folder")
     report.add_argument("month", help="the month, like 2026-09")
+
+    forecast = commands.add_parser("forecast", help="forecast next month's spend, and optionally score it")
+    forecast.add_argument("folder", help="the workspace folder")
+    forecast.add_argument("--as-of", help="use only data through this day (defaults to today)")
+    forecast.add_argument("--score", help="score the forecast against this month's actual spend, like 2026-09")
     return parser
 
 
@@ -127,7 +134,25 @@ def _run_report(args: argparse.Namespace) -> int:
     output = workspace / "out" / month.label / "spend.csv"
     write_spend_csv(spend.rows, output)
     print(summarize(spend, settings.company_name))
+    previous = build_month(workspace, month.previous_month(), settings)
+    print("\n" + describe_change(spend, previous, show_people=settings.visibility == "person"))
     print(f"\nWrote {output.relative_to(workspace)} ({len(spend.rows)} rows)")
+    return 0
+
+
+def _run_forecast(args: argparse.Namespace) -> int:
+    workspace = Path(args.folder).expanduser()
+    settings = load_settings(workspace)
+    as_of = _day(args.as_of) if args.as_of else date.today()
+    forecast = forecast_after(workspace, settings, as_of)
+    print(describe_forecast(forecast))
+    if args.score:
+        month = Month.parse(args.score)
+        if month != forecast.month:
+            raise InputError(
+                f"a forecast made as of {as_of} is for {forecast.month.label}; score it against that month"
+            )
+        print("\n" + describe_score(forecast, build_month(workspace, month, settings)))
     return 0
 
 
