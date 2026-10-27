@@ -5,11 +5,17 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Callable, Sequence
+from datetime import date
 from pathlib import Path
 
 from aicfo_spend import __version__
-from aicfo_spend.settings import SETTINGS_FILE_NAME, Settings, SettingsError, load_settings
-from aicfo_spend.workspace import WorkspaceError, create_workspace
+from aicfo_spend.errors import InputError, UserError
+from aicfo_spend.months import Month
+from aicfo_spend.raw_store import SOURCES, save_raw
+from aicfo_spend.report import build_month, summarize
+from aicfo_spend.settings import SETTINGS_FILE_NAME, Settings, load_settings
+from aicfo_spend.spend_table import write_spend_csv
+from aicfo_spend.workspace import create_workspace
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -17,10 +23,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     commands: dict[str, Callable[[argparse.Namespace], int]] = {
         "init": _run_init,
         "settings": _run_settings,
+        "save": _run_save,
+        "report": _run_report,
     }
     try:
         return commands[args.command](args)
-    except (SettingsError, WorkspaceError) as error:
+    except UserError as error:
         print(f"aicfo-spend: {error}", file=sys.stderr)
         return 1
 
@@ -60,6 +68,17 @@ def _parser() -> argparse.ArgumentParser:
 
     settings = commands.add_parser("settings", help="check a workspace's settings file and summarize it")
     settings.add_argument("folder", help="the workspace folder")
+
+    save = commands.add_parser("save", help="save a download into the workspace, once and read-only")
+    save.add_argument("folder", help="the workspace folder")
+    save.add_argument("source", choices=SOURCES, help="what the download is")
+    save.add_argument("--start", required=True, help="first day it covers, like 2026-09-01")
+    save.add_argument("--end", help="last day it covers (defaults to --start)")
+    save.add_argument("--file", help="the downloaded file (reads standard input if left out)")
+
+    report = commands.add_parser("report", help="build a month's spend table and summarize it by team")
+    report.add_argument("folder", help="the workspace folder")
+    report.add_argument("month", help="the month, like 2026-09")
     return parser
 
 
@@ -80,3 +99,40 @@ def _run_init(args: argparse.Namespace) -> int:
 def _run_settings(args: argparse.Namespace) -> int:
     print(describe_settings(load_settings(Path(args.folder).expanduser())))
     return 0
+
+
+def _run_save(args: argparse.Namespace) -> int:
+    workspace = Path(args.folder).expanduser()
+    if not (workspace / SETTINGS_FILE_NAME).exists():
+        raise InputError(f"{workspace} isn't a workspace; set one up with `aicfo-spend init`")
+    start = _day(args.start)
+    end = _day(args.end) if args.end else start
+    if args.file:
+        download = Path(args.file).expanduser()
+        if not download.is_file():
+            raise InputError(f"no file at {download}")
+        content = download.read_bytes()
+    else:
+        content = sys.stdin.buffer.read()
+    path = save_raw(workspace, args.source, start, end, content)
+    print(f"Saved {path.relative_to(workspace)}")
+    return 0
+
+
+def _run_report(args: argparse.Namespace) -> int:
+    workspace = Path(args.folder).expanduser()
+    settings = load_settings(workspace)
+    month = Month.parse(args.month)
+    spend = build_month(workspace, month, settings)
+    output = workspace / "out" / month.label / "spend.csv"
+    write_spend_csv(spend.rows, output)
+    print(summarize(spend, settings.company_name))
+    print(f"\nWrote {output.relative_to(workspace)} ({len(spend.rows)} rows)")
+    return 0
+
+
+def _day(text: str) -> date:
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        raise InputError(f"{text!r} isn't a date; write it like 2026-09-14") from None

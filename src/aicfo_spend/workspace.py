@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from aicfo_spend.errors import UserError
 from aicfo_spend.settings import SETTINGS_FILE_NAME
 
 PEOPLE_FILE_NAME = "people.csv"
@@ -16,8 +17,8 @@ PEOPLE_COLUMNS = ("email", "name", "team", "vendor", "seat_type")
 DEFAULT_ALERTS = {"spike_multiple": 2, "spike_min_usd": 25, "over_pace_percent": 25}
 
 
-class WorkspaceError(Exception):
-    """A workspace can't be set up where asked, worded so the person can fix it."""
+class WorkspaceError(UserError):
+    """A workspace can't be set up where asked."""
 
 
 def git_repo_containing(folder: Path) -> Path | None:
