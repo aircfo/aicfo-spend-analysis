@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from aicfo_spend.assign import seat_rows
@@ -35,6 +35,7 @@ from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCTS
 
 HISTORY_MONTHS = 3
 USAGE_PRODUCTS = (PRODUCT_EXTRA_USAGE, PRODUCT_API)
+CENT = Decimal("0.01")
 
 
 @dataclass(frozen=True)
@@ -56,12 +57,15 @@ def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast
     seats, seat_notes = seat_rows(target, people_file, settings, directory)
     notes.extend(seat_notes)
     by_team = totals_by(seats, lambda row: row.team)
+    # Each month's people list may spell a team differently; merge them under one spelling,
+    # preferring the target month's.
+    spellings = {team.casefold(): team for team in [*directory.teams.values(), *by_team]}
 
     candidates = _recent_complete_months(as_of)
     spends = {month: build_month(workspace, month, settings) for month in candidates}
     history: dict[str, list[Month]] = {}
     for product in USAGE_PRODUCTS:
-        months = sorted(month for month in candidates if _has_whole_month(spends[month], product, as_of))
+        months = sorted(month for month in candidates if _has_whole_month(spends[month], product))
         history[product] = months
         if not months:
             notes.append(f"no complete month of {product} is saved before {as_of}, so it's forecast at $0")
@@ -69,9 +73,13 @@ def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast
         for month in months:
             product_rows = (row for row in spends[month].rows if row.product == product)
             for team, amounts in totals_by(product_rows, lambda row: row.team).items():
-                team_amounts = by_team.setdefault(team, {name: ZERO for name in PRODUCTS})
+                name = spellings.setdefault(team.casefold(), team)
+                team_amounts = by_team.setdefault(name, {product_name: ZERO for product_name in PRODUCTS})
                 team_amounts[product] += amounts[product] / len(months)
-    return Forecast(target, as_of, by_team, history, notes)
+    # Rounded to cents per team, so the rows people see add up to the total they see.
+    rounded = {team: {product: amount.quantize(CENT, ROUND_HALF_UP) for product, amount in amounts.items()}
+               for team, amounts in by_team.items()}
+    return Forecast(target, as_of, rounded, history, notes)
 
 
 def describe_forecast(forecast: Forecast) -> str:
@@ -109,13 +117,18 @@ def describe_score(forecast: Forecast, actual: MonthSpend) -> str:
 
     notes = [
         "seats come from today's people.csv, so the seat part of the forecast can't miss; the error is in usage",
+        f"the months before {forecast.as_of} are read from today's downloads and people list, so this replays the "
+        "forecast with today's view of those months; one made on the day could differ if they were revised since",
     ]
     for product in USAGE_PRODUCTS:
         used = len(forecast.history[product])
         if used < HISTORY_MONTHS:
             notes.append(f"{product} was averaged over {_months(used)} of history, not {HISTORY_MONTHS}; the score is a thin read")
-        if product not in actual.coverage:
+        covered = actual.coverage.get(product)
+        if covered is None:
             notes.append(f"no {product} is saved for {actual.month.label}, so its actual shows $0")
+        elif covered[1] != actual.month.last_day:
+            notes.append(f"{actual.month.label}'s {product} only runs through {covered[1]}, so its actual is partial")
     lines += ["", "Notes:", *(f"  - {note}" for note in notes)]
     return "\n".join(lines)
 
@@ -129,9 +142,8 @@ def _recent_complete_months(as_of: date) -> list[Month]:
     return months
 
 
-def _has_whole_month(spend: MonthSpend, product: str, as_of: date) -> bool:
-    covered = spend.coverage.get(product)
-    return covered is not None and covered == (spend.month.first_day, spend.month.last_day) and covered[1] <= as_of
+def _has_whole_month(spend: MonthSpend, product: str) -> bool:
+    return spend.coverage.get(product) == (spend.month.first_day, spend.month.last_day)
 
 
 def _score_row(team: str, forecast: Decimal, actual: Decimal) -> list[str]:

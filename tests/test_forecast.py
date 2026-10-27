@@ -7,10 +7,12 @@ import pytest
 from aicfo_spend.cli import main
 from aicfo_spend.forecast import describe_score, forecast_after
 from aicfo_spend.months import Month
-from aicfo_spend.report import build_month, total
+from aicfo_spend.report import MonthSpend, build_month, total
 from aicfo_spend.settings import load_settings
 from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCT_SEATS, UNASSIGNED
-from tests.workspaces import SEPTEMBER, fill_september, new_workspace, save_month
+from aicfo_spend.raw_store import RAMP_PEOPLE, save_raw
+from tests.factories import ramp_people_answer, ramp_user
+from tests.workspaces import SAVED_AT, SEPTEMBER, fill_september, new_workspace, save_month
 
 JUNE, JULY, AUGUST = Month(2026, 6), Month(2026, 7), Month(2026, 8)
 AUG_31 = AUGUST.last_day
@@ -43,7 +45,7 @@ def test_averages_each_usage_product_over_the_months_that_have_it(workspace: Pat
     assert total(forecast.by_team[UNASSIGNED]) == Decimal("25")
 
 
-def test_uses_nothing_after_the_as_of_date(workspace: Path) -> None:
+def test_leaves_out_months_not_complete_by_the_as_of_date(workspace: Path) -> None:
     forecast = forecast_after(workspace, load_settings(workspace), date(2026, 8, 30))
 
     # August isn't complete on Aug 30, so June and July carry the API average, and no extra usage history exists.
@@ -92,3 +94,37 @@ def test_forecast_command_scores_only_the_month_it_forecasts(
     assert main(["forecast", str(workspace), "--as-of", "2026-08-31", "--score", "2026-10"]) == 1
 
     assert "is for 2026-09; score it against that month" in capsys.readouterr().err
+
+
+def test_rounds_each_teams_forecast_to_cents_so_rows_add_up(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    for month, cents in ((JUNE, 10000), (JULY, 10000), (AUGUST, 10001)):
+        save_month(folder, month, backend_cents=cents)
+
+    forecast = forecast_after(folder, load_settings(folder), AUG_31)
+
+    assert forecast.by_team["Engineering"][PRODUCT_API] == Decimal("100.00")
+    assert all(amount.as_tuple().exponent == -2 for amounts in forecast.by_team.values() for amount in amounts.values())
+
+
+def test_merges_a_team_spelled_differently_in_an_older_people_list(workspace: Path) -> None:
+    # June's spend is placed with a list saved on Jul 1, which spells the team in lower case.
+    july_first = date(2026, 7, 1)
+    lower = ramp_people_answer(ramp_user("pat.lee@example.com", "sales"), ramp_user("sam.cho@example.com", "engineering"))
+    save_raw(workspace, RAMP_PEOPLE, july_first, july_first, lower, saved_at=SAVED_AT)
+
+    forecast = forecast_after(workspace, load_settings(workspace), AUG_31)
+
+    assert "engineering" not in forecast.by_team
+    assert forecast.by_team["Engineering"][PRODUCT_API] == Decimal("120.00")
+
+
+def test_score_notes_an_actual_month_that_isnt_finished(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, AUGUST, backend_cents=15000)
+    forecast = forecast_after(folder, load_settings(folder), AUG_31)
+    partial = MonthSpend(SEPTEMBER, rows=[], notes=[], coverage={PRODUCT_API: (SEPTEMBER.first_day, date(2026, 9, 17))})
+
+    score = describe_score(forecast, partial)
+
+    assert "  - 2026-09's api only runs through 2026-09-17, so its actual is partial" in score.splitlines()

@@ -134,8 +134,12 @@ def _run_report(args: argparse.Namespace) -> int:
     output = workspace / "out" / month.label / "spend.csv"
     write_spend_csv(spend.rows, output)
     print(summarize(spend, settings.company_name))
-    previous = build_month(workspace, month.previous_month(), settings)
-    print("\n" + describe_change(spend, previous, show_people=settings.visibility == "person"))
+    # The month's own report has already succeeded, so trouble with last month's files only skips the comparison.
+    try:
+        previous = build_month(workspace, month.previous_month(), settings)
+        print("\n" + describe_change(spend, previous, show_people=settings.visibility == "person"))
+    except UserError as error:
+        print(f"\nChange from last month isn't available: {error}")
     print(f"\nWrote {output.relative_to(workspace)} ({len(spend.rows)} rows)")
     return 0
 
