@@ -5,7 +5,7 @@ from __future__ import annotations
 import calendar
 import re
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 
 from aicfo_spend.errors import InputError
 
@@ -39,6 +39,3 @@ class Month:
     @property
     def last_day(self) -> date:
         return date(self.year, self.number, calendar.monthrange(self.year, self.number)[1])
-
-    def days(self) -> list[date]:
-        return [self.first_day + timedelta(days=offset) for offset in range(self.last_day.day)]

@@ -21,42 +21,47 @@ from tests.factories import (
 )
 
 SEPTEMBER = Month(2026, 9)
-SAVED_AT = datetime(2026, 10, 1, 9, 0, 0, tzinfo=timezone.utc)
+SEPT_1 = SEPTEMBER.first_day
+SEPT_30 = SEPTEMBER.last_day
+PEOPLE_CSV_HEADER = "email,name,team,vendor,seat_type\n"
+TWO_SEATS = "pat.lee@example.com,,,anthropic,standard\nsam.cho@example.com,,,anthropic,standard\n"
 
 
-def new_workspace(tmp_path: Path) -> Path:
+def saved_at(hour: int) -> datetime:
+    return datetime(2026, 10, 1, hour, 0, 0, tzinfo=timezone.utc)
+
+
+def new_workspace(tmp_path: Path, people_csv: str = TWO_SEATS) -> Path:
     folder = tmp_path / "acme"
     create_workspace(folder, "Acme")
     (folder / SETTINGS_FILE_NAME).write_text(
         '{"company_name": "Acme", "seats": {"anthropic": {"standard": {"price_usd": 25, "bought": 3}}}}',
         encoding="utf-8",
     )
-    (folder / PEOPLE_FILE_NAME).write_text(
-        "email,name,team,vendor,seat_type\n"
-        "pat.lee@example.com,,,anthropic,standard\n"
-        "sam.cho@example.com,,,anthropic,standard\n",
-        encoding="utf-8",
-    )
+    (folder / PEOPLE_FILE_NAME).write_text(PEOPLE_CSV_HEADER + people_csv, encoding="utf-8")
     return folder
+
+
+def fill_september(folder: Path) -> None:
+    people = ramp_people_answer(ramp_user("pat.lee@example.com", "Sales"), ramp_user("sam.cho@example.com", "Engineering"))
+    october_first = date(2026, 10, 1)
+    save_raw(folder, RAMP_PEOPLE, october_first, october_first, people, saved_at=saved_at(9))
+    export = spend_export(("pat.lee@example.com", "claude-opus", "100.50"), ("new.hire@example.com", "claude-sonnet", "4.50"))
+    save_raw(folder, CLAUDE_SPEND_EXPORT, SEPT_1, SEPT_30, export, saved_at=saved_at(9))
+    keys = ramp_keys_answer(ramp_key("backend", 30000, "sam.cho@example.com"), ramp_key("orphan", 300))
+    save_raw(folder, RAMP_API_KEYS, SEPT_1, SEPT_30, keys, saved_at=saved_at(9))
 
 
 @pytest.fixture
 def workspace(tmp_path: Path) -> Path:
-    """Two seats held of three bought, one export, and a full month of two API keys.
+    """Two seats held of three bought, one export, and a month of two API keys.
 
-    Expected: Engineering $325.00 (seat $25 + key $10 x 30 days), Sales $125.50 (seat $25 +
-    extra usage $100.50), Unassigned $32.50 (empty seat $25 + unknown person $4.50 + orphan
-    key $0.10 x 30 days). Total $483.00.
+    Expected: Engineering $325.00 (seat $25 + key $300), Sales $125.50 (seat $25 + extra
+    usage $100.50), Unassigned $32.50 (empty seat $25 + unknown person $4.50 + orphan key
+    $3). Total $483.00.
     """
     folder = new_workspace(tmp_path)
-    october_first = date(2026, 10, 1)
-    people = ramp_people_answer(ramp_user("pat.lee@example.com", "Sales"), ramp_user("sam.cho@example.com", "Engineering"))
-    save_raw(folder, RAMP_PEOPLE, october_first, october_first, people, saved_at=SAVED_AT)
-    export = spend_export(("pat.lee@example.com", "claude-opus", "100.50"), ("new.hire@example.com", "claude-sonnet", "4.50"))
-    save_raw(folder, CLAUDE_SPEND_EXPORT, SEPTEMBER.first_day, SEPTEMBER.last_day, export, saved_at=SAVED_AT)
-    for day in SEPTEMBER.days():
-        keys = ramp_keys_answer(ramp_key("backend", 1000, "sam.cho@example.com"), ramp_key("orphan", 10))
-        save_raw(folder, RAMP_API_KEYS, day, day, keys, saved_at=SAVED_AT)
+    fill_september(folder)
     return folder
 
 
@@ -74,29 +79,53 @@ def test_every_dollar_lands_on_a_team_or_on_unassigned(workspace: Path) -> None:
     assert sum(totals.values()) == Decimal("483.00")
 
 
+def test_a_team_in_the_people_file_moves_that_persons_seat_and_usage(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path, "pat.lee@example.com,,Partnerships,anthropic,standard\n")
+    fill_september(folder)
+
+    totals = team_totals(folder)
+
+    assert totals["Partnerships"] == Decimal("125.50")
+    assert "Sales" not in totals
+
+
 def test_summary_lists_biggest_teams_first_and_unassigned_by_reason(workspace: Path) -> None:
     summary = summarize(build_month(workspace, SEPTEMBER, load_settings(workspace)), "Acme")
 
     assert summary.startswith("AI spend for 2026-09 (Acme)")
     assert summary.index("Engineering") < summary.index("Sales") < summary.index("Unassigned")
     assert "$483.00" in summary
+    vendor_line = next(line for line in summary.splitlines() if line.startswith("anthropic"))
+    assert vendor_line.split() == ["anthropic", "$75.00", "$105.00", "$303.00", "$483.00"]
     assert "  empty seat: $25.00" in summary
     assert "  key with no team: $3.00" in summary
-    assert "  not on the people list: $4.50" in summary
+    assert "  no team on the people list: $4.50" in summary
     assert "Notes:" not in summary
 
 
 def test_notes_say_which_inputs_are_missing_or_partial(tmp_path: Path) -> None:
     folder = new_workspace(tmp_path)
-    for day in (date(2026, 9, 14), date(2026, 9, 16)):
-        save_raw(folder, RAMP_API_KEYS, day, day, ramp_keys_answer(ramp_key("backend", 100)), saved_at=SAVED_AT)
+    keys = ramp_keys_answer(ramp_key("backend", 100))
+    save_raw(folder, RAMP_API_KEYS, SEPT_1, date(2026, 9, 16), keys, saved_at=saved_at(9))
 
     notes = build_month(folder, SEPTEMBER, load_settings(folder)).notes
 
     assert "no Ramp people list is saved, so only people.csv places people on teams" in notes
     assert "no claude.ai spend export is saved for 2026-09, so extra usage shows $0" in notes
-    assert any(note.startswith("Ramp API spend is missing for 14 day(s): 2026-09-01") for note in notes)
-    assert "Ramp API spend runs through 2026-09-16" in notes
+    assert "Ramp API spend covers 2026-09-01 to 2026-09-16, not the whole month" in notes
+
+
+def test_notes_when_a_newer_download_shows_less_than_an_earlier_one(workspace: Path) -> None:
+    cut_short = ramp_keys_answer(ramp_key("backend", 1000, "sam.cho@example.com"))
+    save_raw(workspace, RAMP_API_KEYS, SEPT_1, SEPT_30, cut_short, saved_at=saved_at(12))
+
+    spend = build_month(workspace, SEPTEMBER, load_settings(workspace))
+
+    assert (
+        "the newest Ramp API spend totals $10.00, less than an earlier download's $303.00; "
+        "check that the latest download is complete"
+    ) in spend.notes
+    assert team_totals(workspace)["Engineering"] == Decimal("35.00")
 
 
 def test_report_command_writes_a_spend_table_that_adds_up(
@@ -108,7 +137,7 @@ def test_report_command_writes_a_spend_table_that_adds_up(
         rows = list(csv.DictReader(handle))
     assert sum(Decimal(row["amount_usd"]) for row in rows) == Decimal("483.00")
     assert {row["source_file"] for row in rows if row["product"] == "seats"} == {"people.csv", "aicfo-spend.json"}
-    assert "Wrote out/2026-09/spend.csv (65 rows)" in capsys.readouterr().out
+    assert "Wrote out/2026-09/spend.csv (7 rows)" in capsys.readouterr().out
 
 
 def test_save_command_files_a_download(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -116,16 +145,17 @@ def test_save_command_files_a_download(tmp_path: Path, capsys: pytest.CaptureFix
     download = tmp_path / "answer.json"
     download.write_bytes(ramp_keys_answer(ramp_key("backend", 100)))
 
-    assert main(["save", str(folder), "ramp-api-keys", "--start", "2026-09-14", "--file", str(download)]) == 0
+    arguments = ["ramp-api-keys", "--start", "2026-09-01", "--end", "2026-09-14", "--file", str(download)]
+    assert main(["save", str(folder), *arguments]) == 0
 
-    assert capsys.readouterr().out.startswith("Saved raw/2026-09/ramp-api-keys_2026-09-14_2026-09-14_saved-")
+    assert capsys.readouterr().out.startswith("Saved raw/2026-09/ramp-api-keys_2026-09-01_2026-09-14_saved-")
 
 
 @pytest.mark.parametrize(
     ("arguments", "message"),
     [
-        (["ramp-api-keys", "--start", "2026-09-14", "--file", "missing.json"], "no file at"),
-        (["ramp-api-keys", "--start", "14 Sept", "--file", "missing.json"], "isn't a date"),
+        (["ramp-api-keys", "--start", "2026-09-01", "--file", "missing.json"], "no file at"),
+        (["ramp-api-keys", "--start", "1 Sept", "--file", "missing.json"], "isn't a date"),
     ],
 )
 def test_save_command_explains_bad_arguments(
@@ -141,6 +171,6 @@ def test_save_command_explains_bad_arguments(
 def test_save_command_refuses_a_folder_that_isnt_a_workspace(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert main(["save", str(tmp_path), "ramp-api-keys", "--start", "2026-09-14", "--file", "x.json"]) == 1
+    assert main(["save", str(tmp_path), "ramp-api-keys", "--start", "2026-09-01", "--file", "x.json"]) == 1
 
     assert "isn't a workspace" in capsys.readouterr().err

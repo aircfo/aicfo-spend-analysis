@@ -9,12 +9,13 @@ import json
 
 def ramp_key(
     name: str,
-    cents: int,
+    cents: int | float | None,
     owner_email: str | None = None,
     department: str | None = None,
     provider: str = "ANTHROPIC",
     currency: str = "USD",
 ) -> dict[str, object]:
+    """cents=None stands for a key Ramp has no cost estimate for."""
     return {
         "name": name,
         "external_id": f"apikey_{name}",
@@ -22,7 +23,7 @@ def ramp_key(
         "status": "active",
         "tags": [{"key": "Department", "value": department}] if department else [],
         "owner": {"email": owner_email, "first_name": "Test", "last_name": "Owner"} if owner_email else None,
-        "estimated_cost": {"currency": currency, "value": cents},
+        "estimated_cost": None if cents is None else {"currency": currency, "value": cents},
     }
 
 

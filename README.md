@@ -25,12 +25,12 @@ Then save the month's inputs and report on it:
 
 ```
 aicfo-spend save ~/acme-ai-spend ramp-people --start 2026-10-01 --file users.json
-aicfo-spend save ~/acme-ai-spend ramp-api-keys --start 2026-09-14 --file keys-2026-09-14.json
+aicfo-spend save ~/acme-ai-spend ramp-api-keys --start 2026-09-01 --end 2026-09-30 --file keys.json
 aicfo-spend save ~/acme-ai-spend claude-spend-export --start 2026-09-01 --end 2026-09-30 --file spend.csv
 aicfo-spend report ~/acme-ai-spend 2026-09
 ```
 
-Ramp's answers are saved as Ramp returns them, with every page joined into one list. In Claude, the skill does these steps for you.
+Spend downloads cover the month to date, from the 1st; the people list is one day's snapshot. Ramp's answers are saved as Ramp returns them, with every page joined into one list. In Claude, the skill does these steps for you.
 
 No install? Run it from a checkout: `PYTHONPATH=src python3 -m aicfo_spend --help`.
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -23,7 +22,6 @@ class RampPerson:
 
 @dataclass(frozen=True)
 class KeySpend:
-    day: date
     vendor: str
     key_name: str
     owner_email: str
@@ -32,14 +30,31 @@ class KeySpend:
 
 
 def read_people(path: Path) -> dict[str, RampPerson]:
+    return parse_people(load_json(path), path.name)
+
+
+def read_key_spend(path: Path) -> list[KeySpend]:
+    return parse_key_spend(load_json(path), path.name)
+
+
+def load_json(path: Path) -> object:
+    try:
+        # Dollar amounts stay exact: 12.5 is read as Decimal("12.5"), never a float.
+        loaded: object = json.loads(path.read_text(encoding="utf-8-sig"), parse_float=Decimal)
+    except json.JSONDecodeError as error:
+        raise InputError(f"{path.name} isn't valid JSON: {error.msg}") from None
+    return loaded
+
+
+def parse_people(document: object, label: str) -> dict[str, RampPerson]:
     """Ramp's user list, keyed by lowercase email."""
     people: dict[str, RampPerson] = {}
-    for entry in _list(_load(path), "users", path):
-        user = _object(entry, path)
+    for entry in _list(document, "users", label):
+        user = _object(entry, label)
         email = _text(user.get("email")).strip().lower()
         if not email:
             continue
-        name = " ".join(part for part in (_text(user.get("first_name")), _text(user.get("last_name"))) if part)
+        name = " ".join(part.strip() for part in (_text(user.get("first_name")), _text(user.get("last_name"))) if part)
         people[email] = RampPerson(
             email=email,
             name=name,
@@ -49,32 +64,43 @@ def read_people(path: Path) -> dict[str, RampPerson]:
     return people
 
 
-def read_key_spend(path: Path, day: date) -> list[KeySpend]:
-    """One day of Ramp's per-key API spend. Keys that spent nothing that day are left out."""
+def parse_key_spend(document: object, label: str) -> list[KeySpend]:
+    """Each key's spend over the file's dates. Keys that spent nothing are left out."""
     spend: list[KeySpend] = []
-    for entry in _list(_load(path), "data", path):
-        key = _object(entry, path)
-        cost = _object(key.get("estimated_cost"), path)
-        if cost.get("currency") != "USD":
-            raise InputError(f"{path.name} has a key priced in {cost.get('currency')!r}; only USD is supported")
-        cents = cost.get("value")
-        if isinstance(cents, bool) or not isinstance(cents, int):
-            raise InputError(f"{path.name} has a key whose estimated_cost.value isn't a whole number of cents")
-        if cents == 0:
+    for entry in _list(document, "data", label):
+        key = _object(entry, label)
+        key_name = _text(key.get("name")) or _text(key.get("external_id")) or "(unnamed key)"
+        amount = _key_amount(key.get("estimated_cost"), f"{label}, key {key_name!r}")
+        if amount == 0:
             continue
         owner = key.get("owner")
         owner_email = _text(owner.get("email")).strip().lower() if isinstance(owner, dict) else ""
         spend.append(
             KeySpend(
-                day=day,
                 vendor=_text(key.get("provider")).lower(),
-                key_name=_text(key.get("name")) or _text(key.get("external_id")),
+                key_name=key_name,
                 owner_email=owner_email,
                 department_tag=_department_tag(key.get("tags")),
-                amount_usd=Decimal(cents) / 100,
+                amount_usd=amount,
             )
         )
     return spend
+
+
+def _key_amount(cost: object, where: str) -> Decimal:
+    # A key Ramp has no estimate for spent nothing as far as the tool can tell.
+    if cost is None:
+        return Decimal(0)
+    if not isinstance(cost, dict):
+        raise InputError(f"{where} has an estimated_cost that isn't a JSON object")
+    cents = cost.get("value")
+    if cents is None:
+        return Decimal(0)
+    if cost.get("currency") != "USD":
+        raise InputError(f"{where} is priced in {cost.get('currency')!r}; only USD is supported")
+    if isinstance(cents, bool) or not isinstance(cents, (int, Decimal)) or not Decimal(cents).is_finite():
+        raise InputError(f"{where} has an estimated_cost.value that isn't a number of cents")
+    return Decimal(cents) / 100
 
 
 def _department_tag(tags: object) -> str:
@@ -86,25 +112,19 @@ def _department_tag(tags: object) -> str:
     return ""
 
 
-def _load(path: Path) -> object:
-    try:
-        loaded: object = json.loads(path.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError as error:
-        raise InputError(f"{path.name} isn't valid JSON: {error.msg}") from None
-    return loaded
-
-
-def _list(document: object, key: str, path: Path) -> list[object]:
+def _list(document: object, key: str, label: str) -> list[object]:
     if isinstance(document, dict):
         entries = document.get(key)
         if isinstance(entries, list):
             return list(entries)
-    raise InputError(f'{path.name} should hold Ramp\'s answer with a "{key}" list')
+    raise InputError(
+        f'{label} should be Ramp\'s answer with a "{key}" list (join every page into that one list before saving)'
+    )
 
 
-def _object(value: object, path: Path) -> dict[str, object]:
+def _object(value: object, label: str) -> dict[str, object]:
     if not isinstance(value, dict):
-        raise InputError(f"{path.name} has an entry that isn't a JSON object")
+        raise InputError(f"{label} has an entry that isn't a JSON object")
     return {str(key): item for key, item in value.items()}
 
 

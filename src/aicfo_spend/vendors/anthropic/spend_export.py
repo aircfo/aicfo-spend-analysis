@@ -26,9 +26,9 @@ def read_spend_export(path: Path) -> list[ExtraUsage]:
             try:
                 amount = Decimal(raw_amount)
             except InvalidOperation:
-                raise InputError(
-                    f"{path.name} line {line_number} has a spend that isn't a number: {raw_amount!r}"
-                ) from None
+                amount = Decimal("NaN")
+            if not amount.is_finite():
+                raise InputError(f"{path.name} line {line_number} has a spend that isn't a number: {raw_amount!r}")
             if amount == 0:
                 continue
             usage.append(
