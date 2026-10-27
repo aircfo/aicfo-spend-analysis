@@ -83,7 +83,7 @@ Settings (seat prices, seats bought, who sees person detail, alert thresholds) l
   aicfo-spend.json   settings: seat prices, seats bought, visibility, alert thresholds
   people.csv         seat type, plus anyone not in Ramp
   raw/<YYYY-MM>/     every download, saved once, never edited
-  out/<YYYY-MM>/     spend.csv, forecast.json, dashboard data
+  out/<YYYY-MM>/     spend.csv, plan.json, alerts.txt, dashboard.json
 ```
 
 ## Who spent it
@@ -138,6 +138,7 @@ src/aicfo_spend/
   forecast.py  next month's forecast and the backtest
   daily.py     daily usage from month-to-date downloads
   pace.py      this month's projection and the alerts
+  dashboard.py what a shared dashboard shows, rolled up for sharing
   sources/     ramp.py, people.py
   vendors/     anthropic/, openai/
   cli.py       the aicfo-spend command
@@ -150,7 +151,9 @@ legacy/        the v0.3.0 scripts, removed as they're replaced
 Shared outputs show teams; whoever runs the tool can turn on the person view.
 
 - **Teams by default.** Dashboard data and summaries roll people up to teams before they're written; person detail stays in the company's folder.
-- **Small teams fold together.** A one-person team is a person, so shared outputs fold teams under 3 people into "Other (small teams)".
+- **Small teams fold together.** A one-person team is a person, so shared outputs fold teams under 3 people into "Other (small teams)". A team keeps its name only if at least 3 people spent in it in each month the output shows, and spikes are judged on the folded teams.
+
+`aicfo-spend dashboard <folder> [month]` writes the shared numbers to `out/<month>/dashboard.json`: the month by team, vendor and Unassigned reason, the change from last month, the pace, next month's forecast, the alert drafts and the notes. Amounts are whole cents, so no money passes through a float on its way to a chart. In the team view it also leaves out API key names, which often name their owner, and replaces any email in a note. The person view adds each person and each key.
 - **Company data never enters a repo.** Test files are made up.
 - **A privacy scan runs before every commit**, checking the change against real names from the people list and the spend export.
 

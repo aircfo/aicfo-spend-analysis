@@ -231,6 +231,15 @@ def describe_change(current: MonthSpend, previous: MonthSpend, show_people: bool
         lines += ["", "By person (seats, extra usage, and API keys they own):"]
         lines += _biggest_moves(previous.rows, current.rows, lambda row: row.person)
 
+    notes = change_notes(current, previous)
+    if notes:
+        lines += ["", "Notes:", *(f"  - {note}" for note in notes)]
+    return "\n".join(lines)
+
+
+def change_notes(current: MonthSpend, previous: MonthSpend) -> list[str]:
+    """Where comparing the two months misleads, because a download is missing or partial."""
+    before, after = previous.month.label, current.month.label
     notes = []
     for product, (_, end) in current.coverage.items():
         previous_coverage = previous.coverage.get(product)
@@ -241,9 +250,7 @@ def describe_change(current: MonthSpend, previous: MonthSpend, show_people: bool
             notes.append(f"{after}'s {product} only runs through {end}, so it's compared with more of {before}")
         if previous_coverage[1] != previous.month.last_day:
             notes.append(f"{before}'s {product} only runs through {previous_coverage[1]}, so the change overstates growth")
-    if notes:
-        lines += ["", "Notes:", *(f"  - {note}" for note in notes)]
-    return "\n".join(lines)
+    return notes
 
 
 def _biggest_moves(
