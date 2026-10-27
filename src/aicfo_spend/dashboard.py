@@ -1,9 +1,9 @@
 """The numbers a shared dashboard shows: a month's spend, its pace, next month's forecast and the alerts.
 
 Shared outputs show teams, not people, unless the person view is on. In the team view a team
-that fewer than 3 people spent in folds into "Other (small teams)", because a one-person
-team's total is that person's spend; API keys are left out, because a key's name often
-names its owner; and emails in notes are replaced. Amounts are whole cents, so money never
+that fewer than 3 people spent in folds into "Other (small teams)", which itself always holds
+3 or more, because a one-person team's total is that person's spend; API keys are left out,
+because a key's name often names its owner; and emails in notes are replaced. Amounts are whole cents, so money never
 passes through a float on its way to a chart.
 """
 
@@ -20,11 +20,21 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from aicfo_spend import __version__
-from aicfo_spend.errors import InputError, UserError
+from aicfo_spend.errors import InputError
 from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after
 from aicfo_spend.months import Month
 from aicfo_spend.pace import Pace, pace_of
-from aicfo_spend.report import ZERO, Amounts, MonthSpend, build_month, change_notes, team_order, total, totals_by
+from aicfo_spend.report import (
+    ZERO,
+    Amounts,
+    MonthSpend,
+    build_month,
+    change_notes,
+    team_order,
+    team_spellings,
+    total,
+    totals_by,
+)
 from aicfo_spend.settings import Settings
 from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
 
@@ -42,23 +52,21 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
     if month.first_day > today:
         raise InputError(f"{month.label} hasn't started yet, so there's nothing to show")
     spend = build_month(workspace, month, settings)
-    notes = list(spend.notes)
-    previous: MonthSpend | None = None
-    try:
-        previous = build_month(workspace, month.previous_month(), settings)
-    except UserError as error:
-        notes.append(f"change from last month isn't available: {error}")
+    # The forecast and the pace read last month too, so a bad file there stops the dashboard,
+    # with an error naming the file to fix, rather than leaving a gap nobody sees.
+    previous = build_month(workspace, month.previous_month(), settings)
 
     show_people = settings.visibility == "person"
-    shown_months = [spend] if previous is None else [spend, previous]
-    team_name = _unchanged if show_people else fold_small_teams(shown_months)
+    spelled = team_spellings([spend, previous])
+    team_name = spelled if show_people else fold_small_teams([spend, previous], spelled)
     rows = renamed(spend.rows, team_name)
     pace = pace_of(workspace, settings, month, today, team_name)
     forecast = forecast_after(workspace, settings, min(today, month.last_day))
+    notes = list(spend.notes)
     change: Json | None = None
-    if previous is not None and previous.coverage:
+    if previous.coverage:
         change = _change_section(spend, previous, rows, renamed(previous.rows, team_name), show_people)
-    elif previous is not None:
+    else:
         notes.append(f"no usage is saved for {previous.month.label}, so there's no change from last month to show")
     # The same gap can surface in the month, its pace and the forecast; say it once.
     notes = list(dict.fromkeys([*notes, *pace.notes, *forecast.notes]))
@@ -91,21 +99,44 @@ def write_dashboard(workspace: Path, month: Month, dashboard: Json) -> Path:
     return path
 
 
-def fold_small_teams(months: Iterable[MonthSpend]) -> Callable[[str], str]:
-    """A team keeps its name only if at least 3 people spent in it in every month it has spend."""
-    people: dict[str, dict[Month, set[str]]] = defaultdict(lambda: defaultdict(set))
+def fold_small_teams(months: list[MonthSpend], spelled: Callable[[str], str]) -> Callable[[str], str]:
+    """Team names that are safe to share, for the months shown, the current one first.
+
+    A team keeps its name only if at least 3 people spent in it in each month it has spend;
+    the rest fold into Other. Other has to hold 3 people too, so while it holds 1 or 2 in
+    a month, the smallest named team joins it.
+    """
+    people: dict[str, dict[Month, set[str]]] = defaultdict(dict)
     for spend in months:
         for row in spend.rows:
-            people[row.team.casefold()][spend.month].add(row.person)
-    named = {
-        team
-        for team, by_month in people.items()
-        if all(len(persons - {""}) >= MIN_PEOPLE_PER_TEAM for persons in by_month.values())
-    }
+            if row.team == UNASSIGNED:
+                continue
+            persons = people[spelled(row.team)].setdefault(spend.month, set())
+            # A key with a department tag and no owner adds spend but no person.
+            if row.person:
+                persons.add(row.person)
+    named = {team for team, by_month in people.items() if all(len(p) >= MIN_PEOPLE_PER_TEAM for p in by_month.values())}
+    folded = set(people) - named
+
+    def other_is_small() -> bool:
+        for spend in months:
+            in_other: set[str] = set()
+            for team in folded:
+                in_other |= people[team].get(spend.month, set())
+            if 0 < len(in_other) < MIN_PEOPLE_PER_TEAM:
+                return True
+        return False
+
+    current = months[0].month
+    while named and other_is_small():
+        smallest = min(named, key=lambda team: (len(people[team].get(current, set())), team))
+        named.remove(smallest)
+        folded.add(smallest)
 
     def team_name(team: str) -> str:
+        name = spelled(team)
         # A team seen in neither month, such as one only in the forecast's older history, folds too.
-        return team if team == UNASSIGNED or team.casefold() in named else OTHER_SMALL_TEAMS
+        return name if name == UNASSIGNED or name in named else OTHER_SMALL_TEAMS
 
     return team_name
 
@@ -119,10 +150,6 @@ def renamed(rows: Iterable[SpendRow], team_name: Callable[[str], str]) -> list[S
     return [replace(row, team=team_name(row.team)) for row in rows]
 
 
-def _unchanged(team: str) -> str:
-    return team
-
-
 def _spend_section(spend: MonthSpend, rows: list[SpendRow], show_people: bool) -> Json:
     by_team = totals_by(rows, lambda row: row.team)
     by_vendor = totals_by(rows, lambda row: row.vendor)
@@ -132,7 +159,7 @@ def _spend_section(spend: MonthSpend, rows: list[SpendRow], show_people: bool) -
             unassigned[row.reason] += row.amount_usd
     section: Json = {
         "through": {product: end.isoformat() for product, (_, end) in spend.coverage.items()},
-        "total_cents": cents(sum((row.amount_usd for row in rows), ZERO)),
+        "total_cents": _total_cents(by_team),
         "by_team": _table("team", by_team, team_order(by_team)),
         "by_vendor": _table("vendor", by_vendor, sorted(by_vendor, key=lambda vendor: -total(by_vendor[vendor]))),
         "unassigned_by_reason": [
@@ -178,8 +205,8 @@ def _pace_section(pace: Pace) -> Json:
         }
     return {
         "through": min(pace.through.values()).isoformat() if pace.through else None,
-        "so_far_cents": cents(sum(pace.so_far.values(), ZERO)),
-        "on_pace_for_cents": cents(sum(pace.projected.values(), ZERO)),
+        "so_far_cents": sum(cents(amount) for amount in pace.so_far.values()),
+        "on_pace_for_cents": sum(cents(amount) for amount in pace.projected.values()),
         "plan": plan,
         "by_team": [
             {"team": team, "so_far_cents": cents(pace.so_far.get(team, ZERO)),
@@ -198,10 +225,15 @@ def _forecast_section(forecast: Forecast, team_name: Callable[[str], str]) -> Js
     return {
         "month": forecast.month.label,
         "as_of": forecast.as_of.isoformat(),
-        "total_cents": cents(sum((total(amounts) for amounts in by_team.values()), ZERO)),
+        "total_cents": _total_cents(by_team),
         "by_team": _table("team", by_team, team_order(by_team)),
         "averaged_over": {product: [month.label for month in forecast.history[product]] for product in USAGE_PRODUCTS},
     }
+
+
+def _total_cents(amounts: Amounts) -> int:
+    """The sum of the rounded cells, so the rows on the page add up to the total on the page."""
+    return sum(cents(amount) for products in amounts.values() for amount in products.values())
 
 
 def _table(label: str, amounts: Amounts, names: list[str]) -> list[Json]:

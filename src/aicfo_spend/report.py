@@ -209,8 +209,9 @@ def describe_change(current: MonthSpend, previous: MonthSpend, show_people: bool
     if not previous.coverage:
         return f"No usage is saved for {previous.month.label}, so there's no change from last month to show."
     before, after = previous.month.label, current.month.label
-    before_teams = totals_by(previous.rows, lambda row: row.team)
-    after_teams = totals_by(current.rows, lambda row: row.team)
+    spelled = team_spellings([current, previous])
+    before_teams = totals_by(previous.rows, lambda row: spelled(row.team))
+    after_teams = totals_by(current.rows, lambda row: spelled(row.team))
     zeros = {product: ZERO for product in PRODUCTS}
     teams = team_order({team: after_teams.get(team, zeros) for team in {*before_teams, *after_teams}})
 
@@ -235,6 +236,23 @@ def describe_change(current: MonthSpend, previous: MonthSpend, show_people: bool
     if notes:
         lines += ["", "Notes:", *(f"  - {note}" for note in notes)]
     return "\n".join(lines)
+
+
+def team_spellings(months: Iterable[MonthSpend]) -> Callable[[str], str]:
+    """One spelling for each team across months, the first month's winning.
+
+    Each month's people list may spell a team differently, and "engineering" in one month
+    must line up with "Engineering" in the next.
+    """
+    spellings: dict[str, str] = {}
+    for spend in months:
+        for row in spend.rows:
+            spellings.setdefault(row.team.casefold(), row.team)
+
+    def spelled(team: str) -> str:
+        return spellings.get(team.casefold(), team)
+
+    return spelled
 
 
 def change_notes(current: MonthSpend, previous: MonthSpend) -> list[str]:

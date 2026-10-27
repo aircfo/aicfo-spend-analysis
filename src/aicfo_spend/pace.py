@@ -18,10 +18,11 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
 from aicfo_spend.assign import seat_rows
-from aicfo_spend.daily import DailySeries, daily_usage, rename_teams
+from aicfo_spend.daily import SOURCE_OF, DailySeries, daily_usage
 from aicfo_spend.errors import InputError
 from aicfo_spend.forecast import USAGE_PRODUCTS, forecast_after
 from aicfo_spend.months import Month
+from aicfo_spend.raw_store import saved_files
 from aicfo_spend.report import ZERO, aligned, dollars, month_directory, total
 from aicfo_spend.settings import AlertThresholds, Settings
 from aicfo_spend.sources.people import read_people_file
@@ -82,8 +83,8 @@ def pace_of(
 
     previous = month.previous_month()
     previous_directory = month_directory(workspace, previous, people_file, [])
-    this_month = {p: rename_teams(s, name_of) for p, s in daily_usage(workspace, month, directory, notes).items()}
-    last_month = {p: rename_teams(s, name_of) for p, s in daily_usage(workspace, previous, previous_directory, []).items()}
+    this_month = daily_usage(workspace, month, directory, notes, name_of)
+    last_month = daily_usage(workspace, previous, previous_directory, [], name_of)
 
     through: dict[str, date] = {}
     for product in USAGE_PRODUCTS:
@@ -106,7 +107,8 @@ def pace_of(
 
     rounded_projected = _cents(projected)
     alerts = _spikes(this_month, last_month, through, month, settings.alerts, notes)
-    plan, plan_note = plan_for(workspace, settings, month, through, today)
+    ever_saved = [product for product, source in SOURCE_OF.items() if saved_files(workspace, source)]
+    plan, plan_note = plan_for(workspace, settings, month, ever_saved, today)
     if plan is None:
         notes.append(plan_note)
     else:
@@ -120,8 +122,9 @@ def plan_for(
     """The month's saved plan, or a new one saved now if it has the history it needs.
 
     Returns the plan, or None with the reason there isn't one yet. A plan is only saved
-    once every usage product the month has data for has a complete month of history,
-    because a frozen plan missing a product would make every later check look over pace.
+    once every usage product in needed (each one with any download saved) has a complete
+    month of history, because a frozen plan missing a product would make every later
+    check look over pace, even on the 1st, before the month has a download of its own.
     """
     path = workspace / "out" / month.label / PLAN_FILE_NAME
     if path.exists():

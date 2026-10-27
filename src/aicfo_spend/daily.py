@@ -38,14 +38,27 @@ class DailySeries:
     latest: dict[str, Decimal]
 
 
-def daily_usage(workspace: Path, month: Month, directory: Directory, notes: list[str]) -> dict[str, DailySeries]:
-    """Each usage product's spend per day and team, for the days the month's downloads cover."""
+def daily_usage(
+    workspace: Path,
+    month: Month,
+    directory: Directory,
+    notes: list[str],
+    team_name: Callable[[str], str] | None = None,
+) -> dict[str, DailySeries]:
+    """Each usage product's spend per day and team, for the days the month's downloads cover.
+
+    team_name renames each team as it's placed, so totals, and any note about them, use the
+    names the caller shows.
+    """
+    name_of = team_name or _unchanged
     return {
-        product: _daily(workspace, month, source, directory, notes) for product, source in SOURCE_OF.items()
+        product: _daily(workspace, month, source, directory, notes, name_of) for product, source in SOURCE_OF.items()
     }
 
 
-def _daily(workspace: Path, month: Month, source: str, directory: Directory, notes: list[str]) -> DailySeries:
+def _daily(
+    workspace: Path, month: Month, source: str, directory: Directory, notes: list[str], name_of: Callable[[str], str]
+) -> DailySeries:
     # For each day a download reaches, the one saved last counts.
     latest: dict[date, SavedFile] = {}
     for saved in saved_files(workspace, source, month):
@@ -59,7 +72,7 @@ def _daily(workspace: Path, month: Month, source: str, directory: Directory, not
     previous_totals: dict[str, Decimal] = {}
     for end in sorted(latest):
         try:
-            totals = _team_totals(latest[end], source, directory)
+            totals = _team_totals(latest[end], source, directory, name_of)
         except UserError:
             notes.append(f"couldn't read {latest[end].path.name}, so its days are spread over the next download")
             continue
@@ -86,11 +99,14 @@ def _daily(workspace: Path, month: Month, source: str, directory: Directory, not
     return DailySeries(daily, frozenset(observed), previous_totals)
 
 
-def _team_totals(saved: SavedFile, source: str, directory: Directory) -> dict[str, Decimal]:
+def _team_totals(
+    saved: SavedFile, source: str, directory: Directory, name_of: Callable[[str], str]
+) -> dict[str, Decimal]:
     totals: dict[str, Decimal] = {}
 
     def add(team: str, amount: Decimal) -> None:
-        totals[team] = totals.get(team, ZERO) + amount
+        name = name_of(team)
+        totals[name] = totals.get(name, ZERO) + amount
 
     if source == RAMP_API_KEYS:
         for key in read_key_spend(saved.path):
@@ -101,14 +117,5 @@ def _team_totals(saved: SavedFile, source: str, directory: Directory) -> dict[st
     return totals
 
 
-def rename_teams(series: DailySeries, name_of: Callable[[str], str]) -> DailySeries:
-    """The same series with team names passed through name_of, merging any that become equal."""
-
-    def merge(amounts: dict[str, Decimal]) -> dict[str, Decimal]:
-        merged: dict[str, Decimal] = {}
-        for team, amount in amounts.items():
-            name = name_of(team)
-            merged[name] = merged.get(name, ZERO) + amount
-        return merged
-
-    return DailySeries({day: merge(teams) for day, teams in series.days.items()}, series.observed, merge(series.latest))
+def _unchanged(team: str) -> str:
+    return team
