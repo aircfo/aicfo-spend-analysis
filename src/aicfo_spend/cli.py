@@ -12,6 +12,7 @@ from aicfo_spend import __version__
 from aicfo_spend.errors import InputError, UserError
 from aicfo_spend.forecast import describe_forecast, describe_score, forecast_after
 from aicfo_spend.months import Month
+from aicfo_spend.pace import describe_pace, pace_of
 from aicfo_spend.raw_store import SOURCES, save_raw
 from aicfo_spend.report import build_month, describe_change, summarize
 from aicfo_spend.settings import SETTINGS_FILE_NAME, Settings, load_settings
@@ -27,6 +28,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "save": _run_save,
         "report": _run_report,
         "forecast": _run_forecast,
+        "pace": _run_pace,
     }
     try:
         return commands[args.command](args)
@@ -86,6 +88,10 @@ def _parser() -> argparse.ArgumentParser:
     forecast.add_argument("folder", help="the workspace folder")
     forecast.add_argument("--as-of", help="use only data through this day (defaults to today)")
     forecast.add_argument("--score", help="score the forecast against this month's actual spend, like 2026-09")
+
+    pace = commands.add_parser("pace", help="where a month stands: so far, on pace for, and alerts")
+    pace.add_argument("folder", help="the workspace folder")
+    pace.add_argument("month", nargs="?", help="the month, like 2026-10 (defaults to this month)")
     return parser
 
 
@@ -157,6 +163,19 @@ def _run_forecast(args: argparse.Namespace) -> int:
                 f"a forecast made as of {as_of} is for {forecast.month.label}; score it against that month"
             )
         print("\n" + describe_score(forecast, build_month(workspace, month, settings)))
+    return 0
+
+
+def _run_pace(args: argparse.Namespace) -> int:
+    workspace = Path(args.folder).expanduser()
+    settings = load_settings(workspace)
+    month = Month.parse(args.month) if args.month else Month.of(date.today())
+    pace = pace_of(workspace, settings, month)
+    print(describe_pace(pace))
+    if pace.alerts:
+        drafts = workspace / "out" / month.label / "alerts.txt"
+        drafts.write_text("\n".join(pace.alerts) + "\n", encoding="utf-8")
+        print(f"\nSaved the alert drafts to {drafts.relative_to(workspace)}")
     return 0
 
 

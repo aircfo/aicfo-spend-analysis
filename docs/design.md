@@ -107,14 +107,16 @@ The same table gives both views, by team and by person. In the person view, API 
 
 The forecast is arithmetic anyone can redo by hand, and it stands in for a budget. Usage here means extra usage plus API; seats are a fixed monthly fee and are never averaged. A day's usage is the difference between that day's month-to-date download and the previous one, so the skill saves both spend downloads every day; a gap of several days is spread evenly across them.
 
-- **This month:** seats + usage so far + the last 14 days' average daily usage × days left.
+- **This month:** seats + usage so far + the last 14 days' average daily usage × days left. `aicfo-spend pace <folder>` prints it by team.
 - **Next month:** seats × price + each team's average monthly usage over the last 3 complete months. Extra usage and API are averaged separately, each over the months that have a whole month of it, so a source saved only recently isn't diluted by months it wasn't saved for. `aicfo-spend forecast <folder>` prints it.
 - **Change from last month:** by team and model, and by person where the person view is on. `aicfo-spend report` prints it under the month's totals, with a note when last month is missing a download.
 
 **Two alerts**, always drafted, never sent:
 
 - **Spike:** a team's daily usage at more than twice its 28-day median, and at least $25 above it.
-- **Over pace:** the company's projection for this month is 25% or more above the forecast saved for it on the 1st.
+- **Over pace:** the company's projection for this month is 25% or more above the month's plan. The plan is the forecast for the month made as of the last day of the month before; it's saved to `out/<month>/plan.json` the first time the month's pace is checked and never changes after, even if downloads are revised.
+
+`pace` prints the alerts and saves them as drafts in `out/<month>/alerts.txt`. A spike needs at least 7 earlier days to compare with, and is checked only up to the last day every saved download reaches; a run of spike days reads as one alert.
 
 The three alert numbers (2×, $25, 25%) are defaults, editable in settings.
 
@@ -133,7 +135,9 @@ Each vendor is one folder with one function that turns its saved files into rows
 ```text
 src/aicfo_spend/
   assign.py    who spent it
-  forecast.py  forecast and alerts
+  forecast.py  next month's forecast and the backtest
+  daily.py     daily usage from month-to-date downloads
+  pace.py      this month's projection and the alerts
   sources/     ramp.py, people.py
   vendors/     anthropic/, openai/
   cli.py       the aicfo-spend command
