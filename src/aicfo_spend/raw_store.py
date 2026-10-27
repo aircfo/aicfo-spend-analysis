@@ -68,9 +68,11 @@ def save_raw(
     return path
 
 
-def saved_files(workspace: Path, source: str) -> list[SavedFile]:
+def saved_files(workspace: Path, source: str, month: Month | None = None) -> list[SavedFile]:
+    """Every saved file from a source, or only one month's, so a bad file elsewhere doesn't get in the way."""
     found: list[SavedFile] = []
-    for path in sorted((workspace / "raw").glob(f"*/{source}_*")):
+    folders = month.label if month else "*"
+    for path in sorted((workspace / "raw").glob(f"{folders}/{source}_*")):
         match = FILE_NAME.match(path.name)
         if match is None or match.group("source") != source:
             continue

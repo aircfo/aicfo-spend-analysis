@@ -205,3 +205,33 @@ def test_change_says_so_when_last_month_has_no_usage(workspace: Path) -> None:
     change = describe_change(build_month(workspace, SEPTEMBER, settings), build_month(workspace, AUGUST, settings), False)
 
     assert change == "No usage is saved for 2026-08, so there's no change from last month to show."
+
+
+def test_change_warns_when_last_month_is_partial(workspace: Path) -> None:
+    keys = ramp_keys_answer(ramp_key("backend", 15000, "sam.cho@example.com"))
+    save_raw(workspace, RAMP_API_KEYS, AUGUST.first_day, date(2026, 8, 20), keys, saved_at=saved_at(9))
+    settings = load_settings(workspace)
+
+    change = describe_change(build_month(workspace, SEPTEMBER, settings), build_month(workspace, AUGUST, settings), False)
+
+    assert "  - 2026-08's api only runs through 2026-08-20, so the change overstates growth" in change.splitlines()
+
+
+def test_a_team_that_spent_the_same_shows_no_change(workspace: Path) -> None:
+    september = build_month(workspace, SEPTEMBER, load_settings(workspace))
+
+    change = describe_change(september, september, False)
+
+    assert next(line for line in change.splitlines() if line.startswith("Engineering")).endswith("no change")
+
+
+def test_report_still_succeeds_when_last_months_files_cant_be_read(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    broken = workspace / "raw/2026-08/ramp-api-keys_2026-08-31_2026-08-31_saved-20260901T090000Z.json"
+    broken.parent.mkdir(parents=True, exist_ok=True)
+    broken.write_bytes(ramp_keys_answer())
+
+    assert main(["report", str(workspace), "2026-09"]) == 0
+
+    assert "Change from last month isn't available:" in capsys.readouterr().out

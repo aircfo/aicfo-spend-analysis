@@ -110,7 +110,7 @@ def summarize(spend: MonthSpend, company_name: str = "") -> str:
 def _extra_usage_rows(
     workspace: Path, month: Month, directory: Directory, notes: list[str]
 ) -> tuple[list[SpendRow], SavedFile | None]:
-    files = saved_files(workspace, CLAUDE_SPEND_EXPORT)
+    files = saved_files(workspace, CLAUDE_SPEND_EXPORT, month)
     export = fullest_in_month(files, month)
     if export is None:
         notes.append(f"no claude.ai spend export is saved for {month.label}, so extra usage shows $0")
@@ -145,7 +145,7 @@ def _extra_usage_rows(
 def _api_rows(
     workspace: Path, month: Month, directory: Directory, notes: list[str]
 ) -> tuple[list[SpendRow], SavedFile | None]:
-    files = saved_files(workspace, RAMP_API_KEYS)
+    files = saved_files(workspace, RAMP_API_KEYS, month)
     saved = fullest_in_month(files, month)
     if saved is None:
         notes.append(f"no Ramp API spend is saved for {month.label}, so API shows $0")
@@ -233,10 +233,14 @@ def describe_change(current: MonthSpend, previous: MonthSpend, show_people: bool
 
     notes = []
     for product, (_, end) in current.coverage.items():
-        if product not in previous.coverage:
+        previous_coverage = previous.coverage.get(product)
+        if previous_coverage is None:
             notes.append(f"{before} has no {product} saved, so the change overstates growth")
-        elif end != current.month.last_day:
-            notes.append(f"{after}'s {product} only runs through {end}, while {before} is a whole month")
+            continue
+        if end != current.month.last_day:
+            notes.append(f"{after}'s {product} only runs through {end}, so it's compared with more of {before}")
+        if previous_coverage[1] != previous.month.last_day:
+            notes.append(f"{before}'s {product} only runs through {previous_coverage[1]}, so the change overstates growth")
     if notes:
         lines += ["", "Notes:", *(f"  - {note}" for note in notes)]
     return "\n".join(lines)
@@ -261,6 +265,8 @@ def _biggest_moves(
 
 def _change(old: Decimal, new: Decimal) -> str:
     difference = new - old
+    if dollars(abs(difference)) == "$0.00":
+        return "no change"
     sign = "+" if difference >= 0 else "-"
     amount = f"{sign}{dollars(abs(difference))}"
     if old == 0:
