@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from pathlib import Path
 
@@ -5,10 +6,10 @@ import pytest
 
 from aicfo_spend.errors import InputError
 from aicfo_spend.sources.people import read_people_file
-from aicfo_spend.sources.ramp import read_key_spend, read_people
+from aicfo_spend.sources.ramp import read_key_spend, read_people, read_provider_totals
 from aicfo_spend.vendors.anthropic.spend_export import read_spend_export
 from aicfo_spend.workspace import PEOPLE_FILE_NAME
-from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_user, spend_export
+from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_totals_answer, ramp_user, spend_export
 
 
 def write(path: Path, content: bytes) -> Path:
@@ -57,6 +58,19 @@ def test_names_the_key_whose_cost_it_cannot_read(tmp_path: Path) -> None:
 
     with pytest.raises(InputError, match="key 'app' is priced in 'EUR'; only USD"):
         read_key_spend(path)
+
+
+def test_reads_ramps_total_for_each_vendor_exactly(tmp_path: Path) -> None:
+    path = write(tmp_path / "totals.json", ramp_totals_answer(OPENAI="301.63515561", ANTHROPIC="706.7936648"))
+
+    assert read_provider_totals(path) == {"openai": Decimal("301.63515561"), "anthropic": Decimal("706.7936648")}
+
+
+def test_adds_up_a_vendors_rows_when_ramp_splits_them_by_day(tmp_path: Path) -> None:
+    rows = [{"provider": "OPENAI", "total_cost": 1.25}, {"provider": "OPENAI", "total_cost": 2.5}]
+    path = write(tmp_path / "totals.json", json.dumps({"cost": {"data": rows}}).encode())
+
+    assert read_provider_totals(path) == {"openai": Decimal("3.75")}
 
 
 def test_reads_ramp_people_by_lowercase_email(tmp_path: Path) -> None:

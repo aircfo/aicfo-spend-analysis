@@ -2,6 +2,17 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semantic versioning](https://semver.org/). Each release's wheel is attached to its GitHub Release, and the `ai-spend-analysis` skill pins it by SHA-256.
 
+## [0.2.0] — 2026-10-27
+
+### Added
+
+- `ramp-provider-totals`: Ramp's own total for each vendor, saved beside the per-key spend for the same days. API spend Ramp counts but can't tie to a current key, usually because a key was deleted or rotated during the month, now shows as Unassigned with the reason "API spend not tied to a current key", so the totals match Ramp's. On airCFO's real data that was $192 of OpenAI's $302 in October.
+- A note when a vendor's keys add up to more than Ramp's total by over $1, since that points to a copying mistake in the saved per-key answer.
+
+### Changed
+
+- The person view of `dashboard` lists only the keys themselves; spend no key carries stays in Unassigned by reason.
+
 ## [0.1.0] — 2026-10-27
 
 The first release: where a company's AI spend went and where it's heading, built on Ramp.

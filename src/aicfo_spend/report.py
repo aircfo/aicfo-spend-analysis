@@ -9,21 +9,23 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from aicfo_spend.assign import Directory, seat_rows
+from aicfo_spend.assign import REASON_NOT_TIED_TO_A_KEY, Directory, seat_rows, untied_api_spend
 from aicfo_spend.errors import UserError
 from aicfo_spend.months import Month
 from aicfo_spend.raw_store import (
     CLAUDE_SPEND_EXPORT,
     RAMP_API_KEYS,
     RAMP_PEOPLE,
+    RAMP_PROVIDER_TOTALS,
     SavedFile,
     fullest_in_month,
+    partner_for,
     saved_files,
     snapshot_for,
 )
 from aicfo_spend.settings import Settings
 from aicfo_spend.sources.people import PeopleFileRow, read_people_file
-from aicfo_spend.sources.ramp import read_key_spend, read_people
+from aicfo_spend.sources.ramp import read_key_spend, read_people, read_provider_totals
 from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
 from aicfo_spend.vendors.anthropic.spend_export import read_spend_export
 
@@ -157,8 +159,9 @@ def _api_rows(
         return sum((key.amount_usd for key in read_key_spend(other.path)), ZERO)
 
     _note_if_shrunk("Ramp API spend", saved, files, month, keys_total, notes)
+    keys = read_key_spend(saved.path)
     rows: list[SpendRow] = []
-    for key in read_key_spend(saved.path):
+    for key in keys:
         placement = directory.place_key(key.department_tag, key.owner_email)
         rows.append(
             SpendRow(
@@ -173,6 +176,28 @@ def _api_rows(
                 team=placement.team,
                 reason=placement.reason,
                 api_key=key.key_name,
+            )
+        )
+    totals = partner_for(saved, saved_files(workspace, RAMP_PROVIDER_TOTALS, month))
+    if totals is None:
+        notes.append(
+            f"no Ramp provider totals are saved for {saved.start} to {saved.end}, "
+            "so API spend Ramp can't tie to a key isn't counted"
+        )
+        return rows, saved
+    untied, untied_notes = untied_api_spend(keys, read_provider_totals(totals.path), totals.path.name)
+    notes.extend(untied_notes)
+    for vendor, amount in untied.items():
+        rows.append(
+            SpendRow(
+                start_date=totals.start,
+                end_date=totals.end,
+                vendor=vendor,
+                product=PRODUCT_API,
+                amount_usd=amount,
+                source_file=totals.path.relative_to(workspace).as_posix(),
+                team=UNASSIGNED,
+                reason=REASON_NOT_TIED_TO_A_KEY,
             )
         )
     return rows, saved

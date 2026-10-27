@@ -31,6 +31,15 @@ def ramp_keys_answer(*keys: dict[str, object]) -> bytes:
     return json.dumps({"page": {"next": None}, "data": list(keys)}).encode()
 
 
+def ramp_totals_answer(**dollars_by_provider: str) -> bytes:
+    """Ramp's AI spend summary, cost grouped by provider: ramp_totals_answer(ANTHROPIC="303.0049")."""
+    rows = [
+        {"period_start_at": None, "period_end_at": None, "provider": provider, "model": None, "total_cost": float(amount)}
+        for provider, amount in dollars_by_provider.items()
+    ]
+    return json.dumps({"cost": {"effective_start_at": None, "effective_end_at": None, "data": rows}, "usage": None}).encode()
+
+
 def ramp_user(email: str, department: str, inactive: bool = False) -> dict[str, object]:
     first, _, last = email.partition("@")[0].partition(".")
     return {

@@ -4,7 +4,7 @@ Most vendors need no code. Find the cases that fit the vendor; only the last one
 
 ## 1. Its API spend is in Ramp: nothing to do
 
-Ramp's AI spend covers the API keys of every provider whose Admin key is plugged into Ramp; today that's Anthropic and OpenAI. The month-to-date `ramp-api-keys` download already holds all of them, and the report lists each under its own vendor name. Each key lands on a team the same way: its Ramp Department tag, else its owner's team.
+Ramp's AI spend covers the API keys of every provider whose Admin key is plugged into Ramp; today that's Anthropic and OpenAI. The month-to-date `ramp-api-keys` download already holds all of them, and the report lists each under its own vendor name. The `ramp-provider-totals` download beside it holds each vendor's total, so spend Ramp can't tie to a key shows as Unassigned for that vendor too. Each key lands on a team the same way: its Ramp Department tag, else its owner's team.
 
 ## 2. It sells seats: two settings
 

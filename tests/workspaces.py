@@ -6,10 +6,10 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from aicfo_spend.months import Month
-from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, RAMP_API_KEYS, RAMP_PEOPLE, save_raw
+from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, RAMP_API_KEYS, RAMP_PEOPLE, RAMP_PROVIDER_TOTALS, save_raw
 from aicfo_spend.settings import SETTINGS_FILE_NAME
 from aicfo_spend.workspace import PEOPLE_FILE_NAME, create_workspace
-from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_user, spend_export
+from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_totals_answer, ramp_user, spend_export
 
 SEPTEMBER = Month(2026, 9)
 PEOPLE_CSV_HEADER = "email,name,team,vendor,seat_type\n"
@@ -40,8 +40,12 @@ def save_month(
     backend_cents: int | None = None,
     orphan_cents: int | None = None,
     extra_usage: tuple[tuple[str, str, str], ...] | None = None,
+    untied_cents: int = 0,
 ) -> None:
-    """Save a whole month of Ramp API spend and, if given, a claude.ai export."""
+    """Save a whole month of Ramp API spend, with Ramp's total beside it, and, if given, a claude.ai export.
+
+    Ramp's total is the keys' sum plus untied_cents, the spend no current key carries.
+    """
     if backend_cents is not None or orphan_cents is not None:
         keys = []
         if backend_cents is not None:
@@ -49,6 +53,9 @@ def save_month(
         if orphan_cents is not None:
             keys.append(ramp_key("orphan", orphan_cents))
         save_raw(folder, RAMP_API_KEYS, month.first_day, month.last_day, ramp_keys_answer(*keys), saved_at=SAVED_AT)
+        total_cents = (backend_cents or 0) + (orphan_cents or 0) + untied_cents
+        totals = ramp_totals_answer(ANTHROPIC=f"{total_cents / 100}")
+        save_raw(folder, RAMP_PROVIDER_TOTALS, month.first_day, month.last_day, totals, saved_at=SAVED_AT)
     if extra_usage is not None:
         export = spend_export(*extra_usage)
         save_raw(folder, CLAUDE_SPEND_EXPORT, month.first_day, month.last_day, export, saved_at=SAVED_AT)

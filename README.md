@@ -26,6 +26,7 @@ Then save the month's inputs and report on it:
 ```
 aicfo-spend save ~/acme-ai-spend ramp-people --start 2026-10-01 --file users.json
 aicfo-spend save ~/acme-ai-spend ramp-api-keys --start 2026-09-01 --end 2026-09-30 --file keys.json
+aicfo-spend save ~/acme-ai-spend ramp-provider-totals --start 2026-09-01 --end 2026-09-30 --file totals.json
 aicfo-spend save ~/acme-ai-spend claude-spend-export --start 2026-09-01 --end 2026-09-30 --file spend.csv
 aicfo-spend report ~/acme-ai-spend 2026-09
 aicfo-spend forecast ~/acme-ai-spend
@@ -35,7 +36,7 @@ aicfo-spend dashboard ~/acme-ai-spend
 
 `report` shows the month by team and vendor, and how it moved from last month. `forecast` projects next month; add `--as-of 2026-08-31 --score 2026-09` to replay a past forecast and see how far off it was. `pace` shows where this month stands and drafts the two alerts: a team's day spiking, and the month on pace to run well over its plan. `dashboard` writes all of it to `out/<month>/dashboard.json` for a shared page, rolled up to teams, with teams under 3 people folded together, unless the settings turn on the person view.
 
-Spend downloads cover the month to date, from the 1st; the people list is one day's snapshot. Ramp's answers are saved as Ramp returns them, with every page joined into one list. In Claude, the skill does these steps for you.
+Spend downloads cover the month to date, from the 1st; the people list is one day's snapshot. `ramp-provider-totals` is Ramp's AI spend summary (cost grouped by provider) for the same days as `ramp-api-keys`, so spend no current key carries is counted too. Ramp's answers are saved as Ramp returns them, with every page joined into one list. In Claude, the skill does these steps for you.
 
 No install? Run it from a checkout: `PYTHONPATH=src python3 -m aicfo_spend --help`.
 

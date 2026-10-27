@@ -64,7 +64,7 @@ Three inputs, matching the picture above. Claude fetches the first one through t
 
 | Input | What it gives | How it arrives |
 | --- | --- | --- |
-| Ramp | API spend for Anthropic and OpenAI by key, month to date, with each key's owner and department, from the Admin keys plugged into Ramp; the people list (name, email, team, active) | Claude, through the Ramp connector |
+| Ramp | API spend for Anthropic and OpenAI by key, month to date, with each key's owner and department, from the Admin keys plugged into Ramp; each vendor's total for the same days, which also counts spend no current key carries; the people list (name, email, team, active) | Claude, through the Ramp connector |
 | claude.ai spend export | Each person's extra usage | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
 | People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Kept by hand or by Claude |
 
@@ -74,7 +74,7 @@ Settings (seat prices, seats bought, who sees person detail, alert thresholds) l
 
 **Without Ramp** (described here, built later): the tool would read the Anthropic and OpenAI Admin APIs directly, with an Admin key kept on the company's own machine, and a short keys file would name each key's owner. The v0.3.0 Anthropic fetcher in `legacy/` is a starting point.
 
-**Downloads are saved once and never edited.** Claude hands each download to `aicfo-spend save`, which checks it, files it in the folder for the month it covers as `<source>_<start>_<end>_saved-<time>`, and makes it read-only. Ramp's per-key spend and the claude.ai export are saved month to date, starting on the 1st, and each run re-pulls the month so far because vendors revise recent days. The download reaching furthest into the month counts; the older ones stay for the record, and if a newer one shows less than an older one, the report says so. A rerun rebuilds every number from these files, so any number traces back to one. A month uses the first Ramp people list saved after it ended, so re-running a past month gives the same teams.
+**Downloads are saved once and never edited.** Claude hands each download to `aicfo-spend save`, which checks it, files it in the folder for the month it covers as `<source>_<start>_<end>_saved-<time>`, and makes it read-only. Ramp's per-key spend, Ramp's vendor totals (saved beside the per-key spend, for the same days) and the claude.ai export are saved month to date, starting on the 1st, and each run re-pulls the month so far because vendors revise recent days. The download reaching furthest into the month counts; the older ones stay for the record, and if a newer one shows less than an older one, the report says so. A rerun rebuilds every number from these files, so any number traces back to one. A month uses the first Ramp people list saved after it ended, so re-running a past month gives the same teams.
 
 **One plain table.** Every input becomes rows of `spend.csv`: start date, end date, vendor, product (seats, extra usage or API), person, team, reason (for Unassigned rows), API key, model, amount in USD and source file. Each row covers the dates of the download it came from. For API rows, the person is the key's owner, and the model is blank because Ramp reports spend per key, not per model. `aicfo-spend report <folder> <month>` writes the table and prints totals by team. Each company's files live in one folder, outside any git repo:
 
@@ -93,11 +93,12 @@ Two lookups place almost every dollar, and whatever they can't place shows as Un
 1. **Person → team.** Seats and extra usage carry a person's email, and the Ramp people list gives their team. A seat costs the price for its type, from settings.
 2. **API key → team.** A key's team is its Ramp department tag, or else its owner's team.
 
-**Unassigned has three reasons**, each on its own line:
+**Unassigned has four reasons**, each on its own line:
 
 - **No team on the people list:** someone in the spend export the people list doesn't place on a team, either because they're in neither Ramp nor the people file or because they're listed with no team.
 - **Key with no team:** no department tag and no owner. The fix is made in Ramp, where the key lives.
 - **Empty seat:** settings say how many seats were bought, and fewer people hold one. It's the signal to reclaim them.
+- **API spend not tied to a current key:** Ramp's total for a vendor is more than its keys add up to. The usual cause is a key deleted or rotated during the month, because Ramp lists only the keys the vendor's console still has. If a vendor's keys instead add up to more than Ramp's total by over $1, the report says so, since that points to a copying mistake in the saved per-key answer. A download with no vendor totals saved beside it keeps the last known amount.
 
 **Nothing is split.** A shared key belongs to one team, so no row is divided and nothing needs rounding.
 

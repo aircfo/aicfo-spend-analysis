@@ -36,7 +36,7 @@ from aicfo_spend.report import (
     totals_by,
 )
 from aicfo_spend.settings import Settings
-from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
+from aicfo_spend.spend_table import PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
 
 DASHBOARD_FILE_NAME = "dashboard.json"
 OTHER_SMALL_TEAMS = "Other (small teams)"
@@ -169,7 +169,8 @@ def _spend_section(spend: MonthSpend, rows: list[SpendRow], show_people: bool) -
     if show_people:
         by_person = totals_by((row for row in rows if row.person), lambda row: row.person)
         section["by_person"] = _table("person", by_person, sorted(by_person, key=lambda person: -total(by_person[person])))
-        api_rows = sorted((row for row in rows if row.product == PRODUCT_API), key=lambda row: -row.amount_usd)
+        # Spend no current key carries is in Unassigned by reason; this table is the keys themselves.
+        api_rows = sorted((row for row in rows if row.api_key), key=lambda row: -row.amount_usd)
         section["api_keys"] = [
             {"api_key": row.api_key, "vendor": row.vendor, "owner": row.person, "team": row.team,
              "total_cents": cents(row.amount_usd)}
