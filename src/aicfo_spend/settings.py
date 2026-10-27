@@ -13,6 +13,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
+from aicfo_spend.errors import UserError
+
 SETTINGS_FILE_NAME = "aicfo-spend.json"
 
 Visibility = Literal["team", "person"]
@@ -23,8 +25,8 @@ SEAT_PLAN_KEYS = ("price_usd", "bought")
 ALERT_KEYS = ("spike_multiple", "spike_min_usd", "over_pace_percent")
 
 
-class SettingsError(Exception):
-    """A problem with the settings file, worded so the person running the tool can fix it."""
+class SettingsError(UserError):
+    """A problem with the settings file."""
 
 
 @dataclass(frozen=True)
@@ -129,17 +131,18 @@ def _seat_count(value: object, where: str) -> int:
 
 
 def _seats(value: object) -> dict[str, dict[str, SeatPlan]]:
+    # Names are matched without regard to case, so "Anthropic" in settings meets "anthropic" in people.csv.
     seats: dict[str, dict[str, SeatPlan]] = {}
     for vendor, plans in _object(value, "seats").items():
         where_vendor = f"seats.{vendor}"
-        seats[vendor] = {}
+        vendor_plans = seats.setdefault(vendor.strip().lower(), {})
         for seat_type, plan in _object(plans, where_vendor).items():
             where = f"{where_vendor}.{seat_type}"
             fields = _object(plan, where)
             _reject_unknown_keys(fields, SEAT_PLAN_KEYS, where)
             if "price_usd" not in fields or "bought" not in fields:
                 raise SettingsError(f"{where} needs both price_usd and bought")
-            seats[vendor][seat_type] = SeatPlan(
+            vendor_plans[seat_type.strip().lower()] = SeatPlan(
                 price_usd=_money(fields["price_usd"], f"{where}.price_usd"),
                 bought=_seat_count(fields["bought"], f"{where}.bought"),
             )

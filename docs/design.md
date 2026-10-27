@@ -74,9 +74,9 @@ Settings (seat prices, seats bought, who sees person detail, alert thresholds) l
 
 **Without Ramp** (described here, built later): the tool would read the Anthropic and OpenAI Admin APIs directly, with an Admin key kept on the company's own machine, and a short keys file would name each key's owner. The v0.3.0 Anthropic fetcher in `legacy/` is a starting point.
 
-**Downloads are saved once and never edited.** Each lands in the folder for the month it covers, and a rerun rebuilds every number from these files, so any number traces back to one. Each run re-pulls the last 7 days, because vendors revise them; when two files cover the same days from the same source, the newest counts and the older one stays for the record.
+**Downloads are saved once and never edited.** Claude hands each download to `aicfo-spend save`, which files it in the folder for the month it covers as `<source>_<start>_<end>_saved-<time>` and makes it read-only. Ramp's per-key spend is saved one day per file. A rerun rebuilds every number from these files, so any number traces back to one. Each run re-pulls the last 7 days, because vendors revise them; when two files cover the same days from the same source, the one saved last counts and the older one stays for the record.
 
-**One plain table.** Every input becomes rows of `spend.csv`: date, vendor, product (seats, extra usage or API), person, team, reason (for Unassigned rows), API key, model, amount in USD and source file. Each company's files live in one folder, outside any git repo:
+**One plain table.** Every input becomes rows of `spend.csv`: start date, end date, vendor, product (seats, extra usage or API), person, team, reason (for Unassigned rows), API key, model, amount in USD and source file. Daily data has the same start and end date; the claude.ai export covers its whole period. For API rows, the person is the key's owner. `aicfo-spend report <folder> <month>` writes the table and prints totals by team. Each company's files live in one folder, outside any git repo:
 
 ```text
 <workspace>/
