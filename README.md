@@ -44,7 +44,7 @@ No install? Run it from a checkout: `PYTHONPATH=src python3 -m aicfo_spend --hel
 uv run pytest && uv run mypy
 ```
 
-See [CLAUDE.md](CLAUDE.md) for the rules every change follows.
+See [CLAUDE.md](CLAUDE.md) for the rules every change follows, and [docs/adding-a-vendor.md](docs/adding-a-vendor.md) to add a vendor (usually no code).
 
 ## License
 
