@@ -172,10 +172,11 @@ def _run_pace(args: argparse.Namespace) -> int:
     month = Month.parse(args.month) if args.month else Month.of(date.today())
     pace = pace_of(workspace, settings, month)
     print(describe_pace(pace))
-    if pace.alerts:
-        drafts = workspace / "out" / month.label / "alerts.txt"
-        drafts.write_text("\n".join(pace.alerts) + "\n", encoding="utf-8")
-        print(f"\nSaved the alert drafts to {drafts.relative_to(workspace)}")
+    # Rewritten every time, so the file never shows an alert a later check no longer raises.
+    drafts = workspace / "out" / month.label / "alerts.txt"
+    drafts.parent.mkdir(parents=True, exist_ok=True)
+    drafts.write_text("\n".join(pace.alerts or ["No alerts."]) + "\n", encoding="utf-8")
+    print(f"\nSaved the alert drafts to {drafts.relative_to(workspace)}")
     return 0
 
 
