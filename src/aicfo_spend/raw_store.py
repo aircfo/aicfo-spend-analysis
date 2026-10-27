@@ -20,6 +20,7 @@ from pathlib import Path
 from aicfo_spend.errors import InputError
 from aicfo_spend.months import Month
 from aicfo_spend.sources.ramp import parse_key_spend, parse_people
+from aicfo_spend.vendors.anthropic.spend_export import parse_spend_export
 
 RAMP_API_KEYS = "ramp-api-keys"
 RAMP_PEOPLE = "ramp-people"
@@ -93,14 +94,16 @@ def fullest_in_month(files: list[SavedFile], month: Month) -> SavedFile | None:
 
 
 def snapshot_for(files: list[SavedFile], month: Month) -> SavedFile | None:
-    """The people list to use for a month: the first one saved once it ended, else the newest.
+    """The people list to use for a month: the first day's one saved once it ended, else the newest.
 
-    Choosing the first snapshot after the month keeps a past month's teams the same no
-    matter how many later snapshots are saved.
+    Using the first day after the month keeps a past month's teams the same no matter how
+    many later snapshots are saved; within that day the last save wins, so a correction
+    made the same day counts.
     """
     after = [saved for saved in files if saved.start >= month.last_day]
     if after:
-        return min(after, key=lambda saved: (saved.start, saved.saved_at))
+        first_day = min(saved.start for saved in after)
+        return max((saved for saved in after if saved.start == first_day), key=lambda saved: saved.saved_at)
     return max(files, key=lambda saved: (saved.start, saved.saved_at), default=None)
 
 
@@ -137,3 +140,4 @@ def _check_content(source: str, content: bytes) -> None:
     missing = [column for column in SPEND_EXPORT_REQUIRED_COLUMNS if column not in header]
     if missing:
         raise InputError(f"the spend export is missing the columns {missing}; is it the claude.ai spend report?")
+    parse_spend_export(text, label)

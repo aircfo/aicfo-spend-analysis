@@ -54,6 +54,13 @@ def test_a_second_download_becomes_a_new_file(tmp_path: Path) -> None:
         (RAMP_API_KEYS, SEPT_1, SEPT_1, ramp_keys_answer(ramp_key("app", 100, currency="EUR")), "only USD"),
         (RAMP_API_KEYS, SEPT_1, SEPT_1, b'{"data": ["not a key"]}', "isn't a JSON object"),
         (CLAUDE_SPEND_EXPORT, SEPT_1, SEPT_1, b"email,spend\n", "missing the columns"),
+        (
+            CLAUDE_SPEND_EXPORT,
+            SEPT_1,
+            SEPT_1,
+            spend_export(("pat.lee@example.com", "claude-opus", "$12.50")),
+            "line 2 has a spend that isn't a number",
+        ),
         ("quickbooks", SEPT_1, SEPT_1, b"", "unknown source"),
     ],
 )
@@ -91,6 +98,16 @@ def test_a_past_month_keeps_the_first_people_list_saved_after_it(tmp_path: Path)
 
     assert september is not None and september.path == first_after
     assert december is not None and december.path == newest
+
+
+def test_a_correction_saved_the_same_day_replaces_that_days_people_list(tmp_path: Path) -> None:
+    day = date(2026, 10, 2)
+    save_raw(tmp_path, RAMP_PEOPLE, day, day, ramp_people_answer(), saved_at=at(2, 9))
+    corrected = save_raw(tmp_path, RAMP_PEOPLE, day, day, ramp_people_answer(), saved_at=at(2, 15))
+
+    chosen = snapshot_for(saved_files(tmp_path, RAMP_PEOPLE), SEPTEMBER)
+
+    assert chosen is not None and chosen.path == corrected
 
 
 @pytest.mark.parametrize(

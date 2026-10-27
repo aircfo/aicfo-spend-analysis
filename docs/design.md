@@ -64,7 +64,7 @@ Three inputs, matching the picture above. Claude fetches the first one through t
 
 | Input | What it gives | How it arrives |
 | --- | --- | --- |
-| Ramp | Daily API spend for Anthropic and OpenAI by model and key, with each key's owner and department, from the Admin keys plugged into Ramp; the people list (name, email, team, active) | Claude, through the Ramp connector |
+| Ramp | API spend for Anthropic and OpenAI by key, month to date, with each key's owner and department, from the Admin keys plugged into Ramp; the people list (name, email, team, active) | Claude, through the Ramp connector |
 | claude.ai spend export | Each person's extra usage | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
 | People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Kept by hand or by Claude |
 
@@ -76,7 +76,7 @@ Settings (seat prices, seats bought, who sees person detail, alert thresholds) l
 
 **Downloads are saved once and never edited.** Claude hands each download to `aicfo-spend save`, which checks it, files it in the folder for the month it covers as `<source>_<start>_<end>_saved-<time>`, and makes it read-only. Ramp's per-key spend and the claude.ai export are saved month to date, starting on the 1st, and each run re-pulls the month so far because vendors revise recent days. The download reaching furthest into the month counts; the older ones stay for the record, and if a newer one shows less than an older one, the report says so. A rerun rebuilds every number from these files, so any number traces back to one. A month uses the first Ramp people list saved after it ended, so re-running a past month gives the same teams.
 
-**One plain table.** Every input becomes rows of `spend.csv`: start date, end date, vendor, product (seats, extra usage or API), person, team, reason (for Unassigned rows), API key, model, amount in USD and source file. Daily data has the same start and end date; the claude.ai export covers its whole period. For API rows, the person is the key's owner. `aicfo-spend report <folder> <month>` writes the table and prints totals by team. Each company's files live in one folder, outside any git repo:
+**One plain table.** Every input becomes rows of `spend.csv`: start date, end date, vendor, product (seats, extra usage or API), person, team, reason (for Unassigned rows), API key, model, amount in USD and source file. Each row covers the dates of the download it came from. For API rows, the person is the key's owner, and the model is blank because Ramp reports spend per key, not per model. `aicfo-spend report <folder> <month>` writes the table and prints totals by team. Each company's files live in one folder, outside any git repo:
 
 ```text
 <workspace>/
@@ -105,7 +105,7 @@ The same table gives both views, by team and by person. In the person view, API 
 
 ## Forecast and alerts
 
-The forecast is arithmetic anyone can redo by hand, and it stands in for a budget. Usage here means extra usage plus API; seats are a fixed monthly fee and are never averaged.
+The forecast is arithmetic anyone can redo by hand, and it stands in for a budget. Usage here means extra usage plus API; seats are a fixed monthly fee and are never averaged. A day's usage is the difference between that day's month-to-date download and the previous one, so the skill saves both spend downloads every day; a gap of several days is spread evenly across them.
 
 - **This month:** seats + usage so far + the last 14 days' average daily usage × days left.
 - **Next month:** seats × price + each team's average monthly usage over the last 3 months, or over as many months as exist.
