@@ -11,7 +11,7 @@ import json
 import os
 import statistics
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -54,7 +54,14 @@ class Pace:
     notes: list[str]
 
 
-def pace_of(workspace: Path, settings: Settings, month: Month, today: date | None = None) -> Pace:
+def pace_of(
+    workspace: Path,
+    settings: Settings,
+    month: Month,
+    today: date | None = None,
+    team_name: Callable[[str], str] | None = None,
+) -> Pace:
+    """team_name renames teams before anything is added up, so spikes are judged on the teams shown."""
     today = today or date.today()
     notes: list[str] = []
     people_file = read_people_file(workspace)
@@ -64,7 +71,8 @@ def pace_of(workspace: Path, settings: Settings, month: Month, today: date | Non
     spellings = {team.casefold(): team for team in [*directory.teams.values(), *(row.team for row in seats)]}
 
     def name_of(team: str) -> str:
-        return spellings.setdefault(team.casefold(), team)
+        spelled = spellings.setdefault(team.casefold(), team)
+        return team_name(spelled) if team_name else spelled
 
     so_far: dict[str, Decimal] = defaultdict(lambda: ZERO)
     projected: dict[str, Decimal] = defaultdict(lambda: ZERO)

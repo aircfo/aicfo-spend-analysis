@@ -9,6 +9,7 @@ from datetime import date
 from pathlib import Path
 
 from aicfo_spend import __version__
+from aicfo_spend.dashboard import build_dashboard, write_dashboard
 from aicfo_spend.errors import InputError, UserError
 from aicfo_spend.forecast import describe_forecast, describe_score, forecast_after
 from aicfo_spend.months import Month
@@ -29,6 +30,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "report": _run_report,
         "forecast": _run_forecast,
         "pace": _run_pace,
+        "dashboard": _run_dashboard,
     }
     try:
         return commands[args.command](args)
@@ -92,6 +94,10 @@ def _parser() -> argparse.ArgumentParser:
     pace = commands.add_parser("pace", help="where a month stands: so far, on pace for, and alerts")
     pace.add_argument("folder", help="the workspace folder")
     pace.add_argument("month", nargs="?", help="the month, like 2026-10 (defaults to this month)")
+
+    dashboard = commands.add_parser("dashboard", help="write a month's numbers for a shared dashboard, rolled up to teams")
+    dashboard.add_argument("folder", help="the workspace folder")
+    dashboard.add_argument("month", nargs="?", help="the month, like 2026-10 (defaults to this month)")
     return parser
 
 
@@ -177,6 +183,16 @@ def _run_pace(args: argparse.Namespace) -> int:
     drafts.parent.mkdir(parents=True, exist_ok=True)
     drafts.write_text("\n".join(pace.alerts or ["No alerts."]) + "\n", encoding="utf-8")
     print(f"\nSaved the alert drafts to {drafts.relative_to(workspace)}")
+    return 0
+
+
+def _run_dashboard(args: argparse.Namespace) -> int:
+    workspace = Path(args.folder).expanduser()
+    settings = load_settings(workspace)
+    month = Month.parse(args.month) if args.month else Month.of(date.today())
+    path = write_dashboard(workspace, month, build_dashboard(workspace, settings, month))
+    view = "people and teams" if settings.visibility == "person" else "teams only, small ones folded together"
+    print(f"Wrote {path.relative_to(workspace)} ({view})")
     return 0
 
 
