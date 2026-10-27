@@ -1,6 +1,6 @@
 # Adding a vendor
 
-Most vendors need no code. Find the cases that fit the vendor; only the last one involves writing anything.
+Most vendors need no code. Find the cases that fit the vendor; only the last one would involve writing any.
 
 ## 1. Its API spend is in Ramp: nothing to do
 
@@ -26,16 +26,14 @@ Then add the seat price and the number of seats bought to `aicfo-spend.json`:
 
 The seats show up in `report`, `forecast` and `pace` like any other. A paid seat nobody holds shows as Unassigned, reason *empty seat*. Check the file with `aicfo-spend settings <folder>`.
 
-## 3. It has its own usage export: a reader and three hooks
+## 3. It has its own per-person usage export: not built yet
 
-This is the only case that needs code, for a vendor whose per-person usage isn't in Ramp. The claude.ai spend export is the model to copy.
+Today the tool reads per-person extra usage from one export, claude.ai's. A vendor whose per-person usage isn't in Ramp would need two things:
 
-1. **A reader** in `src/aicfo_spend/vendors/<vendor>/`. It's one function that turns the saved file into rows of email, model and amount, and refuses a file it can't read with an `InputError` that names the line. See `vendors/anthropic/spend_export.py`.
-2. **A source name** in `raw_store.py`, so `aicfo-spend save` can file the download and check it at save time.
-3. **One call in `report.py`**, where extra usage is read, and **one entry in `daily.py`**, so the new usage counts toward the pace and the alerts.
-4. **A test** with made-up data that shows the vendor's spend in a month's report.
+- **A reader** in `src/aicfo_spend/vendors/<vendor>/`, modelled on `vendors/anthropic/spend_export.py`.
+- **Changes to the core**, so the report, the daily usage and the forecast read more than one usage export.
 
-Downloads follow the same rules as the others. They cover the month to date from the 1st, are saved once and never edited, and the one reaching furthest into the month counts.
+No vendor needs this yet, so it isn't built.
 
 ## Worked example: OpenAI
 

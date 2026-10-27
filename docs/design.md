@@ -128,7 +128,7 @@ Each vendor is one folder with one function that turns its saved files into rows
 
 - **Anthropic:** its API spend comes through Ramp; its folder reads the claude.ai spend export and counts seats.
 - **OpenAI:** its API spend already comes through Ramp too, so ChatGPT seats are its only new piece: who holds one comes from the people file, and the price from settings.
-- **A vendor Ramp doesn't cover** adds a reader for its own export in its folder, plus three one-line hooks: a source name for `save`, and a call each in the report and the daily usage. It's the only case that needs code.
+- **A vendor with its own per-person usage export** that Ramp doesn't cover would need a reader in its folder and core changes to read a second export. No vendor needs it yet, so it isn't built.
 
 `docs/adding-a-vendor.md` walks through the OpenAI build, and done criterion 3 checks that it changed only OpenAI's folder. The package:
 
