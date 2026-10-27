@@ -10,8 +10,8 @@ from aicfo_spend.months import Month
 from aicfo_spend.report import MonthSpend, build_month, total
 from aicfo_spend.settings import load_settings
 from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCT_SEATS, UNASSIGNED
-from aicfo_spend.raw_store import RAMP_PEOPLE, save_raw
-from tests.factories import ramp_people_answer, ramp_user
+from aicfo_spend.raw_store import RAMP_API_KEYS, RAMP_PEOPLE, save_raw
+from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_user
 from tests.workspaces import SAVED_AT, SEPTEMBER, fill_september, new_workspace, save_month
 
 JUNE, JULY, AUGUST = Month(2026, 6), Month(2026, 7), Month(2026, 8)
@@ -128,3 +128,17 @@ def test_score_notes_an_actual_month_that_isnt_finished(tmp_path: Path) -> None:
     score = describe_score(forecast, partial)
 
     assert "  - 2026-09's api only runs through 2026-09-17, so its actual is partial" in score.splitlines()
+
+
+def test_says_which_averaged_months_have_no_ramp_totals_beside_their_api_spend(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, JUNE, backend_cents=9000)
+    keys = ramp_keys_answer(ramp_key("backend", 12000, "sam.cho@example.com"))
+    save_raw(folder, RAMP_API_KEYS, JULY.first_day, JULY.last_day, keys, saved_at=SAVED_AT)
+
+    forecast = forecast_after(folder, load_settings(folder), AUG_31)
+
+    assert (
+        "2026-07 had no Ramp provider totals saved, so the API average leaves out spend not tied to a current key "
+        "in those months"
+    ) in forecast.notes

@@ -70,6 +70,13 @@ def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast
         if not months:
             notes.append(f"no complete month of {product} is saved before {as_of}, so it's forecast at $0")
             continue
+        if product == PRODUCT_API:
+            unknown = [month.label for month in months if spends[month].untied_unknown]
+            if unknown:
+                notes.append(
+                    f"{', '.join(unknown)} had no Ramp provider totals saved, so the API average leaves out "
+                    "spend not tied to a current key in those months"
+                )
         for month in months:
             product_rows = (row for row in spends[month].rows if row.product == product)
             for team, amounts in totals_by(product_rows, lambda row: row.team).items():

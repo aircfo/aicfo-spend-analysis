@@ -98,7 +98,7 @@ Two lookups place almost every dollar, and whatever they can't place shows as Un
 - **No team on the people list:** someone in the spend export the people list doesn't place on a team, either because they're in neither Ramp nor the people file or because they're listed with no team.
 - **Key with no team:** no department tag and no owner. The fix is made in Ramp, where the key lives.
 - **Empty seat:** settings say how many seats were bought, and fewer people hold one. It's the signal to reclaim them.
-- **API spend not tied to a current key:** Ramp's total for a vendor is more than its keys add up to. The usual cause is a key deleted or rotated during the month, because Ramp lists only the keys the vendor's console still has. If a vendor's keys instead add up to more than Ramp's total by over $1, the report says so, since that points to a copying mistake in the saved per-key answer. A download with no vendor totals saved beside it keeps the last known amount.
+- **API spend not tied to a current key:** Ramp's total for a vendor is more than its keys add up to. The usual cause is a key deleted or rotated during the month, because Ramp lists only the keys the vendor's console still has. If a vendor's keys instead add up to more than Ramp's total by over $1, the report says so, since that points to a copying mistake in the saved per-key answer. It's counted only where the newest per-key download has Ramp's totals saved for exactly the same days; otherwise the report says so. A forecast averaging months without those totals says so too.
 
 **Nothing is split.** A shared key belongs to one team, so no row is divided and nothing needs rounding.
 
@@ -106,9 +106,9 @@ The same table gives both views, by team and by person. In the person view, API 
 
 ## Forecast and alerts
 
-The forecast is arithmetic anyone can redo by hand, and it stands in for a budget. Usage here means extra usage plus API; seats are a fixed monthly fee and are never averaged. A day's usage is the difference between that day's month-to-date download and the previous one, so the skill saves both spend downloads every day; a gap of several days is spread evenly across them.
+The forecast is arithmetic anyone can redo by hand, and it stands in for a budget. Usage here means extra usage plus API; seats are a fixed monthly fee and are never averaged. A day's usage is the difference between that day's month-to-date download and the previous one, counting only API spend tied to a key, so the skill saves both spend downloads every day; a gap of several days is spread evenly across them.
 
-- **This month:** seats + usage so far + the last 14 days' average daily usage × days left. `aicfo-spend pace <folder>` prints it by team.
+- **This month:** seats + usage so far + the last 14 days' average daily usage × days left. `aicfo-spend pace <folder>` prints it by team. API spend not tied to a current key is added as it stands, never projected and never checked for spikes: it's mostly spend on keys deleted during the month, so on the day of a deletion it moves out of a team's numbers rather than adding new spend.
 - **Next month:** seats × price + each team's average monthly usage over the last 3 complete months. Extra usage and API are averaged separately, each over the months that have a whole month of it, so a source saved only recently isn't diluted by months it wasn't saved for. `aicfo-spend forecast <folder>` prints it.
 - **Change from last month:** by team and model, and by person where the person view is on. `aicfo-spend report` prints it under the month's totals, with a note when last month is missing a download.
 

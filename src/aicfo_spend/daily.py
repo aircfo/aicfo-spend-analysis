@@ -1,6 +1,8 @@
 """Daily usage from month-to-date downloads.
 
 A day's usage is the difference between that day's download and the one before it.
+API usage here is only what Ramp ties to a key: when a key is deleted, its spend moves from its
+team to "not tied to a current key", and differencing that move would count it twice.
 When downloads are several days apart, the difference is spread evenly across those
 days; the first download of a month is spread from the 1st. Only days that are a
 one-day difference count as observed, since spread days are an average, not a reading.
@@ -14,12 +16,12 @@ from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from aicfo_spend.assign import Directory, untied_api_spend
+from aicfo_spend.assign import Directory
 from aicfo_spend.errors import UserError
 from aicfo_spend.months import Month
-from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, RAMP_API_KEYS, RAMP_PROVIDER_TOTALS, SavedFile, partner_for, saved_files
-from aicfo_spend.sources.ramp import read_key_spend, read_provider_totals
-from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, UNASSIGNED
+from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, RAMP_API_KEYS, SavedFile, saved_files
+from aicfo_spend.sources.ramp import read_key_spend
+from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE
 from aicfo_spend.vendors.anthropic.spend_export import read_spend_export
 
 ZERO = Decimal(0)
@@ -66,25 +68,13 @@ def _daily(
         if current is None or saved.saved_at > current.saved_at:
             latest[saved.end] = saved
 
-    provider_totals = saved_files(workspace, RAMP_PROVIDER_TOTALS, month) if source == RAMP_API_KEYS else []
     daily: Daily = {}
     observed: set[date] = set()
     previous_end = month.first_day - timedelta(days=1)
     previous_totals: dict[str, Decimal] = {}
-    # A download with no provider totals saved beside it keeps the last known untied spend,
-    # so the untied amount isn't counted as dropping to $0 and coming back.
-    untied = ZERO
     for end in sorted(latest):
         try:
             totals = _team_totals(latest[end], source, directory, name_of)
-            partner = partner_for(latest[end], provider_totals)
-            if partner is not None:
-                keys = read_key_spend(latest[end].path)
-                by_vendor, _ = untied_api_spend(keys, read_provider_totals(partner.path), partner.path.name)
-                untied = sum(by_vendor.values(), ZERO)
-            if untied:
-                unassigned = name_of(UNASSIGNED)
-                totals[unassigned] = totals.get(unassigned, ZERO) + untied
         except UserError:
             notes.append(f"couldn't read {latest[end].path.name}, so its days are spread over the next download")
             continue

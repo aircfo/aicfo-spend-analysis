@@ -193,29 +193,29 @@ def test_pace_command_rewrites_the_alert_drafts_every_time(
     assert (workspace / "out/2026-12/alerts.txt").read_text(encoding="utf-8") == "No alerts.\n"
 
 
-def test_spend_no_current_key_carries_counts_in_the_pace_and_can_spike(workspace: Path) -> None:
-    """Ramp's total matches the keys until the 21st, when $150 lands on a key since deleted."""
-    keys_total = 0
-    for day in range(1, 22):
-        keys_total += 1000 if day <= 14 else 4000
-        save_october_totals(workspace, day, keys_total + (15000 if day == 21 else 0))
+def test_spend_no_current_key_carries_counts_so_far_but_is_never_projected_or_a_spike(workspace: Path) -> None:
+    """On the 21st a $150 key is deleted: its spend leaves the keys and shows only in Ramp's total."""
+    save_october_api(workspace, 21, 42000 - 15000, saved_at=SAVED_AT.replace(hour=10))
+    save_october_totals(workspace, 21, 42000)
 
     pace = pace_of(workspace, load_settings(workspace), OCTOBER, TODAY)
 
     assert pace.so_far[UNASSIGNED] == Decimal("175.00")  # the empty seat and the untied $150
-    assert "Spike: Unassigned spent $150.00 on 2026-10-21, against a usual day of $0.00." in pace.alerts
+    assert pace.projected[UNASSIGNED] == Decimal("175.00")
+    assert not any(alert.startswith("Spike: Unassigned") for alert in pace.alerts)
+    assert sum(pace.so_far.values()) == Decimal("75.00") + Decimal("420.00")  # seats and Ramp's API total
 
 
-def test_a_download_without_provider_totals_keeps_the_last_untied_amount(workspace: Path) -> None:
-    keys_total = 0
-    for day in range(1, 11):
-        keys_total += 1000
-        save_october_totals(workspace, day, keys_total + 2000)
+def test_pace_leaves_untied_spend_out_when_the_newest_download_has_no_totals_like_the_report(workspace: Path) -> None:
+    save_october_totals(workspace, 10, 10000 + 2000)
 
     pace = pace_of(workspace, load_settings(workspace), OCTOBER, TODAY)
 
-    assert pace.so_far[UNASSIGNED] == Decimal("45.00")  # the empty seat and the $20 untied by the 10th
-    assert not any("shows less than the download before it" in note for note in pace.notes)
+    assert pace.so_far[UNASSIGNED] == Decimal("25.00")  # the empty seat only
+    assert (
+        "no Ramp provider totals are saved for 2026-10-01 to 2026-10-21, so API spend Ramp can't tie to a key isn't counted"
+        in pace.notes
+    )
 
 
 def test_saved_on_is_today_not_the_month(tmp_path: Path) -> None:

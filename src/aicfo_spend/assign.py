@@ -83,6 +83,11 @@ def untied_api_spend(
         )
         if difference > 0:
             untied[vendor] = difference
+            if vendor not in keys_by_vendor:
+                notes.append(
+                    f"Ramp's total in {label} has ${difference:,.2f} of {vendor} spend and none of its keys spent; "
+                    "all of it counts as not tied to a current key"
+                )
         elif -difference > KEYS_OVER_TOTAL_TOLERANCE:
             notes.append(
                 f"{vendor}'s keys add up to ${-difference:,.2f} more than Ramp's total in {label}; "
