@@ -8,15 +8,17 @@ month before, saved the first time the month's pace is checked so it never moves
 from __future__ import annotations
 
 import json
+import os
 import statistics
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
 from aicfo_spend.assign import seat_rows
-from aicfo_spend.daily import Daily, daily_usage, rename_teams
+from aicfo_spend.daily import DailySeries, daily_usage, rename_teams
 from aicfo_spend.errors import InputError
 from aicfo_spend.forecast import USAGE_PRODUCTS, forecast_after
 from aicfo_spend.months import Month
@@ -27,10 +29,17 @@ from aicfo_spend.spend_table import UNASSIGNED
 
 PROJECTION_WINDOW_DAYS = 14
 SPIKE_HISTORY_DAYS = 28
-# Fewer days than this make a median too jumpy to call anything a spike.
+# Fewer observed days than this make a median too jumpy to call anything a spike.
 SPIKE_MIN_HISTORY_DAYS = 7
 PLAN_FILE_NAME = "plan.json"
 CENT = Decimal("0.01")
+
+
+@dataclass(frozen=True)
+class Plan:
+    total: Decimal
+    made_as_of: date
+    saved_on: date
 
 
 @dataclass(frozen=True)
@@ -40,13 +49,13 @@ class Pace:
     through: dict[str, date]
     so_far: dict[str, Decimal]
     projected: dict[str, Decimal]
-    plan_total: Decimal
-    plan_made_as_of: date
+    plan: Plan | None
     alerts: list[str]
     notes: list[str]
 
 
-def pace_of(workspace: Path, settings: Settings, month: Month) -> Pace:
+def pace_of(workspace: Path, settings: Settings, month: Month, today: date | None = None) -> Pace:
+    today = today or date.today()
     notes: list[str] = []
     people_file = read_people_file(workspace)
     directory = month_directory(workspace, month, people_file, notes)
@@ -65,69 +74,87 @@ def pace_of(workspace: Path, settings: Settings, month: Month) -> Pace:
 
     previous = month.previous_month()
     previous_directory = month_directory(workspace, previous, people_file, [])
-    this_month = {product: rename_teams(daily, name_of) for product, daily in daily_usage(workspace, month, directory, notes).items()}
-    last_month = {
-        product: rename_teams(daily, name_of)
-        for product, daily in daily_usage(workspace, previous, previous_directory, []).items()
-    }
+    this_month = {p: rename_teams(s, name_of) for p, s in daily_usage(workspace, month, directory, notes).items()}
+    last_month = {p: rename_teams(s, name_of) for p, s in daily_usage(workspace, previous, previous_directory, []).items()}
 
     through: dict[str, date] = {}
     for product in USAGE_PRODUCTS:
-        days = this_month[product]
-        if not days:
+        series = this_month[product]
+        if not series.days:
             notes.append(f"no {product} is saved for {month.label} yet, so the projection leaves it out")
             continue
-        end = max(days)
+        end = max(series.days)
         through[product] = end
-        history = {**last_month[product], **days}
+        history = {**last_month[product].days, **series.days}
         window = [day for day in (end - timedelta(days=back) for back in range(PROJECTION_WINDOW_DAYS)) if day in history]
         days_left = (month.last_day - end).days
-        teams = {team for day_teams in days.values() for team in day_teams} | {team for day in window for team in history[day]}
-        for team in teams:
-            spent = sum((teams_on_day.get(team, ZERO) for teams_on_day in days.values()), ZERO)
+        for team in {*series.latest, *(team for day in window for team in history[day])}:
             average = sum((history[day].get(team, ZERO) for day in window), ZERO) / len(window)
-            so_far[team] += spent
-            projected[team] += spent + average * days_left
+            so_far[team] += series.latest.get(team, ZERO)
+            projected[team] += series.latest.get(team, ZERO) + average * days_left
     if len(set(through.values())) > 1:
         reached = ", ".join(f"{product} through {end}" for product, end in through.items())
         notes.append(f"the downloads reach different days ({reached}), so spikes are checked up to the earlier one")
 
-    plan_total, plan_made_as_of = plan_for(workspace, settings, month)
     rounded_projected = _cents(projected)
-    alerts = _spikes(this_month, last_month, through, month, settings.alerts)
-    alerts += _over_pace(month, sum(rounded_projected.values(), ZERO), plan_total, plan_made_as_of, settings.alerts)
-    return Pace(month, through, _cents(so_far), rounded_projected, plan_total, plan_made_as_of, alerts, notes)
+    alerts = _spikes(this_month, last_month, through, month, settings.alerts, notes)
+    plan, plan_note = plan_for(workspace, settings, month, through, today)
+    if plan is None:
+        notes.append(plan_note)
+    else:
+        alerts += _over_pace(month, sum(rounded_projected.values(), ZERO), plan, settings.alerts)
+    return Pace(month, through, _cents(so_far), rounded_projected, plan, alerts, notes)
 
 
-def plan_for(workspace: Path, settings: Settings, month: Month) -> tuple[Decimal, date]:
-    """The month's plan: read it if saved, else forecast it as of the month before and save it."""
+def plan_for(
+    workspace: Path, settings: Settings, month: Month, needed: Iterable[str], today: date
+) -> tuple[Plan | None, str]:
+    """The month's saved plan, or a new one saved now if it has the history it needs.
+
+    Returns the plan, or None with the reason there isn't one yet. A plan is only saved
+    once every usage product the month has data for has a complete month of history,
+    because a frozen plan missing a product would make every later check look over pace.
+    """
     path = workspace / "out" / month.label / PLAN_FILE_NAME
     if path.exists():
-        return _read_plan(path)
+        return _read_plan(path), ""
+    if month.first_day > today:
+        return None, f"no plan yet: {month.label} hasn't started, so over pace isn't checked"
     made_as_of = month.previous_month().last_day
     forecast = forecast_after(workspace, settings, made_as_of)
+    missing = [product for product in needed if not forecast.history[product]]
+    if missing:
+        return None, (
+            f"no plan yet: no complete month of {' or '.join(missing)} is saved before {made_as_of}, "
+            "so over pace isn't checked"
+        )
     by_team = {team: total(amounts) for team, amounts in forecast.by_team.items()}
-    plan_total = sum(by_team.values(), ZERO)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    plan = Plan(sum(by_team.values(), ZERO), made_as_of, today)
     document = {
         "month": month.label,
         "made_as_of": made_as_of.isoformat(),
-        "total_usd": f"{plan_total:f}",
+        "saved_on": today.isoformat(),
+        "total_usd": f"{plan.total:f}",
         "by_team": {team: f"{amount:f}" for team, amount in sorted(by_team.items())},
     }
-    path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-    return plan_total, made_as_of
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Written beside the final name, then renamed, so a crash can't leave half a plan.
+    partial = path.with_suffix(".json.partial")
+    partial.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    os.replace(partial, path)
+    return plan, ""
 
 
 def describe_pace(pace: Pace) -> str:
     so_far_total = sum(pace.so_far.values(), ZERO)
     projected_total = sum(pace.projected.values(), ZERO)
     reached = f" through {min(pace.through.values())}" if pace.through else ""
-    lines = [
-        f"{pace.month.label}{reached}: {dollars(so_far_total)} so far, on pace for {dollars(projected_total)}",
-        f"Plan (the forecast made as of {pace.plan_made_as_of}): {dollars(pace.plan_total)}",
-        "",
-    ]
+    lines = [f"{pace.month.label}{reached}: {dollars(so_far_total)} so far, on pace for {dollars(projected_total)}"]
+    if pace.plan is not None:
+        lines.append(
+            f"Plan: {dollars(pace.plan.total)} (the forecast made as of {pace.plan.made_as_of}, saved {pace.plan.saved_on})"
+        )
+    lines.append("")
     teams = sorted((team for team in pace.projected if team != UNASSIGNED), key=lambda team: -pace.projected[team])
     if UNASSIGNED in pace.projected:
         teams.append(UNASSIGNED)
@@ -143,30 +170,49 @@ def describe_pace(pace: Pace) -> str:
 
 
 def _spikes(
-    this_month: dict[str, Daily],
-    last_month: dict[str, Daily],
+    this_month: dict[str, DailySeries],
+    last_month: dict[str, DailySeries],
     through: dict[str, date],
     month: Month,
     thresholds: AlertThresholds,
+    notes: list[str],
 ) -> list[str]:
-    """A team's day over the spike multiple of its 28-day median and at least the minimum above it."""
+    """A team's day over the spike multiple of its 28-day median and at least the minimum above it.
+
+    Only observed days count, on both sides: a day spread evenly over a gap between
+    downloads is an average, so it can neither be a spike nor set what normal looks like.
+    """
     if not through:
         return []
     checked_through = min(through.values())
-    combined: Daily = {}
-    for daily in (*last_month.values(), *this_month.values()):
-        for day, teams in daily.items():
+    combined: dict[date, dict[str, Decimal]] = {}
+    observed: set[date] = set()
+    for series_by_product in (last_month, this_month):
+        days = {day for series in series_by_product.values() for day in series.days}
+        for day in days:
+            covering = [series for series in series_by_product.values() if day in series.days]
+            if all(day in series.observed for series in covering):
+                observed.add(day)
             combined_day = combined.setdefault(day, {})
-            for team, amount in teams.items():
-                combined_day[team] = combined_day.get(team, ZERO) + amount
+            for series in covering:
+                for team, amount in series.days[day].items():
+                    combined_day[team] = combined_day.get(team, ZERO) + amount
+
+    month_days = [day for day in combined if Month.of(day) == month and day <= checked_through]
+    spread = sum(1 for day in month_days if day not in observed)
+    if spread:
+        notes.append(
+            f"{spread} of {len(month_days)} days this month are spread evenly between downloads saved days apart; "
+            "spikes are only checked on days with a download the day before"
+        )
 
     spike_days: dict[str, list[tuple[date, Decimal, Decimal]]] = defaultdict(list)
-    for day in sorted(combined):
-        if Month.of(day) != month or day > checked_through:
+    for day in sorted(month_days):
+        if day not in observed:
             continue
         for team, amount in combined[day].items():
             earlier = (day - timedelta(days=back) for back in range(1, SPIKE_HISTORY_DAYS + 1))
-            history = [combined[earlier_day].get(team, ZERO) for earlier_day in earlier if earlier_day in combined]
+            history = [combined[earlier_day].get(team, ZERO) for earlier_day in earlier if earlier_day in observed]
             if len(history) < SPIKE_MIN_HISTORY_DAYS:
                 continue
             median = statistics.median(history)
@@ -174,8 +220,8 @@ def _spikes(
                 spike_days[team].append((day, amount, median))
 
     alerts: list[str] = []
-    for team, days in sorted(spike_days.items()):
-        for run in _consecutive(days):
+    for team, team_days in sorted(spike_days.items()):
+        for run in _consecutive(team_days):
             first_day, _, median = run[0]
             peak = max(amount for _, amount, _ in run)
             usual = f"against a usual day of {dollars(median)}"
@@ -196,33 +242,33 @@ def _consecutive(days: list[tuple[date, Decimal, Decimal]]) -> list[list[tuple[d
     return runs
 
 
-def _over_pace(
-    month: Month, projected_total: Decimal, plan_total: Decimal, made_as_of: date, thresholds: AlertThresholds
-) -> list[str]:
-    if plan_total <= 0:
+def _over_pace(month: Month, projected_total: Decimal, plan: Plan, thresholds: AlertThresholds) -> list[str]:
+    if plan.total <= 0 or projected_total < plan.total * (1 + thresholds.over_pace_percent / 100):
         return []
-    if projected_total < plan_total * (1 + thresholds.over_pace_percent / 100):
-        return []
-    over = (projected_total - plan_total) / plan_total * 100
+    over = (projected_total - plan.total) / plan.total * 100
     return [
         f"Over pace: {month.label} is on pace for {dollars(projected_total)}, {over:.0f}% above the "
-        f"{dollars(plan_total)} forecast for it made as of {made_as_of}."
+        f"{dollars(plan.total)} forecast for it made as of {plan.made_as_of}."
     ]
 
 
-def _read_plan(path: Path) -> tuple[Decimal, date]:
-    problem = f"{path} isn't a plan the tool wrote; remove it and check the pace again"
+def _read_plan(path: Path) -> Plan:
+    problem = (
+        f"{path} isn't a plan the tool wrote. Removing it lets the next check save a new plan, "
+        "built from the downloads saved by then"
+    )
     try:
         document: object = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         raise InputError(problem) from None
     if not isinstance(document, dict):
         raise InputError(problem)
-    total_text, made_text = document.get("total_usd"), document.get("made_as_of")
-    if not isinstance(total_text, str) or not isinstance(made_text, str):
+    fields = [document.get(key) for key in ("total_usd", "made_as_of", "saved_on")]
+    if not all(isinstance(value, str) for value in fields):
         raise InputError(problem)
+    total_text, made_text, saved_text = (str(value) for value in fields)
     try:
-        return Decimal(total_text), date.fromisoformat(made_text)
+        return Plan(Decimal(total_text), date.fromisoformat(made_text), date.fromisoformat(saved_text))
     except (InvalidOperation, ValueError):
         raise InputError(problem) from None
 

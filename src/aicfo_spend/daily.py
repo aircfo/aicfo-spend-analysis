@@ -2,12 +2,14 @@
 
 A day's usage is the difference between that day's download and the one before it.
 When downloads are several days apart, the difference is spread evenly across those
-days; the first download of a month is spread from the 1st.
+days; the first download of a month is spread from the 1st. Only days that are a
+one-day difference count as observed, since spread days are an average, not a reading.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -27,14 +29,23 @@ Daily = dict[date, dict[str, Decimal]]  # day -> team -> dollars
 SOURCE_OF = {PRODUCT_EXTRA_USAGE: CLAUDE_SPEND_EXPORT, PRODUCT_API: RAMP_API_KEYS}
 
 
-def daily_usage(workspace: Path, month: Month, directory: Directory, notes: list[str]) -> dict[str, Daily]:
+@dataclass(frozen=True)
+class DailySeries:
+    days: Daily
+    # Days whose amount is a one-day difference between downloads, not spread over a gap.
+    observed: frozenset[date]
+    # Each team's month-to-date total in the newest download.
+    latest: dict[str, Decimal]
+
+
+def daily_usage(workspace: Path, month: Month, directory: Directory, notes: list[str]) -> dict[str, DailySeries]:
     """Each usage product's spend per day and team, for the days the month's downloads cover."""
     return {
         product: _daily(workspace, month, source, directory, notes) for product, source in SOURCE_OF.items()
     }
 
 
-def _daily(workspace: Path, month: Month, source: str, directory: Directory, notes: list[str]) -> Daily:
+def _daily(workspace: Path, month: Month, source: str, directory: Directory, notes: list[str]) -> DailySeries:
     # For each day a download reaches, the one saved last counts.
     latest: dict[date, SavedFile] = {}
     for saved in saved_files(workspace, source, month):
@@ -43,6 +54,7 @@ def _daily(workspace: Path, month: Month, source: str, directory: Directory, not
             latest[saved.end] = saved
 
     daily: Daily = {}
+    observed: set[date] = set()
     previous_end = month.first_day - timedelta(days=1)
     previous_totals: dict[str, Decimal] = {}
     for end in sorted(latest):
@@ -52,14 +64,26 @@ def _daily(workspace: Path, month: Month, source: str, directory: Directory, not
             notes.append(f"couldn't read {latest[end].path.name}, so its days are spread over the next download")
             continue
         days = [previous_end + timedelta(days=offset) for offset in range(1, (end - previous_end).days + 1)]
+        if len(days) == 1:
+            observed.add(end)
         for day in days:
             daily[day] = {}
+        shrunk: list[str] = []
         for team in {*totals, *previous_totals}:
-            per_day = (totals.get(team, ZERO) - previous_totals.get(team, ZERO)) / len(days)
+            change = totals.get(team, ZERO) - previous_totals.get(team, ZERO)
+            # Month-to-date totals only grow; a drop means a revision or downloads out of order.
+            if change < 0:
+                shrunk.append(team)
+                change = ZERO
             for day in days:
-                daily[day][team] = per_day
+                daily[day][team] = change / len(days)
+        if shrunk:
+            notes.append(
+                f"{latest[end].path.name} shows less than the download before it for {', '.join(sorted(shrunk))}, "
+                "so those days count as $0"
+            )
         previous_end, previous_totals = end, totals
-    return daily
+    return DailySeries(daily, frozenset(observed), previous_totals)
 
 
 def _team_totals(saved: SavedFile, source: str, directory: Directory) -> dict[str, Decimal]:
@@ -77,13 +101,14 @@ def _team_totals(saved: SavedFile, source: str, directory: Directory) -> dict[st
     return totals
 
 
-def rename_teams(daily: Daily, name_of: Callable[[str], str]) -> Daily:
-    """The same days with team names passed through name_of, merging any that become equal."""
-    renamed: Daily = {}
-    for day, teams in daily.items():
+def rename_teams(series: DailySeries, name_of: Callable[[str], str]) -> DailySeries:
+    """The same series with team names passed through name_of, merging any that become equal."""
+
+    def merge(amounts: dict[str, Decimal]) -> dict[str, Decimal]:
         merged: dict[str, Decimal] = {}
-        for team, amount in teams.items():
+        for team, amount in amounts.items():
             name = name_of(team)
             merged[name] = merged.get(name, ZERO) + amount
-        renamed[day] = merged
-    return renamed
+        return merged
+
+    return DailySeries({day: merge(teams) for day, teams in series.days.items()}, series.observed, merge(series.latest))
