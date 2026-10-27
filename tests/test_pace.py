@@ -136,6 +136,18 @@ def test_no_plan_is_saved_without_history_to_base_it_on(tmp_path: Path) -> None:
     assert not (folder / "out/2026-10/plan.json").exists()
 
 
+def test_no_plan_is_saved_on_the_1st_while_a_saved_product_lacks_history(tmp_path: Path) -> None:
+    """A workspace started late in October: on Nov 1 nothing is saved for November yet."""
+    folder = new_workspace(tmp_path)
+    save_october_api(folder, 26, 42000)
+
+    pace = pace_of(folder, load_settings(folder), Month(2026, 11), date(2026, 11, 1))
+
+    assert pace.plan is None
+    assert "no plan yet: no complete month of api is saved before 2026-10-31, so over pace isn't checked" in pace.notes
+    assert not (folder / "out/2026-11/plan.json").exists()
+
+
 def test_no_plan_is_saved_for_a_month_that_has_not_started(workspace: Path) -> None:
     pace = pace_of(workspace, load_settings(workspace), Month(2026, 11), TODAY)
 

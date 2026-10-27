@@ -6,11 +6,11 @@ from pathlib import Path
 import pytest
 
 from aicfo_spend.cli import main
-from aicfo_spend.raw_store import RAMP_API_KEYS, save_raw
+from aicfo_spend.raw_store import RAMP_API_KEYS, RAMP_PEOPLE, save_raw
 from aicfo_spend.report import build_month, describe_change, summarize
 from aicfo_spend.settings import load_settings
 from aicfo_spend.spend_table import UNASSIGNED
-from tests.factories import ramp_key, ramp_keys_answer, spend_export
+from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_user, spend_export
 from tests.workspaces import SEPTEMBER, fill_september, new_workspace, save_month
 
 SEPT_1 = SEPTEMBER.first_day
@@ -179,6 +179,18 @@ def test_change_from_last_month_shows_each_teams_move(workspace: Path) -> None:
     assert "  claude-opus: $60.00 to $100.50, +$40.50 (+68%)" in lines
     assert "  claude-sonnet: $0.00 to $4.50, +$4.50 (new)" in lines
     assert "By person" not in change
+
+
+def test_change_lines_up_a_team_spelled_differently_last_month(workspace: Path) -> None:
+    fill_august(workspace)
+    lowercase = ramp_people_answer(ramp_user("pat.lee@example.com", "sales"), ramp_user("sam.cho@example.com", "engineering"))
+    save_raw(workspace, RAMP_PEOPLE, date(2026, 9, 1), date(2026, 9, 1), lowercase, saved_at=saved_at(9))
+    settings = load_settings(workspace)
+
+    change = describe_change(build_month(workspace, SEPTEMBER, settings), build_month(workspace, AUGUST, settings), False)
+
+    team_lines = [line.split()[0] for line in change.splitlines()[3:6]]
+    assert team_lines == ["Engineering", "Sales", "Unassigned"]
 
 
 def test_change_by_person_appears_only_in_the_person_view(workspace: Path) -> None:
