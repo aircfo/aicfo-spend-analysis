@@ -11,6 +11,26 @@ Open-source AI spend analysis, built on Ramp. Each month it answers two question
 
 The design is approved: [docs/design.md](docs/design.md). v1 is being built. Until it's done, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
 
+## Try it
+
+```
+uv tool install git+https://github.com/aircfo/aicfo-spend-analysis
+aicfo-spend init ~/acme-ai-spend --company "Acme"
+aicfo-spend settings ~/acme-ai-spend
+```
+
+`init` sets up a company's folder, which must sit outside any git repo because it will hold real spend data. Add your seat prices and seats bought to its `aicfo-spend.json`, then `settings` checks the file and summarizes it.
+
+No install? Run it from a checkout: `PYTHONPATH=src python3 -m aicfo_spend --help`.
+
+## Development
+
+```
+uv run pytest && uv run mypy
+```
+
+See [CLAUDE.md](CLAUDE.md) for the rules every change follows.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

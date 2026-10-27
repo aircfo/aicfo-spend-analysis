@@ -1,0 +1,29 @@
+name: tests
+
+# Runs the tests and the type check on every pull request and on the default
+# branch. The tests use made-up data only and never reach the network, so the
+# job needs no secrets and only read access to the repository.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        # 3.10 is the oldest supported Python (Cowork's local shell runs it);
+        # 3.13 is what Cowork's cloud shell runs.
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv run --locked pytest
+      - run: uv run --locked mypy

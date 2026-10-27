@@ -1,0 +1,36 @@
+[project]
+name = "aicfo-spend-analysis"
+dynamic = ["version"]
+description = "Open-source AI spend analysis built on Ramp: where your AI money went and where it's heading."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+# 3.10 is what Cowork's local shell runs; the tool uses only the standard library
+# so it runs anywhere that Python does, including cloud routines that can't install packages.
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+aicfo-spend = "aicfo_spend.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "mypy>=1.13"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/aicfo_spend/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aicfo_spend"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+disallow_any_explicit = true
+files = ["src", "tests"]
