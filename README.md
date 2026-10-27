@@ -9,12 +9,12 @@ Open-source AI spend analysis, built on Ramp. Each month it answers two question
 
 ## Status
 
-The design is approved: [docs/design.md](docs/design.md). v1 is being built. Until it's done, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
+v0.1.0 is the first release; [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
 
 ## Try it
 
 ```
-uv tool install git+https://github.com/aircfo/aicfo-spend-analysis
+uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.1.0
 aicfo-spend init ~/acme-ai-spend --company "Acme"
 aicfo-spend settings ~/acme-ai-spend
 ```

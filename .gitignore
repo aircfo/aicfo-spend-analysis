@@ -14,3 +14,6 @@ __pycache__/
 # A company's spend data and keys live in its own workspace, never in this repo
 .secrets/
 workspace/
+
+# Release builds; the wheel is attached to its GitHub Release instead
+dist/

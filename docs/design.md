@@ -1,6 +1,6 @@
 # aicfo-spend-analysis — design
 
-**Status:** approved 2026-10-27. v1 is being built. The v0.3.0 scripts it replaces live in `legacy/` until each piece is replaced.
+**Status:** approved 2026-10-27; v0.1.0 released. The v0.3.0 scripts it replaces live in `legacy/` until the cut-over checks a real month against them.
 
 `aicfo-spend-analysis` is a small open-source tool, built on Ramp, that tells a company where its AI money went and where spending is heading. It reads the AI spend Ramp already collects through the Admin keys plugged into Ramp, so Ramp holds the keys and the tool never does. It runs without Claude. The `ai-spend-analysis` skill in the `ai-cfo-lab` plugin ([aircfo/claude-startup-finance](https://github.com/aircfo/claude-startup-finance)) becomes a thin layer that fetches the data, runs the tool and shows the results.
 
@@ -162,11 +162,11 @@ Shared outputs show teams; whoever runs the tool can turn on the person view.
 The tool uses only what comes with Python 3.10 or later, with no add-on packages, because Claude's cloud routines can't install add-ons but can run code from a repo they're given (tested 2026-10-26).
 
 - **Cloud routines** attach the tool's repo, pinned to a release, and run it in place.
-- **Cowork and the plugin:** the skill installs the pinned release from GitHub when it runs. The Cowork install test passed on 2026-10-27 in Cowork's cloud shell and its local shell (Python 3.10). Outside users need this repo to be public, so the cut-over comes after it is.
+- **Cowork and the plugin:** the skill's launcher downloads the pinned release's wheel from this repo's GitHub Releases into the company's folder once, checks it against the SHA-256 pinned in the skill, and runs it straight from the file (`python3 -m aicfo_spend` with the wheel on `PYTHONPATH`), so nothing is installed. Builds are reproducible, so the fingerprint is stable. The Cowork install test passed on 2026-10-27 in Cowork's cloud shell and its local shell (Python 3.10). Outside users need this repo to be public, so the cut-over comes after it is.
+- **Daily refresh:** a Cowork scheduled task runs the skill in the company's folder. A task that needs local files runs only on the computer, so it needs the computer on.
 - **People and Macs:** `uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@vX.Y.Z`.
-- **Optional:** `[excel]` adds Excel workbooks.
 
-**The skill's job** is to set up a company's folder, save the Ramp data and spend export into `raw/`, run the tool, and show the results and drafts. It records the tool version it was tested with, and its setup check fails if the installed version differs.
+**The skill's job** is to set up a company's folder, save the Ramp data and spend export into `raw/`, run the tool, and show the results and drafts. It pins the tool version it was tested with, by fingerprint, and runs no other.
 
 ## Milestones
 
