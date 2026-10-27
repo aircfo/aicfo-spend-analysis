@@ -164,14 +164,14 @@ def fill_august(folder: Path) -> None:
 
 def test_api_spend_no_current_key_carries_is_unassigned_with_its_reason(tmp_path: Path) -> None:
     folder = new_workspace(tmp_path)
-    save_month(folder, SEPTEMBER, backend_cents=30000, untied_cents=19236)
+    save_month(folder, SEPTEMBER, backend_cents=30000, untied_cents=12500)
 
     spend = build_month(folder, SEPTEMBER, load_settings(folder))
 
     [untied] = [row for row in spend.rows if row.reason == "API spend not tied to a current key"]
-    assert (untied.team, untied.vendor, untied.product, untied.amount_usd) == (UNASSIGNED, "anthropic", "api", Decimal("192.36"))
+    assert (untied.team, untied.vendor, untied.product, untied.amount_usd) == (UNASSIGNED, "anthropic", "api", Decimal("125.00"))
     assert untied.source_file.startswith("raw/2026-09/ramp-provider-totals_2026-09-01_2026-09-30_saved-")
-    assert "  API spend not tied to a current key: $192.36" in summarize(spend)
+    assert "  API spend not tied to a current key: $125.00" in summarize(spend)
 
 
 def test_keys_adding_up_to_clearly_more_than_ramps_total_earn_a_note(tmp_path: Path) -> None:
