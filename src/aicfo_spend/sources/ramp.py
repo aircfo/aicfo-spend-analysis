@@ -77,7 +77,7 @@ def parse_key_spend(document: object, label: str) -> list[KeySpend]:
         owner_email = _text(owner.get("email")).strip().lower() if isinstance(owner, dict) else ""
         spend.append(
             KeySpend(
-                vendor=_text(key.get("provider")).lower(),
+                vendor=_text(key.get("provider")).lower() or "(unknown vendor)",
                 key_name=key_name,
                 owner_email=owner_email,
                 department_tag=_department_tag(key.get("tags")),

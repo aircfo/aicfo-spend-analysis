@@ -9,6 +9,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from aicfo_spend.assign import Directory, seat_rows
+from aicfo_spend.errors import UserError
 from aicfo_spend.months import Month
 from aicfo_spend.raw_store import (
     CLAUDE_SPEND_EXPORT,
@@ -159,8 +160,15 @@ def _note_if_shrunk(
 ) -> None:
     """Month-to-date totals only grow, so a newer download showing less was probably cut short."""
     chosen_total = total_of(chosen)
-    earlier = [saved for saved in files if Month.of(saved.start) == month and saved.path != chosen.path]
-    largest = max((total_of(saved) for saved in earlier), default=ZERO)
+    largest = ZERO
+    for saved in files:
+        if Month.of(saved.start) != month or saved.path == chosen.path:
+            continue
+        # An older download isn't used for the totals, so one that can't be read only earns a note.
+        try:
+            largest = max(largest, total_of(saved))
+        except UserError:
+            notes.append(f"couldn't read the older download {saved.path.name}, so it wasn't compared")
     if largest > chosen_total:
         notes.append(
             f"the newest {what} totals {_dollars(chosen_total)}, less than an earlier download's "

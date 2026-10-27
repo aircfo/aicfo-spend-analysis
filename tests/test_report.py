@@ -128,6 +128,17 @@ def test_notes_when_a_newer_download_shows_less_than_an_earlier_one(workspace: P
     assert team_totals(workspace)["Engineering"] == Decimal("35.00")
 
 
+def test_an_older_download_it_cannot_read_only_earns_a_note(workspace: Path) -> None:
+    # Placed by hand, so it skipped the checks save would have made.
+    bad = workspace / "raw/2026-09/claude-spend-export_2026-09-01_2026-09-15_saved-20260916T090000Z.csv"
+    bad.write_bytes(spend_export(("pat.lee@example.com", "claude-opus", "$12.50")))
+
+    spend = build_month(workspace, SEPTEMBER, load_settings(workspace))
+
+    assert f"couldn't read the older download {bad.name}, so it wasn't compared" in spend.notes
+    assert sum(row.amount_usd for row in spend.rows) == Decimal("483.00")
+
+
 def test_report_command_writes_a_spend_table_that_adds_up(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
