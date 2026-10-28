@@ -1,6 +1,21 @@
 # Changelog
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semantic versioning](https://semver.org/). Each release's wheel is attached to its GitHub Release, and the `ai-spend-analysis` skill pins it by SHA-256.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semantic versioning](https://semver.org/). Each release's wheel is attached to its GitHub Release. The `ai-spend-analysis` skill ships in the same release; a copy of its folder on its own pins that wheel by SHA-256.
+
+## [Unreleased]
+
+### Added
+
+- The `ai-spend-analysis` Claude skill now lives in this repo, in `skills/ai-spend-analysis/`, and the repo installs as one plugin: `/plugin install ai-spend-analysis --marketplace aircfo/aicfo-spend-analysis`. The engine and the skill are released together under one version. It was copied from `claude-startup-finance`'s unmerged `feat/ai-spend-thin-wrapper` branch, where its earlier history is.
+- The skill's behavior tests (`evals/`) and its scripts' tests (`tests/skill/`), which now run in this repo's checks, type check included.
+
+### Changed
+
+- The skill's launcher is `scripts/run_engine.py`, renamed from `aicfo_spend.py` so it can't be mistaken for the engine. It runs the engine that shipped beside it. Only a copy of the skill folder on its own downloads the pinned release, as before.
+
+### Fixed
+
+- The Mac export script hands its export to the launcher under its new name; a test now runs that hand-off through the real engine.
 
 ## [0.2.0] — 2026-10-27
 

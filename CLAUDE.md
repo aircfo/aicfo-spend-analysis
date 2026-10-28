@@ -1,6 +1,6 @@
 # aicfo-spend-analysis
 
-Open-source AI spend analysis built on Ramp. The design is [docs/design.md](docs/design.md); read it before changing behavior, and update it in the same change when behavior changes.
+Open-source AI spend analysis built on Ramp: the engine in `src/aicfo_spend/` and the Claude skill in `skills/ai-spend-analysis/`, released together as one plugin. The design is [docs/design.md](docs/design.md); read it before changing behavior, and update it in the same change when behavior changes. A change to the skill's steps updates its `SKILL.md` too.
 
 ## Check command
 
@@ -12,7 +12,8 @@ Run it before calling a change done. CI runs the same on Python 3.10 and 3.13.
 
 ## Rules
 
-- **Standard library only at run time**, Python 3.10 or later. Cloud routines can't install packages. Dev tools (pytest, mypy) live in the `dev` dependency group.
+- **Standard library only at run time**, Python 3.10 or later. Cloud routines can't install packages. Dev tools (pytest, mypy) live in the `dev` dependency group. The one exception is the skill's optional Mac export script, which brings Playwright itself with `uv run --with playwright`.
+- **One version.** `.claude-plugin/plugin.json`, `src/aicfo_spend/__init__.py` and `ENGINE_VERSION` in the skill's `scripts/run_engine.py` always match, and tests check it. A release also pins its wheel's SHA-256 in `run_engine.py`, for skill folders copied on their own.
 - **Money is `Decimal`**, never `float`. Read JSON with `parse_float=Decimal`.
 - **Type-hint everything.** mypy runs strict, and an explicit `Any` is not allowed: take `object` and narrow it.
 - **Errors people see are plain words** that say what to fix, raised as `SettingsError` or `WorkspaceError` and printed by the CLI.

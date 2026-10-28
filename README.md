@@ -5,16 +5,26 @@ Open-source AI spend analysis, built on Ramp. Each month it answers two question
 - Every dollar of Anthropic and OpenAI spend goes to a person and a team. Anything it can't place shows as Unassigned, with the reason.
 - It projects this month and next, and flags days that spike.
 - Ramp holds the Admin keys. This tool reads the AI spend Ramp already collects and never touches a key.
-- It's plain Python with no add-on packages, and it runs without Claude. In Claude, the `ai-spend-analysis` skill in [aircfo/claude-startup-finance](https://github.com/aircfo/claude-startup-finance) fetches the data and shows the results.
+- It's plain Python with no add-on packages, and it runs without Claude. In Claude, the `ai-spend-analysis` skill that ships in this repo fetches the data and shows the results.
 
 ## Status
 
-v0.1.0 is the first release; [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
+v0.2.0 is the latest release; [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
 
-## Try it
+## In Claude
+
+This repo installs as one Claude plugin, the engine and the skill together:
 
 ```
-uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.1.0
+/plugin install ai-spend-analysis --marketplace aircfo/aicfo-spend-analysis
+```
+
+Then ask "set up AI spend tracking". Setup is a conversation: Claude connects Ramp, sets up a folder for your company's files, builds the seats roster and publishes a dashboard that stays private until you share it. After that, a daily scheduled task keeps the numbers current. The skill is [skills/ai-spend-analysis/SKILL.md](skills/ai-spend-analysis/SKILL.md), and [its security overview](skills/ai-spend-analysis/references/security-overview.md) is one page for whoever approves it.
+
+## Without Claude
+
+```
+uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.2.0
 aicfo-spend init ~/acme-ai-spend --company "Acme"
 aicfo-spend settings ~/acme-ai-spend
 ```

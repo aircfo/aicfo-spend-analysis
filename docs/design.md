@@ -2,7 +2,7 @@
 
 **Status:** approved 2026-10-27; v0.1.0 released. The v0.3.0 scripts it replaces live in `legacy/` until the cut-over checks a real month against them.
 
-`aicfo-spend-analysis` is a small open-source tool, built on Ramp, that tells a company where its AI money went and where spending is heading. It reads the AI spend Ramp already collects through the Admin keys plugged into Ramp, so Ramp holds the keys and the tool never does. It runs without Claude. The `ai-spend-analysis` skill in the `ai-cfo-lab` plugin ([aircfo/claude-startup-finance](https://github.com/aircfo/claude-startup-finance)) becomes a thin layer that fetches the data, runs the tool and shows the results.
+`aicfo-spend-analysis` is a small open-source tool, built on Ramp, that tells a company where its AI money went and where spending is heading. It reads the AI spend Ramp already collects through the Admin keys plugged into Ramp, so Ramp holds the keys and the tool never does. It runs without Claude. The `ai-spend-analysis` Claude skill ships beside it in this repo, which installs as one plugin; the skill is a thin layer that fetches the data, runs the tool and shows the results.
 
 ## What it does
 
@@ -143,6 +143,11 @@ src/aicfo_spend/
   sources/     ramp.py, people.py
   vendors/     anthropic/, openai/
   cli.py       the aicfo-spend command
+skills/ai-spend-analysis/
+  SKILL.md     the Claude skill: setup, the daily refresh, the rules
+  scripts/     the launcher, the claude.ai export script, the roster and page builders
+.claude-plugin/ the plugin and its one-plugin marketplace, so the repo installs in Claude
+evals/         behavior tests for the skill, run with `claude plugin eval`
 docs/          design.md, adding-a-vendor.md
 legacy/        the v0.3.0 scripts, removed as they're replaced
 ```
@@ -163,11 +168,12 @@ Shared outputs show teams; whoever runs the tool can turn on the person view.
 The tool uses only what comes with Python 3.10 or later, with no add-on packages, because Claude's cloud routines can't install add-ons but can run code from a repo they're given (tested 2026-10-26).
 
 - **Cloud routines** attach the tool's repo, pinned to a release, and run it in place.
-- **Cowork and the plugin:** the skill's launcher downloads the pinned release's wheel from this repo's GitHub Releases into the company's folder once, checks it against the SHA-256 pinned in the skill, and runs it straight from the file (`python3 -m aicfo_spend` with the wheel on `PYTHONPATH`), so nothing is installed. Builds are reproducible, so the fingerprint is stable. The Cowork install test passed on 2026-10-27 in Cowork's cloud shell and its local shell (Python 3.10). Outside users need this repo to be public, so the cut-over comes after it is.
+- **Claude Code and Cowork:** this repo is the plugin. Its marketplace file lists it, so `/plugin install ai-spend-analysis --marketplace aircfo/aicfo-spend-analysis` installs the engine and the skill together, from one release. The skill's launcher runs the engine's source from the install (`python3 -m aicfo_spend` with `src/` on `PYTHONPATH`), so nothing is installed into Python and nothing is downloaded. Outside users need this repo to be public, so the cut-over comes after it is.
+- **A copy of the skill folder on its own**, such as one uploaded to claude.ai, has no engine beside it. Its launcher downloads the pinned release's wheel from this repo's GitHub Releases into the company's folder once, checks it against the SHA-256 pinned in the launcher, and runs it straight from the file. Builds are reproducible, so the fingerprint is stable; a test keeps the pinned version equal to the engine's, and each release pins its wheel's fingerprint. This path passed the Cowork install test on 2026-10-27 in Cowork's cloud shell and its local shell (Python 3.10); the plugin install still needs the same test.
 - **Daily refresh:** a Cowork scheduled task runs the skill in the company's folder. A task that needs local files runs only on the computer, so it needs the computer on.
 - **People and Macs:** `uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@vX.Y.Z`.
 
-**The skill's job** is to set up a company's folder, save the Ramp data and spend export into `raw/`, run the tool, and show the results and drafts. It pins the tool version it was tested with, by fingerprint, and runs no other.
+**The skill's job** is to set up a company's folder, save the Ramp data and spend export into `raw/`, run the tool, and show the results and drafts. It runs the tool it shipped with, and runs no other.
 
 ## Milestones
 
@@ -179,11 +185,11 @@ Five milestones, each ending at a gate.
 | M1 · September numbers | Readers for Ramp, the spend export and the people list; the two lookups; the monthly report | Done criterion 1 |
 | M2 · Forecast | This month and next, change from last month, the two alerts, the Aug 31 backtest | Done criterion 2 |
 | M3 · OpenAI | The adding-a-vendor guide and ChatGPT seats | Done criterion 3 |
-| M4 · Cut-over | A tagged release; the skill installs it from GitHub and becomes the thin wrapper | A real month matches v0.3.0's numbers, then `legacy/` is deleted |
+| M4 · Cut-over | A tagged release of the plugin, with the skill as the thin wrapper; the plugin install passes the Cowork install test | A real month matches v0.3.0's numbers, then `legacy/` is deleted |
 
 The test and release workflows need a code owner's approval.
 
-**History.** This repo's history was moved from `aircfo/claude-startup-finance` on 2026-10-27, keeping every author and date. References like `aircfo/claude-startup-finance#11` point to the original pull requests.
+**History.** This repo's history was moved from `aircfo/claude-startup-finance` on 2026-10-27, keeping every author and date. References like `aircfo/claude-startup-finance#11` point to the original pull requests. The skill followed on 2026-10-28, copied from that repo's unmerged `feat/ai-spend-thin-wrapper` branch (at `a0da8ad`), whose commits hold its earlier history.
 
 ## Decisions
 
@@ -204,9 +210,10 @@ The test and release workflows need a code owner's approval.
 | Alert thresholds | Spike over twice the 28-day median and $25 above it; pace 25% over the forecast; all editable in settings |
 | Names | Package `aicfo-spend-analysis`, import `aicfo_spend`, command `aicfo-spend` |
 | Excel workbooks | An optional `[excel]` extra |
-| How the plugin gets the tool | Installs the pinned release from GitHub when the skill runs |
+| Where the skill lives | In this repo, beside the engine, so one release carries both (moved from `claude-startup-finance` on 2026-10-28) |
+| How the skill gets the tool | Runs the engine it shipped with; a skill folder copied on its own downloads the pinned release instead |
 | Settings file | JSON (`aicfo-spend.json`), readable by Python 3.10 with no add-ons |
-| Marketplace listing | Added to the marketplace README in the pull request that makes this repo public |
+| Marketplace listing | This repo is its own one-plugin marketplace, and no other marketplace lists it. The v0.3.0 skill is deleted from `claude-startup-finance`, since few if any outside installs use it (decided 2026-10-28) |
 
 ## Risks
 
