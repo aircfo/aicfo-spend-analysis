@@ -4,6 +4,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+### Changed
+
+- The dashboard's Overview leads with the alerts, and shows the month by product as a donut with its total in the middle.
+- The Spend tab charts spend by vendor and the change from last month, each with its table a click away.
+- The Unassigned tab says what each reason means for a finance lead, where it gets fixed, and that fixing it moves the dollars onto a team at the next refresh.
+- The Forecast tab is one table: this month on pace for, beside next month's forecast, by team.
+
 ### Fixed
 
 - No plan is saved before any usage is. Setup publishes the page before the first refresh, and the dashboard then froze a plan of seats alone, so the month read as far over pace until it ended. Found in the first end-to-end run of the plugin on real data.

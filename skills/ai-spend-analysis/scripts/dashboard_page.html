@@ -156,14 +156,29 @@ main { padding-block: 24px 48px; }
 .swatch.seats { background: var(--seats); }
 .swatch.extra { background: var(--extra); }
 .swatch.api { background: var(--api); }
+.swatch.previous { background: var(--projected); }
+.swatch.current { background: var(--accent); }
 
-/* The month by product */
-.split { display: flex; gap: 2px; height: 14px; }
-.split .seg:first-child { border-radius: 4px 0 0 4px; }
-.split .seg:last-child { border-radius: 0 4px 4px 0; }
-.split .seg:only-child { border-radius: 4px; }
-.products { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; }
-.product-name { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; }
+/* The month by product: a donut, its total in the middle, a legend beside it */
+.donut-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 40px; }
+.donut { position: relative; width: 200px; max-width: 100%; aspect-ratio: 1; flex: none; }
+.donut svg { display: block; width: 100%; height: 100%; }
+.donut-arc { fill: none; stroke-width: 30; cursor: default; transition: opacity 120ms ease; }
+.donut-arc.seats { stroke: var(--seats); }
+.donut-arc.extra { stroke: var(--extra); }
+.donut-arc.api { stroke: var(--api); }
+.donut-arc:focus { outline: none; }
+.donut.focused .donut-arc:not(.active) { opacity: 0.35; }
+.donut-track { fill: none; stroke: var(--line); stroke-width: 30; }
+.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; padding: 40px; }
+.donut-value { font-family: var(--font-display); font-size: 24px; font-weight: 600; font-variant-numeric: lining-nums tabular-nums; }
+.donut-label { color: var(--muted); font-size: 13px; }
+.donut-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; flex: 1 1 220px; min-width: 0; }
+.donut-legend li { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 2px 10px; }
+.donut-legend .swatch { align-self: center; }
+.legend-name { color: var(--ink-2); font-size: 14px; }
+.legend-value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.legend-share { grid-column: 2 / -1; color: var(--muted); font-size: 13px; }
 
 /* Alerts */
 .alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -184,6 +199,12 @@ main { padding-block: 24px 48px; }
 .seg.api { background: var(--api); }
 .seg:hover, .seg:focus-visible { filter: brightness(1.12); }
 .bar-total { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pair { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pair-bar { height: 9px; min-width: 2px; border-radius: 0 3px 3px 0; }
+.pair-bar.previous { background: var(--projected); }
+.pair-bar.current { background: var(--accent); }
+.bar-total .up { color: var(--critical); }
+.bar-total .down { color: var(--good); }
 .tooltip { position: absolute; pointer-events: none; z-index: 4; background: var(--ink); color: var(--surface); border-radius: 6px; padding: 6px 10px; font-size: 13px; line-height: 1.35; max-width: 240px; }
 .tooltip strong { display: block; font-size: 14px; }
 
@@ -201,11 +222,17 @@ details[open] > summary { margin-bottom: 10px; }
 
 /* Unassigned */
 .reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
-.reason { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding-block: 12px; border-bottom: 1px solid var(--line); }
+.lead { color: var(--ink-2); max-width: 68ch; }
+.reason { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; padding-block: 16px; border-bottom: 1px solid var(--line); }
 .reason:last-child { border-bottom: none; }
+.reason-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .reason-name { font-weight: 600; }
+.reason-where { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
 .reason-amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-.reason-fix { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; }
+.reason-body { grid-column: 1 / -1; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 14px; max-width: 80ch; }
+.reason-body dt { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 2px; }
+.reason-body dd { margin: 0; color: var(--ink-2); }
+@media (max-width: 560px) { .reason-body { grid-template-columns: 1fr; } .reason-body dd { margin-bottom: 6px; } }
 
 .notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 14px; }
 
@@ -238,6 +265,9 @@ details[open] > summary { margin-bottom: 10px; }
   .hero { font-size: 44px; }
   .bar-row { grid-template-columns: 1fr auto; gap: 4px 12px; }
   .bar-track { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .donut-arc { transition: none; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .seg { transition: filter 120ms ease; }
@@ -272,6 +302,11 @@ details[open] > summary { margin-bottom: 10px; }
   <div class="column">
 
     <section class="tabpanel" role="tabpanel" id="overview" aria-labelledby="tab-overview">
+      <section class="panel" aria-labelledby="alerts-heading">
+        <div class="panel-head"><h2 id="alerts-heading">Alerts</h2></div>
+        <ul class="alerts" id="alerts"></ul>
+      </section>
+
       <section class="panel verdict" aria-labelledby="verdict-heading">
         <h2 id="verdict-heading" hidden>Where this month is heading</h2>
         <div class="verdict-top">
@@ -298,21 +333,15 @@ details[open] > summary { margin-bottom: 10px; }
         </div>
       </section>
 
-      <section class="panel" aria-labelledby="alerts-heading">
-        <div class="panel-head">
-          <h2 id="alerts-heading">Alerts</h2>
-          <p class="panel-note">Drafts for a person to send. Nothing here was sent.</p>
-        </div>
-        <ul class="alerts" id="alerts"></ul>
-      </section>
-
       <section class="panel" aria-labelledby="split-heading">
         <div class="panel-head">
           <h2 id="split-heading">The month so far</h2>
           <button class="link-button" type="button" data-go="spend">By team</button>
         </div>
-        <div class="split" id="split" role="img"></div>
-        <div class="products" id="products"></div>
+        <div class="donut-wrap">
+          <div class="donut" id="donut"></div>
+          <ul class="donut-legend" id="products"></ul>
+        </div>
       </section>
 
       <section class="panel" aria-labelledby="notes-heading">
@@ -341,7 +370,16 @@ details[open] > summary { margin-bottom: 10px; }
 
       <section class="panel" aria-labelledby="vendors-heading">
         <div class="panel-head"><h2 id="vendors-heading">By vendor</h2></div>
-        <div class="table-wrap"><table id="vendors-table"></table></div>
+        <div class="key-row" aria-hidden="true">
+          <span class="key"><span class="swatch seats"></span>Seats</span>
+          <span class="key"><span class="swatch extra"></span>Extra usage</span>
+          <span class="key"><span class="swatch api"></span>API</span>
+        </div>
+        <div class="bars" id="vendor-bars"></div>
+        <details>
+          <summary>Show as a table</summary>
+          <div class="table-wrap"><table id="vendors-table"></table></div>
+        </details>
       </section>
 
       <section class="panel" aria-labelledby="change-heading">
@@ -349,7 +387,15 @@ details[open] > summary { margin-bottom: 10px; }
           <h2 id="change-heading">Change from last month</h2>
           <p class="panel-note" id="change-note"></p>
         </div>
-        <div class="table-wrap"><table id="change-table"></table></div>
+        <div class="key-row" id="change-key" aria-hidden="true">
+          <span class="key"><span class="swatch previous"></span><span id="change-key-previous">Last month</span></span>
+          <span class="key"><span class="swatch current"></span><span id="change-key-current">This month</span></span>
+        </div>
+        <div class="bars" id="change-bars"></div>
+        <details id="change-details">
+          <summary>Show as a table</summary>
+          <div class="table-wrap"><table id="change-table"></table></div>
+        </details>
         <div id="models" hidden>
           <h3>Extra usage by model, biggest moves first</h3>
           <div class="table-wrap"><table id="models-table"></table></div>
@@ -360,27 +406,19 @@ details[open] > summary { margin-bottom: 10px; }
     <section class="tabpanel" role="tabpanel" id="unassigned" aria-labelledby="tab-unassigned" hidden>
       <section class="panel" aria-labelledby="reasons-heading">
         <div class="panel-head">
-          <h2 id="reasons-heading">Unassigned, and how to place it</h2>
+          <h2 id="reasons-heading">Spend that isn't on a team yet</h2>
           <p class="panel-note" id="reasons-note"></p>
         </div>
+        <p class="lead">This is real spend that no team's total includes yet, so the team view understates what each team costs. Each line says why and who can fix it. Once it's fixed, the next daily refresh moves those dollars onto the right team.</p>
         <ul class="reasons" id="reasons"></ul>
       </section>
     </section>
 
     <section class="tabpanel" role="tabpanel" id="forecast" aria-labelledby="tab-forecast" hidden>
-      <section class="panel" aria-labelledby="pace-heading">
-        <div class="panel-head">
-          <h2 id="pace-heading">This month by team</h2>
-          <p class="panel-note">The last 14 days' average daily usage, carried to the month's end.</p>
-        </div>
-        <div class="table-wrap"><table id="pace-table"></table></div>
-      </section>
-      <section class="panel" aria-labelledby="next-heading">
-        <div class="panel-head">
-          <h2 id="next-heading">Next month by team</h2>
-          <p class="panel-note" id="forecast-note"></p>
-        </div>
+      <section class="panel" aria-labelledby="forecast-heading">
+        <div class="panel-head"><h2 id="forecast-heading">This month and next, by team</h2></div>
         <div class="table-wrap"><table id="forecast-table"></table></div>
+        <ul class="notes" id="forecast-notes"></ul>
       </section>
     </section>
 
@@ -443,11 +481,32 @@ details[open] > summary { margin-bottom: 10px; }
     { field: "extra_usage_cents", name: "Extra usage", cls: "extra" },
     { field: "api_cents", name: "API", cls: "api" },
   ];
-  const REASON_FIXES = {
-    "no team on the people list": "Give these people a team in Ramp, or a team in the Seats tab if they aren't in Ramp.",
-    "key with no team": "Tag these API keys with a department in Ramp, or give them an owner.",
-    "empty seat": "Paid seats nobody holds: reclaim them, or correct the seats bought in settings.",
-    "API spend not tied to a current key": "Spend Ramp counts but no current key carries, usually a key deleted or rotated this month.",
+  // The engine's reasons for spend it can't place on a team, in the words a finance lead uses.
+  const REASONS = {
+    "no team on the people list": {
+      title: "People with no team",
+      what: "These people used Claude or hold a paid seat, but Ramp lists no department for them, so their spend can't roll up to a team.",
+      fix: "Give each person a department in Ramp. For someone who isn't in Ramp, such as a contractor, ask Claude to set their team on the roster.",
+      where: "Fix in Ramp",
+    },
+    "key with no team": {
+      title: "API keys with no team",
+      what: "These API keys have no department tag and no owner in Ramp, so their usage can't be traced to a team.",
+      fix: "In Ramp's AI spend settings, tag each key with a department or give it an owner.",
+      where: "Fix in Ramp",
+    },
+    "empty seat": {
+      title: "Seats paid for but not assigned",
+      what: "You pay for more seats than the roster shows anyone holding, so this is spent on nobody's behalf.",
+      fix: "Remove the unused seats in Claude's or ChatGPT's admin billing. If someone does hold one, set their seat on the Seats tab. If the number of seats bought is wrong, ask Claude to correct it.",
+      where: "Fix in Claude or ChatGPT admin",
+    },
+    "API spend not tied to a current key": {
+      title: "API spend from deleted keys",
+      what: "The vendor's bill in Ramp includes this, but the key that spent it was deleted or replaced during the month, so no key is left to trace it to a team.",
+      fix: "It's real spend, and it won't recur, because a deleted key can't spend again. If the amount is large, check which keys were removed this month.",
+      where: "Usually nothing to do",
+    },
   };
   const VENDORS = { anthropic: "Claude", openai: "ChatGPT" };
   const VENDOR_COMPANIES = { anthropic: "Anthropic", openai: "OpenAI" };
@@ -483,6 +542,14 @@ details[open] > summary { margin-bottom: 10px; }
     return sign + money(Math.abs(difference)) + " (" + sign + Math.round(Math.abs(difference) / before * 100) + "%)";
   };
   const unassignedRow = (cells) => cells[0] === UNASSIGNED ? "unassigned" : "";
+  const vendorName = (vendor) => VENDOR_COMPANIES[vendor] || vendor;
+  const percentOf = (part, whole) => whole > 0 ? Math.round(part / whole * 100) : 0;
+  const SVG = "http://www.w3.org/2000/svg";
+  const drawn = (tag, attributes) => {
+    const el = document.createElementNS(SVG, tag);
+    Object.entries(attributes).forEach(([name, value]) => el.setAttribute(name, String(value)));
+    return el;
+  };
 
   function table(el, headings, rows, options) {
     const opts = options || {};
@@ -520,16 +587,120 @@ details[open] > summary { margin-bottom: 10px; }
     };
   }
 
-  function segment(cls, label, cents, tip) {
-    const mark = make("span", "seg " + cls);
-    mark.style.flex = cents + " 1 0";
+  function hoverable(mark, label, value, tip) {
     mark.tabIndex = 0;
-    mark.setAttribute("aria-label", label + ": " + money(cents));
-    mark.addEventListener("pointerenter", () => tip.show(mark, label, money(cents)));
-    mark.addEventListener("focus", () => tip.show(mark, label, money(cents)));
+    mark.setAttribute("aria-label", label + ": " + value);
+    mark.addEventListener("pointerenter", () => tip.show(mark, label, value));
+    mark.addEventListener("focus", () => tip.show(mark, label, value));
     mark.addEventListener("pointerleave", tip.hide);
     mark.addEventListener("blur", tip.hide);
     return mark;
+  }
+
+  // One row per name, each a bar split into seats, extra usage and API, all on one scale.
+  function stackedBars(container, rows, nameOf) {
+    const tip = tooltipFor(container);
+    const largest = Math.max(1, ...rows.map((row) => row.total_cents));
+    rows.forEach((row) => {
+      const name = nameOf(row);
+      const line = make("div", "bar-row");
+      line.appendChild(make("span", "bar-name" + (name === UNASSIGNED ? " unassigned" : ""), name));
+      const track = make("div", "bar-track");
+      track.style.width = (row.total_cents / largest * 100) + "%";
+      PRODUCTS.forEach((product) => {
+        const cents = row[product.field];
+        if (cents > 0) track.appendChild(segment(product.cls, name + " · " + product.name, cents, tip));
+      });
+      const holder = make("div");
+      holder.style.minWidth = "0";
+      holder.appendChild(track);
+      line.appendChild(holder);
+      line.appendChild(make("span", "bar-total", money(row.total_cents)));
+      container.appendChild(line);
+    });
+  }
+
+  // Last month above this month for each team, on one scale, with the move written beside them.
+  function pairedBars(container, rows, previousName, currentName) {
+    const tip = tooltipFor(container);
+    const largest = Math.max(1, ...rows.flatMap((row) => [row.previous_cents, row.current_cents]));
+    rows.forEach((row) => {
+      const line = make("div", "bar-row");
+      line.appendChild(make("span", "bar-name" + (row.team === UNASSIGNED ? " unassigned" : ""), row.team));
+      const pair = make("div", "pair");
+      [["previous", row.previous_cents, previousName], ["current", row.current_cents, currentName]].forEach(([cls, cents, month]) => {
+        const bar = make("span", "pair-bar " + cls);
+        bar.style.width = (cents / largest * 100) + "%";
+        pair.appendChild(hoverable(bar, row.team + " · " + month, money(cents), tip));
+      });
+      line.appendChild(pair);
+      const moved = row.current_cents - row.previous_cents;
+      const total = make("span", "bar-total");
+      total.appendChild(make("span", moved >= 1 ? "up" : moved <= -1 ? "down" : "", change(row.previous_cents, row.current_cents)));
+      line.appendChild(total);
+      container.appendChild(line);
+    });
+  }
+
+  // A ring of the month by product. Pointing at a piece puts its amount in the middle.
+  function donut(container, legend, parts, total) {
+    const radius = 85;
+    const circumference = 2 * Math.PI * radius;
+    const shown = parts.filter((part) => part.cents > 0);
+    // A short break between pieces, drawn as surface, so neighbors never touch.
+    const gap = shown.length > 1 ? 3 : 0;
+    const ring = drawn("svg", { viewBox: "0 0 200 200", role: "img",
+      "aria-label": parts.map((part) => part.name + " " + money(part.cents)).join(", ") });
+    if (!shown.length) ring.appendChild(drawn("circle", { class: "donut-track", cx: 100, cy: 100, r: radius }));
+    const center = make("div", "donut-center");
+    const value = make("p", "donut-value");
+    const label = make("p", "donut-label");
+    center.append(value, label);
+    const rest = () => {
+      text(value, wholeMoney(total));
+      text(label, "so far this month");
+      container.classList.remove("focused");
+      ring.querySelectorAll(".active").forEach((arc) => arc.classList.remove("active"));
+    };
+    let start = 0;
+    shown.forEach((part) => {
+      const length = part.cents / total * circumference;
+      const arc = drawn("circle", {
+        class: "donut-arc " + part.cls, cx: 100, cy: 100, r: radius, tabindex: 0,
+        "stroke-dasharray": Math.max(length - gap, 0.5) + " " + circumference,
+        "stroke-dashoffset": -start, transform: "rotate(-90 100 100)",
+        "aria-label": part.name + ": " + money(part.cents) + ", " + percentOf(part.cents, total) + "%",
+      });
+      start += length;
+      const show = () => {
+        rest();
+        arc.classList.add("active");
+        container.classList.add("focused");
+        text(value, wholeMoney(part.cents));
+        text(label, part.name + " · " + percentOf(part.cents, total) + "%");
+      };
+      arc.addEventListener("pointerenter", show);
+      arc.addEventListener("focus", show);
+      arc.addEventListener("pointerleave", rest);
+      arc.addEventListener("blur", rest);
+      ring.appendChild(arc);
+    });
+    container.replaceChildren(ring, center);
+    rest();
+    parts.forEach((part) => {
+      const item = make("li");
+      item.appendChild(make("span", "swatch " + part.cls));
+      item.appendChild(make("span", "legend-name", part.name));
+      item.appendChild(make("span", "legend-value", money(part.cents)));
+      item.appendChild(make("span", "legend-share", percentOf(part.cents, total) + "% of the month so far"));
+      legend.appendChild(item);
+    });
+  }
+
+  function segment(cls, label, cents, tip) {
+    const mark = make("span", "seg " + cls);
+    mark.style.flex = cents + " 1 0";
+    return hoverable(mark, label, money(cents), tip);
   }
 
   const about = data.about;
@@ -634,23 +805,8 @@ details[open] > summary { margin-bottom: 10px; }
   // Overview: the month by product
   const teams = spend.by_team;
   const productTotals = PRODUCTS.map((product) => teams.reduce((sum, team) => sum + team[product.field], 0));
-  const split = byId("split");
-  const splitTip = tooltipFor(split.parentElement);
-  split.parentElement.style.position = "relative";
-  PRODUCTS.forEach((product, index) => {
-    const cents = productTotals[index];
-    if (cents > 0) split.appendChild(segment(product.cls, product.name, cents, splitTip));
-    const cell = make("div");
-    const name = make("p", "product-name");
-    name.appendChild(make("span", "swatch " + product.cls));
-    name.appendChild(document.createTextNode(product.name));
-    cell.appendChild(name);
-    cell.appendChild(make("p", "figure-value", money(cents)));
-    const share = spend.total_cents > 0 ? Math.round(cents / spend.total_cents * 100) : 0;
-    cell.appendChild(make("p", "figure-sub", share + "% of " + money(spend.total_cents)));
-    byId("products").appendChild(cell);
-  });
-  split.setAttribute("aria-label", PRODUCTS.map((product, index) => product.name + " " + money(productTotals[index])).join(", "));
+  donut(byId("donut"), byId("products"),
+    PRODUCTS.map((product, index) => ({ cls: product.cls, name: product.name, cents: productTotals[index] })), spend.total_cents);
 
   // Overview: notes
   const notes = byId("notes");
@@ -660,38 +816,23 @@ details[open] > summary { margin-bottom: 10px; }
   allNotes.forEach((note) => notes.appendChild(make("li", "", sentence(note))));
 
   // Spend: by team
-  const largest = Math.max(1, ...teams.map((team) => team.total_cents));
-  const bars = byId("bars");
-  const barTip = tooltipFor(bars);
-  teams.forEach((team) => {
-    const row = make("div", "bar-row");
-    row.appendChild(make("span", "bar-name" + (team.team === UNASSIGNED ? " unassigned" : ""), team.team));
-    const track = make("div", "bar-track");
-    track.style.width = (team.total_cents / largest * 100) + "%";
-    PRODUCTS.forEach((product) => {
-      const cents = team[product.field];
-      if (cents > 0) track.appendChild(segment(product.cls, team.team + " · " + product.name, cents, barTip));
-    });
-    const holder = make("div");
-    holder.style.minWidth = "0";
-    holder.appendChild(track);
-    row.appendChild(holder);
-    row.appendChild(make("span", "bar-total", money(team.total_cents)));
-    bars.appendChild(row);
-  });
+  stackedBars(byId("bars"), teams, (team) => team.team);
   table(byId("teams-table"), ["Team", "Seats", "Extra usage", "API", "Total"],
     teams.map((team) => [team.team, ...PRODUCTS.map((product) => money(team[product.field])), money(team.total_cents)]),
     { total: ["Total", ...productTotals.map(money), money(spend.total_cents)], rowClass: unassignedRow });
   text(byId("teams-note"), money(spend.total_cents) + " this month" + (through ? ", through " + dayName(through) : ""));
 
   // Spend: by vendor
-  const vendorName = (vendor) => VENDOR_COMPANIES[vendor] || vendor;
+  stackedBars(byId("vendor-bars"), spend.by_vendor, (vendor) => vendorName(vendor.vendor));
   table(byId("vendors-table"), ["Vendor", "Seats", "Extra usage", "API", "Total"],
     spend.by_vendor.map((vendor) => [vendorName(vendor.vendor), ...PRODUCTS.map((product) => money(vendor[product.field])), money(vendor.total_cents)]));
 
   // Spend: change from last month
   if (changes) {
-    text(byId("change-note"), "Against " + monthName(changes.previous_month));
+    text(byId("change-note"), monthName(about.month) + " against " + monthName(changes.previous_month));
+    text(byId("change-key-previous"), monthName(changes.previous_month));
+    text(byId("change-key-current"), monthName(about.month));
+    pairedBars(byId("change-bars"), changes.by_team, monthName(changes.previous_month), monthName(about.month));
     table(byId("change-table"), ["Team", monthName(changes.previous_month), monthName(about.month), "Change"],
       changes.by_team.map((row) => [row.team, money(row.previous_cents), money(row.current_cents), change(row.previous_cents, row.current_cents)]),
       { rowClass: unassignedRow });
@@ -701,40 +842,57 @@ details[open] > summary { margin-bottom: 10px; }
         changes.by_model.slice(0, 8).map((row) => [row.model, money(row.previous_cents), money(row.current_cents), change(row.previous_cents, row.current_cents)]));
     }
   } else {
-    byId("change-table").replaceWith(make("p", "empty", "No usage is saved for last month, so there's nothing to compare."));
+    byId("change-key").hidden = true;
+    byId("change-details").hidden = true;
+    byId("change-bars").replaceWith(make("p", "empty", "No usage is saved for last month, so there's nothing to compare."));
   }
 
   // Unassigned
   const reasons = byId("reasons");
   const unassignedCents = spend.unassigned_by_reason.reduce((sum, reason) => sum + reason.total_cents, 0);
   if (spend.unassigned_by_reason.length === 0) {
-    reasons.appendChild(make("li", "empty", "Every dollar is on a team."));
+    reasons.appendChild(make("li", "empty", "Every dollar this month is on a team. Nothing to fix."));
   } else {
-    text(byId("reasons-note"), money(unassignedCents) + " of " + money(spend.total_cents) + " this month");
+    text(byId("reasons-note"), money(unassignedCents) + " of " + money(spend.total_cents) + " this month (" + percentOf(unassignedCents, spend.total_cents) + "%)");
     const badge = byId("unassigned-badge");
     text(badge, wholeMoney(unassignedCents));
     badge.hidden = false;
   }
   spend.unassigned_by_reason.forEach((reason) => {
+    const known = REASONS[reason.reason];
     const item = make("li", "reason");
-    item.appendChild(make("span", "reason-name", sentence(reason.reason)));
+    const head = make("div", "reason-head");
+    head.appendChild(make("span", "reason-name", known ? known.title : sentence(reason.reason)));
+    if (known) head.appendChild(make("span", "reason-where", known.where));
+    item.appendChild(head);
     item.appendChild(make("span", "reason-amount", money(reason.total_cents)));
-    if (REASON_FIXES[reason.reason]) item.appendChild(make("span", "reason-fix", REASON_FIXES[reason.reason]));
+    if (known) {
+      const body = make("dl", "reason-body");
+      body.append(make("dt", "", "What it is"), make("dd", "", known.what), make("dt", "", "How to fix"), make("dd", "", known.fix));
+      item.appendChild(body);
+    }
     reasons.appendChild(item);
   });
 
-  // Forecast
-  table(byId("pace-table"), ["Team", "So far", "On pace for"],
-    pace.by_team.map((row) => [row.team, money(row.so_far_cents), money(row.on_pace_for_cents)]),
-    { total: ["Total", money(pace.so_far_cents), money(pace.on_pace_for_cents)], rowClass: unassignedRow });
-  table(byId("forecast-table"), ["Team", "Forecast"],
-    forecast.by_team.map((row) => [row.team, money(row.total_cents)]),
-    { total: ["Total", money(forecast.total_cents)], rowClass: unassignedRow });
+  // Forecast: this month's projection and next month's forecast side by side, every team in either
+  const thisMonth = new Map(pace.by_team.map((row) => [row.team, row.on_pace_for_cents]));
+  const nextMonth = new Map(forecast.by_team.map((row) => [row.team, row.total_cents]));
+  const forecastTeams = [...new Set([...thisMonth.keys(), ...nextMonth.keys()])].filter((team) => team !== UNASSIGNED);
+  if (thisMonth.has(UNASSIGNED) || nextMonth.has(UNASSIGNED)) forecastTeams.push(UNASSIGNED);
+  table(byId("forecast-table"),
+    ["Team", monthName(about.month) + ", on pace for", monthName(forecast.month) + ", forecast"],
+    forecastTeams.map((team) => [team, money(thisMonth.get(team) || 0), money(nextMonth.get(team) || 0)]),
+    { total: ["Total", money(pace.on_pace_for_cents), money(forecast.total_cents)], rowClass: unassignedRow });
   const spans = Object.entries(forecast.averaged_over || {})
     .filter(([, months]) => months.length)
     .map(([product, months]) => ({ "extra usage": "extra usage", api: "API" }[product] || product) +
-      " averaged over " + months.length + (months.length === 1 ? " month" : " months"));
-  text(byId("forecast-note"), monthName(forecast.month) + (spans.length ? "; " + spans.join(", ") : ""));
+      " over " + months.length + (months.length === 1 ? " month" : " months"));
+  const forecastNotes = byId("forecast-notes");
+  forecastNotes.appendChild(make("li", "", monthName(about.month) + ": what's been spent so far" +
+    (pace.through ? " (through " + dayName(pace.through) + ")" : "") +
+    ", plus the last 14 days' average daily usage for each day left. Seats are a flat fee, so they aren't projected."));
+  forecastNotes.appendChild(make("li", "", monthName(forecast.month) + ": seats at their price, plus each team's average monthly usage over the last 3 complete months" +
+    (spans.length ? " (" + spans.join(", ") + " so far)" : "") + "."));
 
   // People, only in the person view
   if (spend.by_person) {
