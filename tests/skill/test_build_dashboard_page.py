@@ -1,7 +1,9 @@
 """The dashboard page builder: the engine's data goes into the page whole, and can't break out of it."""
 from __future__ import annotations
 
+import base64
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -48,6 +50,25 @@ class BuildPageTest(unittest.TestCase):
 
         self.assertNotIn(builder.DATA_SLOT, page)
         self.assertNotIn(builder.TITLE_SLOT, page)
+        self.assertNotIn(builder.LOGO_SLOT, page)
+
+    def test_the_airCFO_logo_travels_inside_the_page(self) -> None:
+        logo = builder.LOGO.read_bytes()
+
+        page = builder.build_page(dashboard(), builder.TEMPLATE.read_text(encoding="utf-8"), logo)
+
+        uri = re.search(r'src="data:image/png;base64,([A-Za-z0-9+/=]+)"', page)
+        assert uri is not None
+        self.assertEqual(base64.b64decode(uri.group(1)), logo)
+
+    def test_the_page_loads_nothing_from_elsewhere_but_its_fonts(self) -> None:
+        template = builder.TEMPLATE.read_text(encoding="utf-8")
+
+        loaded = re.findall(r'(?:src|href)="(https?://[^"]+)"', template)
+        links_out = re.findall(r'<a [^>]*href="(https?://[^"]+)"', template)
+
+        hosts = {re.sub(r"^https?://([^/]+).*", r"\1", url) for url in loaded if url not in links_out}
+        self.assertEqual(hosts, {"fonts.googleapis.com", "fonts.gstatic.com"})
 
 
 class FolderTest(unittest.TestCase):

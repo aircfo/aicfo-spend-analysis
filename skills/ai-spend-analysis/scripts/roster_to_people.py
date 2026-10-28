@@ -4,8 +4,8 @@
 Usage:
   python3 roster_to_people.py <folder> <roster rows file> [--compare <claude.ai spend export>]
 
-The roster is a Claude Doc with one row per person: name, email, team, and a seat column
-per vendor. Claude reads its table and writes the rows to a JSON file:
+The roster is the dashboard page's Seats tab, one row per person: name, email, team, and a
+seat per vendor. Claude reads its rows from the page's database and writes them to a JSON file:
 
   {"rows": [{"name": "Pat Lee", "email": "pat@acme.com", "team": "Sales",
              "seats": {"anthropic": "Standard", "openai": "No account"}}]}

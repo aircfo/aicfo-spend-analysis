@@ -86,6 +86,7 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
         "forecast": _forecast_section(forecast, team_name),
         "alerts": pace.alerts,
         "notes": notes if show_people else [without_emails(note) for note in notes],
+        "seat_types": _seat_types(settings),
     }
 
 
@@ -229,6 +230,14 @@ def _forecast_section(forecast: Forecast, team_name: Callable[[str], str]) -> Js
         "total_cents": _total_cents(by_team),
         "by_team": _table("team", by_team, team_order(by_team)),
         "averaged_over": {product: [month.label for month in forecast.history[product]] for product in USAGE_PRODUCTS},
+    }
+
+
+def _seat_types(settings: Settings) -> Json:
+    """Each vendor's seat types and how many were bought, for the page's seats roster to offer."""
+    return {
+        vendor: [{"seat_type": seat_type, "bought": plan.bought} for seat_type, plan in sorted(plans.items())]
+        for vendor, plans in sorted(settings.seats.items())
     }
 
 
