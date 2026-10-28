@@ -65,8 +65,8 @@ Three inputs, matching the picture above. Claude fetches the first one through t
 | Input | What it gives | How it arrives |
 | --- | --- | --- |
 | Ramp | API spend for Anthropic and OpenAI by key, month to date, with each key's owner and department, from the Admin keys plugged into Ramp; each vendor's total for the same days, which also counts spend no current key carries; the people list (name, email, team, active) | Claude, through the Ramp connector |
-| claude.ai spend export | Each person's extra usage | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
-| People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Kept by hand or by Claude |
+| claude.ai spend export | Each person's extra usage, and so who uses Claude: it lists everyone active in its period, $0 included | Claude in Chrome clicking Export in an Owner's signed-in browser, the button by hand, or a fixed browser script on a Mac. Claude Team has no API for it. It covers only the last 90 days, so it's saved at least monthly |
+| People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Kept by hand, or written by the skill from a seats roster people edit (a Claude Doc built from Ramp's users, with a default seat per vendor) |
 
 Settings (seat prices, seats bought, who sees person detail, alert thresholds) live in one small JSON file, `aicfo-spend.json`. It's JSON because Python 3.10 can't read TOML without an add-on package.
 
