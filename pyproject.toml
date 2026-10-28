@@ -17,7 +17,9 @@ aicfo-spend = "aicfo_spend.cli:main"
 dev = ["pytest>=8.3", "mypy>=1.13"]
 
 [build-system]
-requires = ["hatchling>=1.27"]
+# Pinned exactly: the wheel's metadata names the hatchling that built it, so any other
+# version gives a different file and a different fingerprint (docs/releasing.md).
+requires = ["hatchling==1.32.4"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]

@@ -174,7 +174,7 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    1st to the 3rd, also run `report` for the month before, since it has just closed, and
    compare its claude.ai export with the roster doc as in Setup step 4.3.
 4. **Update the page.** Run `python3 "$SKILL/scripts/build_dashboard_page.py" "$FOLDER" <month>`.
-   It writes `$FOLDER/out/<month>/dashboard.html`, a self-contained page holding the
+   It writes `$FOLDER/out/<month>/dashboard.html`, one page holding the
    engine's numbers, so nothing is retyped. Publish that file with the Artifact tool:
    - **No `$FOLDER/dashboard-url.txt` yet:** publish it as a new page with the icon `chart`,
      and write the link the tool returns into `$FOLDER/dashboard-url.txt`.
@@ -214,7 +214,7 @@ re-adds the right organization's Admin key in Ramp.
 - **Visibility is the operator's call**, as Setup step 5 says. Anyone who can open a shared
   output can download its rows.
 - **Drafts only.** Alerts and summaries are written for a person to send.
-- **Company data stays in `$FOLDER`.** Never copy it into a repo or anywhere else.
+- **Company data stays in `$FOLDER`, the roster doc and the published page.** Never copy it into a repo or anywhere else.
 - **Run only the engine the launcher picks.** Never edit files in `raw/` or `.engine/`.
 
 ## Files
@@ -224,6 +224,6 @@ re-adds the right organization's Admin key in Ramp.
 | `scripts/run_engine.py` | The launcher: runs the engine beside this skill, or else downloads the pinned release once, checks its fingerprint and runs it |
 | `scripts/fetch_spend_export.py` | The claude.ai spend export on a Mac, by a fixed script (`--login` once, then daily) |
 | `scripts/roster_to_people.py` | Writes the engine's `people.csv` from the seats roster doc's rows, checking every seat type against settings |
-| `scripts/build_dashboard_page.py` | Puts the engine's `dashboard.json` into `dashboard_page.html`, giving one self-contained page to publish |
+| `scripts/build_dashboard_page.py` | Puts the engine's `dashboard.json` into `dashboard_page.html`, giving one page to publish that carries its own data |
 | `scripts/dashboard_page.html` | The page: the month's verdict, where the money went, Unassigned and how to place it, the change from last month, and next month |
 | `references/security-overview.md` | One page for an IT or security reviewer: what data goes where, and who can see it |

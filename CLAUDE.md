@@ -13,7 +13,7 @@ Run it before calling a change done. CI runs the same on Python 3.10 and 3.13.
 ## Rules
 
 - **Standard library only at run time**, Python 3.10 or later. Cloud routines can't install packages. Dev tools (pytest, mypy) live in the `dev` dependency group. The one exception is the skill's optional Mac export script, which brings Playwright itself with `uv run --with playwright`.
-- **One version.** `.claude-plugin/plugin.json`, `src/aicfo_spend/__init__.py` and `ENGINE_VERSION` in the skill's `scripts/run_engine.py` always match, and tests check it. A release also pins its wheel's SHA-256 in `run_engine.py`, for skill folders copied on their own.
+- **One version.** `.claude-plugin/plugin.json`, `src/aicfo_spend/__init__.py`, `ENGINE_VERSION` in the skill's `scripts/run_engine.py` and the release tag in `.claude-plugin/marketplace.json` always match, and tests check it. Installs get that tag, never `main`. Releasing follows [docs/releasing.md](docs/releasing.md), which also pins the uploaded wheel's SHA-256 in `run_engine.py`.
 - **Money is `Decimal`**, never `float`. Read JSON with `parse_float=Decimal`.
 - **Type-hint everything.** mypy runs strict, and an explicit `Any` is not allowed: take `object` and narrow it.
 - **Errors people see are plain words** that say what to fix, raised as `SettingsError` or `WorkspaceError` and printed by the CLI.

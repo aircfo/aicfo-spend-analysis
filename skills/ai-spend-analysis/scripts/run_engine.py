@@ -21,12 +21,14 @@ import hashlib
 import os
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
 # Kept equal to the engine's own version by a test, so a release can't ship a skill
-# that downloads an older engine than the one beside it.
+# that downloads an older engine than the one beside it. Each release pins the
+# fingerprint of the wheel it uploads (docs/releasing.md).
 ENGINE_VERSION = "0.2.0"
 WHEEL_NAME = f"aicfo_spend_analysis-{ENGINE_VERSION}-py3-none-any.whl"
 WHEEL_URL = f"https://github.com/aircfo/aicfo-spend-analysis/releases/download/v{ENGINE_VERSION}/{WHEEL_NAME}"
@@ -37,6 +39,13 @@ MIN_PYTHON = (3, 10)
 # skills/ai-spend-analysis/scripts/run_engine.py -> the repo's src/. Walking up with
 # .parent never fails, even when a copied skill folder sits near the top of the disk.
 BUNDLED_SOURCE = Path(__file__).resolve().parent.parent.parent.parent / "src"
+# The engine is started in isolated mode (-I), which keeps the working directory and
+# PYTHON* settings out of its import path, so a stray aicfo_spend folder in the company's
+# folder can never run in place of the engine the launcher picked.
+START_ENGINE = (
+    "import runpy, sys; sys.path.insert(0, sys.argv.pop(1)); "
+    "runpy.run_module('aicfo_spend', run_name='__main__', alter_sys=True)"
+)
 
 
 def download(url: str) -> bytes:
@@ -47,7 +56,10 @@ def download(url: str) -> bytes:
 
 def engine_path(folder: Path, fetch: Callable[[str], bytes] = download, bundled: Path = BUNDLED_SOURCE) -> Path:
     """Where to run the engine from: the source beside the skill, or else the pinned release."""
-    if (bundled / "aicfo_spend" / "__init__.py").is_file():
+    # Only this repo's own layout counts as "beside the skill": the engine's source with the
+    # plugin's manifest next to it. Any other aicfo_spend folder that happens to sit four
+    # levels up is ignored, and the pinned release runs instead.
+    if (bundled / "aicfo_spend" / "__init__.py").is_file() and (bundled.parent / ".claude-plugin" / "plugin.json").is_file():
         return bundled
     return engine_wheel(folder, fetch)
 
@@ -57,7 +69,14 @@ def engine_wheel(folder: Path, fetch: Callable[[str], bytes] = download) -> Path
     wheel = folder / ENGINE_FOLDER / WHEEL_NAME
     if wheel.is_file() and _sha256(wheel.read_bytes()) == WHEEL_SHA256:
         return wheel
-    content = fetch(WHEEL_URL)
+    try:
+        content = fetch(WHEEL_URL)
+    except (urllib.error.URLError, OSError) as failure:
+        reason = getattr(failure, "reason", failure)
+        raise SystemExit(
+            f"aicfo-spend: couldn't download engine {ENGINE_VERSION} from {WHEEL_URL} ({reason}). "
+            "Check this computer's internet connection and try again."
+        ) from None
     if _sha256(content) != WHEEL_SHA256:
         raise SystemExit(
             f"aicfo-spend: the download of engine {ENGINE_VERSION} doesn't match its pinned fingerprint, "
@@ -80,8 +99,7 @@ def main(argv: Sequence[str], fetch: Callable[[str], bytes] = download, bundled:
         raise SystemExit(__doc__)
     folder, command, rest = Path(argv[0]).expanduser(), argv[1], list(argv[2:])
     engine = engine_path(folder, fetch, bundled)
-    environment = {**os.environ, "PYTHONPATH": str(engine)}
-    return subprocess.call([sys.executable, "-m", "aicfo_spend", command, str(folder), *rest], env=environment)
+    return subprocess.call([sys.executable, "-I", "-c", START_ENGINE, str(engine), command, str(folder), *rest])
 
 
 def _sha256(content: bytes) -> str:

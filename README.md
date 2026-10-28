@@ -19,7 +19,7 @@ This repo installs as one Claude plugin, the engine and the skill together:
 /plugin install ai-spend-analysis --marketplace aircfo/aicfo-spend-analysis
 ```
 
-Then ask "set up AI spend tracking". Setup is a conversation: Claude connects Ramp, sets up a folder for your company's files, builds the seats roster and publishes a dashboard that stays private until you share it. After that, a daily scheduled task keeps the numbers current. The skill is [skills/ai-spend-analysis/SKILL.md](skills/ai-spend-analysis/SKILL.md), and [its security overview](skills/ai-spend-analysis/references/security-overview.md) is one page for whoever approves it.
+That needs Claude Code 2.1.275 or later, and installs the tagged release the marketplace file names, never unreleased work. The first release with the plugin in it is the next one after v0.2.0; until then, load a checkout with `claude --plugin-dir <checkout>`. Then ask "set up AI spend tracking". Setup is a conversation: Claude connects Ramp, sets up a folder for your company's files, builds the seats roster and publishes a dashboard that stays private until you share it. After that, a daily scheduled task keeps the numbers current. The skill is [skills/ai-spend-analysis/SKILL.md](skills/ai-spend-analysis/SKILL.md), and [its security overview](skills/ai-spend-analysis/references/security-overview.md) is one page for whoever approves it.
 
 ## Without Claude
 
