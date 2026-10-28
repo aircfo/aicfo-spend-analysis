@@ -17,3 +17,6 @@ workspace/
 
 # Release builds; the wheel is attached to its GitHub Release instead
 dist/
+
+# claude plugin eval run output (reports, transcripts)
+evals/results/

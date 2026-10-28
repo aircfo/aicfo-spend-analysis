@@ -1,0 +1,17 @@
+{
+  "name": "aicfo-spend-analysis",
+  "owner": {
+    "name": "airCFO",
+    "email": "alex@aircfo.com"
+  },
+  "description": "airCFO's open-source AI spend analysis, built on Ramp, as one Claude plugin. Unofficial: not affiliated with or endorsed by Anthropic, OpenAI or Ramp.",
+  "plugins": [
+    {
+      "name": "ai-spend-analysis",
+      "source": "./",
+      "description": "Where your company's AI spend went and where it's heading: seats, extra usage and API spend by person and team, with this month's pace, next month's forecast and spike alerts. Built on Ramp. Read-only; it drafts alerts and never sends.",
+      "category": "finance",
+      "keywords": ["finance", "ai-spend", "anthropic", "openai", "ramp", "claude", "cost", "fpa"]
+    }
+  ]
+}

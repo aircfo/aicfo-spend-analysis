@@ -33,4 +33,12 @@ testpaths = ["tests"]
 python_version = "3.10"
 strict = true
 disallow_any_explicit = true
-files = ["src", "tests"]
+files = ["src", "tests", "skills/ai-spend-analysis/scripts"]
+# The skill's scripts run as plain files, so their tests import them by file name.
+mypy_path = "skills/ai-spend-analysis/scripts"
+
+# Only the optional Mac export script uses Playwright, and it brings its own copy
+# (`uv run --with playwright`), so the type check doesn't install it.
+[[tool.mypy.overrides]]
+module = ["playwright.*"]
+ignore_missing_imports = true
