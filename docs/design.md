@@ -1,6 +1,6 @@
 # aicfo-spend-analysis — design
 
-**Status:** approved 2026-10-27; v0.3.0 released, the first as a Claude plugin. The v0.3.0 scripts it replaces live in `legacy/` until the cut-over checks a real month against them.
+**Status:** approved 2026-10-27; v0.3.1 released. v0.3.0 was the first as a Claude plugin. The v0.3.0 scripts it replaces live in `legacy/` until the cut-over checks a real month against them.
 
 `aicfo-spend-analysis` is a small open-source tool, built on Ramp, that tells a company where its AI money went and where spending is heading. It reads the AI spend Ramp already collects through the Admin keys plugged into Ramp, so Ramp holds the keys and the tool never does. It runs without Claude. The `ai-spend-analysis` Claude skill ships beside it in this repo, which installs as one plugin; the skill is a thin layer that fetches the data, runs the tool and shows the results.
 
