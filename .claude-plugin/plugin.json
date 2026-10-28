@@ -2,7 +2,7 @@
   "name": "ai-spend-analysis",
   "displayName": "airCFO · AI Spend Analysis",
   "description": "Where your company's AI spend went and where it's heading. Anthropic and OpenAI seats, extra usage and API spend go to people and teams, with this month's pace, next month's forecast and spike alerts, refreshed daily. Built on Ramp, which holds the Admin keys; the math is the open-source engine in this repo. Read-only; it drafts alerts and never sends. Unofficial: not affiliated with or endorsed by Anthropic, OpenAI or Ramp.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "airCFO",
     "email": "alex@aircfo.com"

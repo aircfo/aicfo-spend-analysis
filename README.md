@@ -9,7 +9,7 @@ Open-source AI spend analysis, built on Ramp. Each month it answers two question
 
 ## Status
 
-v0.2.0 is the latest release; [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
+v0.3.0 is the latest release, and the first that installs as a Claude plugin; [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
 
 ## In Claude
 
@@ -19,12 +19,12 @@ This repo installs as one Claude plugin, the engine and the skill together:
 /plugin install ai-spend-analysis --marketplace aircfo/aicfo-spend-analysis
 ```
 
-That needs Claude Code 2.1.275 or later, and installs the tagged release the marketplace file names, never unreleased work. The first release with the plugin in it is the next one after v0.2.0; until then, load a checkout with `claude --plugin-dir <checkout>`. Then ask "set up AI spend tracking". Setup is a conversation: Claude connects Ramp, sets up a folder for your company's files, builds the seats roster and publishes a dashboard that stays private until you share it. After that, a daily scheduled task keeps the numbers current. The skill is [skills/ai-spend-analysis/SKILL.md](skills/ai-spend-analysis/SKILL.md), and [its security overview](skills/ai-spend-analysis/references/security-overview.md) is one page for whoever approves it.
+That needs Claude Code 2.1.275 or later, and installs the tagged release the marketplace file names, never unreleased work. To try unreleased work instead, load a checkout with `claude --plugin-dir <checkout>`. Then ask "set up AI spend tracking". Setup is a conversation: Claude connects Ramp, sets up a folder for your company's files, builds the seats roster and publishes a dashboard that stays private until you share it. After that, a daily scheduled task keeps the numbers current. The skill is [skills/ai-spend-analysis/SKILL.md](skills/ai-spend-analysis/SKILL.md), and [its security overview](skills/ai-spend-analysis/references/security-overview.md) is one page for whoever approves it.
 
 ## Without Claude
 
 ```
-uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.2.0
+uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.3.0
 aicfo-spend init ~/acme-ai-spend --company "Acme"
 aicfo-spend settings ~/acme-ai-spend
 ```
