@@ -4,12 +4,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+### Added
+
+- The Overview flags data that has fallen behind: a source more than 2 days behind yesterday, or a claude.ai export missing for the month, with how to bring it up to date.
+
 ### Changed
 
 - The dashboard's Overview leads with the alerts, and shows the month by product as a donut with its total in the middle.
 - The Spend tab charts spend by vendor and the change from last month, each with its table a click away.
 - The Unassigned tab says what each reason means for a finance lead, where it gets fixed, and that fixing it moves the dollars onto a team at the next refresh.
 - The Forecast tab is one table: this month on pace for, beside next month's forecast, by team.
+- The skill checks for Claude in Chrome before setup and every refresh. If it's missing, it says so first, gives the fix for Claude Code (`claude --chrome`) or the desktop app, and offers the export by hand, instead of carrying on with an older export. It recommends the Mac script for refreshes nobody watches.
 
 ### Fixed
 
