@@ -42,6 +42,32 @@ and stop; don't install anything else. Commands: `init`, `settings`, `save`, `re
   `out/<month>/dashboard.json` and `report` output, and refresh first if the latest
   download is more than a day old.
 
+## Check for Claude in Chrome first
+
+On a Claude Team plan, the claude.ai spend export is the only record of each person's extra
+usage, and Claude in Chrome is how you get it without the operator. So at the start of Setup
+and of every Daily refresh, before anything else, check whether Claude in Chrome's browser
+tools are in your tool list.
+
+- **They are:** carry on. You export the report yourself (Setup step 6, refresh step 2).
+- **They aren't, and someone is in the conversation:** say so in your first line, and give the
+  fix for where they're running you:
+  - **Claude Code:** quit, and start again with `claude --chrome`.
+  - **The Claude desktop app or Cowork:** connect Claude in Chrome in the app, then start a new
+    conversation.
+  - **Either way:** the Claude in Chrome extension must be installed in Chrome, signed in to the
+    same Claude account, and Chrome must be open, signed in to claude.ai as an Owner.
+
+  If they'd rather not now, give the steps by hand instead: claude.ai → Settings → Analytics
+  → Export spend report, from the month's 1st through yesterday, saved into `$FOLDER/inbox/`.
+  Then carry on with Ramp. Never carry on with an older export without saying so.
+- **They aren't, and a scheduled task is running:** use the export the Mac script saved, if it
+  ran. Otherwise carry on with the rest, and make the summary's first line say that extra
+  usage wasn't refreshed and the last day it reaches. The page's Overview flags it too.
+
+For a refresh nobody watches, recommend the Mac script (Setup step 6). A scheduled run can use
+Claude in Chrome only while Chrome is open, and Chrome may stop to ask before downloading.
+
 ## Setup
 
 Talk to the operator one step at a time; they mostly confirm.
@@ -130,7 +156,9 @@ Talk to the operator one step at a time; they mostly confirm.
      nobody has to say which file is which.
    - **By hand:** the same steps, by the operator.
    - **Daily on a Mac, with no Claude session:** the fixed script
-     `scripts/fetch_spend_export.py`. A claude.ai Owner signs it in once with `--login`.
+     `scripts/fetch_spend_export.py`. A claude.ai Owner signs it in once with `--login`. This
+     is the one to recommend when the daily refresh will run unattended, because it needs
+     neither Chrome nor a Claude session.
    **The export only reaches back 90 days, so a month that isn't saved within 90 days is
    lost.** Save last month whole and this month so far (step 2 of the refresh).
 7. **First refresh**, then **schedule it**. Run the Daily refresh. Its first run also saves
@@ -181,7 +209,8 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
      tab, so a seat changed there counts from this refresh on. Name in the summary anyone
      whose seats differ from the last `people.csv`.
 2. **Save the spend export.** If the Mac script ran, it has already saved its export.
-   Otherwise, with Claude in Chrome signed in to claude.ai as an Owner, export `<first>`
+   Otherwise, with Claude in Chrome (see "Check for Claude in Chrome first") signed in to
+   claude.ai as an Owner, export `<first>`
    through `<yesterday>` yourself and save it with those dates:
    `save claude-spend-export --start <first> --end <yesterday> --file <it>`. A file the
    operator dropped in `$FOLDER/inbox/` is saved the same way, after asking which days it
@@ -202,13 +231,15 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    Republishing never touches the Seats tab's rows. The page is private until the operator
    shares it from its Share menu. Never share it yourself. Its spend shows exactly what the
    `visibility` setting allows; its Seats tab shows the roster to everyone who can open it.
-5. **Show the results.** Give the page's link, then lead with the pace line, then the
-   alerts, then the notes, and finish with the team table from `report`. Present the alerts
+5. **Show the results.** Give the page's link. If any source is more than 2 days behind
+   yesterday, lead with that and how to bring it up to date, as the page's Overview does.
+   Then the pace line, then the alerts, then the notes, and finish with the team table from `report`. Present the alerts
    as drafts: **never send anything**. If a scheduled task is running, write the same
    summary to `$FOLDER/out/<month>/summary.txt` and stop.
 
 **When something fails, say so in the summary's first line.** That includes a Ramp call,
-a save, or a missing export. Never fill a gap with a guess. A save that refuses a file says
+a save, a missing export, or an export left older than the rest because Claude in Chrome
+wasn't connected. Never fill a gap with a guess. A save that refuses a file says
 why; fix the cause, don't edit files in `raw/`.
 
 **If `report` says a vendor's keys add up to more than Ramp's total,** the per-key copy has a

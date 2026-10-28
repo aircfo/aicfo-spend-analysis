@@ -25,6 +25,8 @@
   --projected: #b9c7d2;
   --critical: #b4372a;
   --critical-soft: #fbeae7;
+  --warning: #8a5a00;
+  --warning-soft: #fff3d6;
   --good: #2e7d4f;
   --skeleton: #e6ebf0;
   --font-display: "Bitter", Georgia, "Times New Roman", serif;
@@ -50,6 +52,8 @@
     --projected: #3f5a69;
     --critical: #f08a7e;
     --critical-soft: #3a2326;
+    --warning: #f2c46b;
+    --warning-soft: #3a3120;
     --good: #6ccb94;
     --skeleton: #1d3a49;
     color-scheme: dark;
@@ -74,6 +78,8 @@
   --projected: #3f5a69;
   --critical: #f08a7e;
   --critical-soft: #3a2326;
+  --warning: #f2c46b;
+  --warning-soft: #3a3120;
   --good: #6ccb94;
   --skeleton: #1d3a49;
   color-scheme: dark;
@@ -179,6 +185,13 @@ main { padding-block: 24px 48px; }
 .legend-name { color: var(--ink-2); font-size: 14px; }
 .legend-value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .legend-share { grid-column: 2 / -1; color: var(--muted); font-size: 13px; }
+
+/* Out-of-date data */
+.stale { border-color: color-mix(in srgb, var(--warning) 45%, var(--line)); background: var(--warning-soft); }
+.stale h2 { color: var(--warning); font-family: var(--font-ui); font-size: 15px; }
+.stale-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.stale-what { font-weight: 600; }
+.stale-fix { color: var(--ink-2); font-size: 14px; max-width: 75ch; }
 
 /* Alerts */
 .alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -302,6 +315,11 @@ details[open] > summary { margin-bottom: 10px; }
   <div class="column">
 
     <section class="tabpanel" role="tabpanel" id="overview" aria-labelledby="tab-overview">
+      <section class="panel stale" id="stale" role="status" aria-labelledby="stale-heading" hidden>
+        <h2 id="stale-heading">Some of this month's data is out of date</h2>
+        <ul class="stale-list" id="stale-list"></ul>
+      </section>
+
       <section class="panel" aria-labelledby="alerts-heading">
         <div class="panel-head"><h2 id="alerts-heading">Alerts</h2></div>
         <ul class="alerts" id="alerts"></ul>
@@ -512,6 +530,24 @@ details[open] > summary { margin-bottom: 10px; }
   const VENDOR_COMPANIES = { anthropic: "Anthropic", openai: "OpenAI" };
   const NO_SEAT = "none";
   const UNASSIGNED = "Unassigned";
+  // A source further behind yesterday than this is flagged on the Overview, so a stale export
+  // can't pass for current numbers.
+  const STALE_AFTER_DAYS = 2;
+  const SOURCES = [
+    {
+      key: "extra usage",
+      name: "Extra usage, from the claude.ai spend export",
+      // Only a company with Claude seats has an export to keep current.
+      expected: () => ((data.seat_types || {}).anthropic || []).length > 0,
+      fix: "Ask Claude to refresh it with Claude in Chrome connected, or export it yourself from claude.ai (Settings, then Analytics, then Export spend report) and drop the file in the company folder's inbox.",
+    },
+    {
+      key: "api",
+      name: "API spend, from Ramp",
+      expected: () => true,
+      fix: "Run the daily refresh. Ramp's numbers are normally a day behind.",
+    },
+  ];
   const TAB_IDS = ["overview", "spend", "unassigned", "forecast", "people", "seats"];
 
   const byId = (id) => document.getElementById(id);
@@ -530,6 +566,11 @@ details[open] > summary { margin-bottom: 10px; }
     const [year, month] = label.split("-").map(Number);
     return new Date(Date.UTC(year, month - 1, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   };
+  const utcDay = (iso) => {
+    const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
+    return Date.UTC(year, month - 1, day);
+  };
+  const DAY_MS = 24 * 60 * 60 * 1000;
   const dayName = (iso) => {
     const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
     return new Date(Date.UTC(year, month - 1, day)).toLocaleString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -787,6 +828,25 @@ details[open] > summary { margin-bottom: 10px; }
   byId("bullet").setAttribute("aria-label",
     "So far " + wholeMoney(pace.so_far_cents) + ", on pace for " + wholeMoney(pace.on_pace_for_cents) +
     (pace.plan ? ", against a plan of " + wholeMoney(pace.plan.total_cents) : ""));
+
+  // Overview: data that has fallen behind. A refresh covers through yesterday, or through the
+  // month's last day once it has closed, so that's the day every source should reach.
+  const [shownYear, shownMonth] = about.month.split("-").map(Number);
+  const shouldReach = Math.min(utcDay(about.made_on) - DAY_MS, Date.UTC(shownYear, shownMonth, 0));
+  const staleList = byId("stale-list");
+  SOURCES.forEach((source) => {
+    if (!source.expected()) return;
+    const reached = (spend.through || {})[source.key];
+    const behind = reached ? Math.round((shouldReach - utcDay(reached)) / DAY_MS) : null;
+    if (reached && behind <= STALE_AFTER_DAYS) return;
+    const item = make("li");
+    item.appendChild(make("p", "stale-what", reached
+      ? source.name + ": through " + dayName(reached) + ", " + behind + " days behind."
+      : source.name + ": nothing saved for " + monthName(about.month) + " yet."));
+    item.appendChild(make("p", "stale-fix", source.fix));
+    staleList.appendChild(item);
+  });
+  byId("stale").hidden = staleList.children.length === 0;
 
   // Overview: alerts
   const alerts = byId("alerts");
