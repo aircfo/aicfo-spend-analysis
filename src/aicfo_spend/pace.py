@@ -133,12 +133,17 @@ def plan_for(
     once every usage product in needed (each one with any download saved) has a complete
     month of history, because a frozen plan missing a product would make every later
     check look over pace, even on the 1st, before the month has a download of its own.
+    A workspace with no usage download at all has no plan yet either: one saved then would
+    be seats alone, the case setup hits when it publishes the page before the first refresh.
     """
     path = workspace / "out" / month.label / PLAN_FILE_NAME
     if path.exists():
         return _read_plan(path), ""
     if month.first_day > today:
         return None, f"no plan yet: {month.label} hasn't started, so over pace isn't checked"
+    needed = list(needed)
+    if not needed:
+        return None, "no plan yet: no usage is saved, so over pace isn't checked"
     made_as_of = month.previous_month().last_day
     forecast = forecast_after(workspace, settings, made_as_of)
     missing = [product for product in needed if not forecast.history[product]]
