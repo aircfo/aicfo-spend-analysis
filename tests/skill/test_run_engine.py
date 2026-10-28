@@ -4,7 +4,9 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import tempfile
+import urllib.error
 import unittest
 import zipfile
 from pathlib import Path
@@ -95,9 +97,15 @@ class CopiedSkillTest(unittest.TestCase):
 
         self.assertIn("Usage:", str(refused.exception))
 
-    def test_the_pinned_release_is_the_one_the_url_names(self) -> None:
-        self.assertIn(f"/v{run_engine.ENGINE_VERSION}/", run_engine.WHEEL_URL)
-        self.assertTrue(run_engine.WHEEL_URL.endswith(run_engine.WHEEL_NAME))
+    def test_explains_a_failed_download_in_plain_words(self) -> None:
+        def offline(url: str) -> bytes:
+            raise urllib.error.URLError("no route to host")
+
+        with self.assertRaises(SystemExit) as refused:
+            run_engine.main([str(self.folder), "settings"], offline, bundled=self.no_source)
+
+        self.assertIn("couldn't download engine", str(refused.exception))
+        self.assertIn("no route to host", str(refused.exception))
 
 
 
@@ -113,6 +121,8 @@ class BundledSourceTest(unittest.TestCase):
         (self.source / "aicfo_spend").mkdir(parents=True)
         (self.source / "aicfo_spend" / "__init__.py").write_text("")
         (self.source / "aicfo_spend" / "__main__.py").write_text(FAKE_MAIN)
+        (Path(temporary.name) / ".claude-plugin").mkdir()
+        (Path(temporary.name) / ".claude-plugin" / "plugin.json").write_text("{}")
 
     def test_runs_the_source_beside_the_skill_without_downloading(self) -> None:
         downloads = Downloads(b"never fetched")
@@ -123,6 +133,30 @@ class BundledSourceTest(unittest.TestCase):
         self.assertEqual(json.loads((self.folder / "ran.json").read_text()), ["report", str(self.folder), "2026-09"])
         self.assertEqual(downloads.urls, [])
         self.assertFalse((self.folder / run_engine.ENGINE_FOLDER).exists())
+
+    def test_a_stray_aicfo_spend_folder_where_it_runs_never_replaces_the_engine(self) -> None:
+        decoy = self.folder / "aicfo_spend"
+        decoy.mkdir()
+        (decoy / "__init__.py").write_text("")
+        (decoy / "__main__.py").write_text("from pathlib import Path\nPath('decoy-ran').write_text('yes')\n")
+        here = os.getcwd()
+        os.chdir(self.folder)
+        self.addCleanup(os.chdir, here)
+
+        run_engine.main([str(self.folder), "settings"], Downloads(b"never fetched"), bundled=self.source)
+
+        self.assertTrue((self.folder / "ran.json").exists())
+        self.assertFalse((self.folder / "decoy-ran").exists())
+
+    def test_engine_source_without_the_plugin_beside_it_is_not_trusted(self) -> None:
+        (self.source.parent / ".claude-plugin" / "plugin.json").unlink()
+        downloads = Downloads(b"not the engine")
+
+        with self.assertRaises(SystemExit):
+            run_engine.main([str(self.folder), "settings"], downloads, bundled=self.source)
+
+        self.assertEqual(downloads.urls, [run_engine.WHEEL_URL])
+        self.assertFalse((self.folder / "ran.json").exists())
 
     def test_in_this_repo_the_skill_finds_the_engine_source(self) -> None:
         self.assertTrue((run_engine.BUNDLED_SOURCE / "aicfo_spend" / "__init__.py").is_file())

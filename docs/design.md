@@ -1,6 +1,6 @@
 # aicfo-spend-analysis — design
 
-**Status:** approved 2026-10-27; v0.1.0 released. The v0.3.0 scripts it replaces live in `legacy/` until the cut-over checks a real month against them.
+**Status:** approved 2026-10-27; v0.2.0 released. The v0.3.0 scripts it replaces live in `legacy/` until the cut-over checks a real month against them.
 
 `aicfo-spend-analysis` is a small open-source tool, built on Ramp, that tells a company where its AI money went and where spending is heading. It reads the AI spend Ramp already collects through the Admin keys plugged into Ramp, so Ramp holds the keys and the tool never does. It runs without Claude. The `ai-spend-analysis` Claude skill ships beside it in this repo, which installs as one plugin; the skill is a thin layer that fetches the data, runs the tool and shows the results.
 
@@ -148,7 +148,7 @@ skills/ai-spend-analysis/
   scripts/     the launcher, the claude.ai export script, the roster and page builders
 .claude-plugin/ the plugin and its one-plugin marketplace, so the repo installs in Claude
 evals/         behavior tests for the skill, run with `claude plugin eval`
-docs/          design.md, adding-a-vendor.md
+docs/          design.md, adding-a-vendor.md, releasing.md
 legacy/        the v0.3.0 scripts, removed as they're replaced
 ```
 
@@ -167,9 +167,9 @@ Shared outputs show teams; whoever runs the tool can turn on the person view.
 
 The tool uses only what comes with Python 3.10 or later, with no add-on packages, because Claude's cloud routines can't install add-ons but can run code from a repo they're given (tested 2026-10-26).
 
-- **Cloud routines** attach the tool's repo, pinned to a release, and run it in place.
-- **Claude Code and Cowork:** this repo is the plugin. Its marketplace file lists it, so `/plugin install ai-spend-analysis --marketplace aircfo/aicfo-spend-analysis` installs the engine and the skill together, from one release. The skill's launcher runs the engine's source from the install (`python3 -m aicfo_spend` with `src/` on `PYTHONPATH`), so nothing is installed into Python and nothing is downloaded. Outside users need this repo to be public, so the cut-over comes after it is.
-- **A copy of the skill folder on its own**, such as one uploaded to claude.ai, has no engine beside it. Its launcher downloads the pinned release's wheel from this repo's GitHub Releases into the company's folder once, checks it against the SHA-256 pinned in the launcher, and runs it straight from the file. Builds are reproducible, so the fingerprint is stable; a test keeps the pinned version equal to the engine's, and each release pins its wheel's fingerprint. This path passed the Cowork install test on 2026-10-27 in Cowork's cloud shell and its local shell (Python 3.10); the plugin install still needs the same test.
+- **Cloud routines** attach the tool's repo, pinned to a release, and run it in place. A routine doesn't find the skill on its own, because Claude looks for project skills in `.claude/skills/`, so the routine's prompt says "Follow `skills/ai-spend-analysis/SKILL.md`: run the daily refresh in `<folder>`."
+- **Claude Code and Cowork:** this repo is the plugin. Its marketplace file lists it at the release tag of the current version, never the default branch, so `/plugin install ai-spend-analysis --marketplace aircfo/aicfo-spend-analysis` installs the engine and the skill together from one tagged release, and unreleased work on `main` reaches nobody. The first release with the plugin in it is the next one after v0.2.0; before then, `claude --plugin-dir <checkout>` loads it for testing. The skill's launcher runs the engine's source from the install in isolated mode (`python3 -I`, with `src/` put first on the import path), so nothing is installed into Python, nothing is downloaded, and nothing in the working directory can stand in for the engine. It trusts `src/` only with the plugin's manifest beside it. Outside users need this repo to be public, so the cut-over comes after it is.
+- **A copy of the skill folder on its own**, such as one uploaded to claude.ai, has no engine beside it. Its launcher downloads the pinned release's wheel from this repo's GitHub Releases into the company's folder once, checks it against the SHA-256 pinned in the launcher, and runs it straight from the file. Builds are reproducible with the exact hatchling `pyproject.toml` pins; tests keep the pinned version equal to the engine's, and each release pins the fingerprint of the very wheel it uploads ([releasing.md](releasing.md)). This path passed the Cowork install test on 2026-10-27 in Cowork's cloud shell and its local shell (Python 3.10); the plugin install still needs the same test.
 - **Daily refresh:** a Cowork scheduled task runs the skill in the company's folder. A task that needs local files runs only on the computer, so it needs the computer on.
 - **People and Macs:** `uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@vX.Y.Z`.
 
@@ -212,6 +212,7 @@ The test and release workflows need a code owner's approval.
 | Excel workbooks | An optional `[excel]` extra |
 | Where the skill lives | In this repo, beside the engine, so one release carries both (moved from `claude-startup-finance` on 2026-10-28) |
 | How the skill gets the tool | Runs the engine it shipped with; a skill folder copied on its own downloads the pinned release instead |
+| What an install gets | The release tag of the current version, named in the marketplace file; never the default branch |
 | Settings file | JSON (`aicfo-spend.json`), readable by Python 3.10 with no add-ons |
 | Marketplace listing | This repo is its own one-plugin marketplace, and no other marketplace lists it. The v0.3.0 skill is deleted from `claude-startup-finance`, since few if any outside installs use it (decided 2026-10-28) |
 

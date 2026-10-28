@@ -23,14 +23,12 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import run_engine  # noqa: E402
+import run_engine
 
 if TYPE_CHECKING:
     from playwright.sync_api import BrowserContext, Playwright
