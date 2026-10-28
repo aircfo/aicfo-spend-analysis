@@ -245,6 +245,6 @@ re-adds the right organization's Admin key in Ramp.
 | `scripts/fetch_spend_export.py` | The claude.ai spend export on a Mac, by a fixed script (`--login` once, then daily) |
 | `scripts/roster_to_people.py` | Writes the engine's `people.csv` from the Seats tab's rows, checking every seat type against settings |
 | `scripts/build_dashboard_page.py` | Puts the engine's `dashboard.json` and the airCFO logo into `dashboard_page.html`, giving one page to publish that carries its own data |
-| `scripts/dashboard_page.html` | The page, in tabs: Overview (the month's verdict, alerts, the month by product, notes), Spend, Unassigned, Forecast, People (person view only) and Seats, the editable roster |
+| `scripts/dashboard_page.html` | The page, in tabs: Overview (alerts, the month's verdict, the month by product as a donut, notes), Spend (by team, by vendor and the change from last month, as charts), Unassigned (what each reason means and who fixes it), Forecast (this month and next in one table), People (person view only) and Seats, the editable roster |
 | `scripts/aircfo-logo.png` | The airCFO wordmark in the page's masthead |
 | `references/security-overview.md` | One page for an IT or security reviewer: what data goes where, and who can see it |
