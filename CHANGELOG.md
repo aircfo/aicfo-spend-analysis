@@ -2,7 +2,9 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semantic versioning](https://semver.org/). Each release's wheel is attached to its GitHub Release. The `ai-spend-analysis` skill ships in the same release; a copy of its folder on its own pins that wheel by SHA-256.
 
-## [Unreleased]
+## [0.3.0] — 2026-10-28
+
+The first release that installs as a Claude plugin, the engine and the skill together.
 
 ### Added
 
