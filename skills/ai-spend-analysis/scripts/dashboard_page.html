@@ -2,291 +2,436 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
 <style>
-/* Layout: one reading column. The month's verdict first, then where the money went, then what changes it. */
+/* Layout: an airCFO navy masthead, a sticky row of tabs, then one reading column per tab.
+   The month's verdict opens the first tab; detail, fixes, the forecast and seats each get their own. */
 :root {
-  --page: #f5f6f3;
-  --surface: #fcfcfb;
-  --ink: #121412;
-  --ink-2: #4c524e;
-  --muted: #7d837f;
-  --line: #e0e3dd;
-  --axis: #c3c7c0;
-  --accent: #1d5c48;
-  --seats: #2a78d6;
-  --extra: #eb6834;
-  --api: #1baf7a;
-  --projected: #a9b4ae;
-  --critical: #d03b3b;
-  --critical-text: #b02e2e;
-  --good: #0ca30c;
-  --good-text: #006300;
-  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --page: #f5f7fb;
+  --surface: #ffffff;
+  --ink: #132c3a;
+  --ink-2: #3b5361;
+  --muted: #5e7280;
+  --line: #dce3ea;
+  --accent: #3c6e82;
+  --highlight: #ff971e;
+  --masthead: #132c3a;
+  --masthead-ink: #f5f7fb;
+  --masthead-muted: #9fc7d3;
+  --seats: #245a9c;
+  --extra: #e07800;
+  --api: #0fa3a8;
+  --so-far: #3b5361;
+  --projected: #b9c7d2;
+  --critical: #b4372a;
+  --critical-soft: #fbeae7;
+  --good: #2e7d4f;
+  --skeleton: #e6ebf0;
+  --font-display: "Bitter", Georgia, "Times New Roman", serif;
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --page: #0e0f0e;
-    --surface: #1a1b1a;
-    --ink: #eff0ec;
-    --ink-2: #c4c7c0;
-    --muted: #8c918c;
-    --line: #2c2e2c;
-    --axis: #3a3d3a;
-    --accent: #7cc4a8;
-    --seats: #3987e5;
-    --extra: #d95926;
-    --api: #199e70;
-    --projected: #4d5650;
-    --critical: #e66767;
-    --critical-text: #f08a8a;
-    --good: #0ca30c;
-    --good-text: #3fc93f;
+    --page: #0b1a23;
+    --surface: #132c3a;
+    --ink: #eef3f6;
+    --ink-2: #c3d0d8;
+    --muted: #8ea3b0;
+    --line: #24404f;
+    --accent: #7fcada;
+    --highlight: #ff971e;
+    --masthead: #0f2532;
+    --masthead-ink: #f5f7fb;
+    --masthead-muted: #9fc7d3;
+    --seats: #4c80d2;
+    --extra: #d4730f;
+    --api: #1ea79b;
+    --so-far: #c3d0d8;
+    --projected: #3f5a69;
+    --critical: #f08a7e;
+    --critical-soft: #3a2326;
+    --good: #6ccb94;
+    --skeleton: #1d3a49;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --page: #0e0f0e;
-  --surface: #1a1b1a;
-  --ink: #eff0ec;
-  --ink-2: #c4c7c0;
-  --muted: #8c918c;
-  --line: #2c2e2c;
-  --axis: #3a3d3a;
-  --accent: #7cc4a8;
-  --seats: #3987e5;
-  --extra: #d95926;
-  --api: #199e70;
-  --projected: #4d5650;
-  --critical: #e66767;
-  --critical-text: #f08a8a;
-  --good: #0ca30c;
-  --good-text: #3fc93f;
+  --page: #0b1a23;
+  --surface: #132c3a;
+  --ink: #eef3f6;
+  --ink-2: #c3d0d8;
+  --muted: #8ea3b0;
+  --line: #24404f;
+  --accent: #7fcada;
+  --highlight: #ff971e;
+  --masthead: #0f2532;
+  --masthead-ink: #f5f7fb;
+  --masthead-muted: #9fc7d3;
+  --seats: #4c80d2;
+  --extra: #d4730f;
+  --api: #1ea79b;
+  --so-far: #c3d0d8;
+  --projected: #3f5a69;
+  --critical: #f08a7e;
+  --critical-soft: #3a2326;
+  --good: #6ccb94;
+  --skeleton: #1d3a49;
   color-scheme: dark;
 }
 
+/* Tabs, panels and controls set their own display, so hidden has to win over all of them. */
+[hidden] { display: none !important; }
 body {
   background: var(--page);
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.5;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 28px 48px;
 }
-.spend { max-width: 1040px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--masthead); }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.column { max-width: 1040px; margin-inline: auto; }
 h1, h2, h3 { margin: 0; text-wrap: balance; }
-h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
-h2 { font-size: 16px; font-weight: 600; }
+h2 { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+h3 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 p { margin: 0; }
 a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
 
-.masthead { display: flex; flex-direction: column; gap: 4px; }
-.eyebrow { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.meta { color: var(--ink-2); font-size: 14px; }
+/* Masthead */
+.masthead { background: var(--masthead); color: var(--masthead-ink); padding-block: 22px 20px; }
+.masthead .column { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.masthead-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--masthead-muted); }
+h1 { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
+.meta { color: var(--masthead-muted); font-size: 14px; }
+.by-aircfo { display: inline-flex; align-items: center; gap: 8px; color: var(--masthead-muted); font-size: 12px; text-decoration: none; }
+.by-aircfo img { height: 22px; width: auto; display: block; }
 
+/* Tabs */
+.tabbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { appearance: none; background: none; border: none; border-bottom: 3px solid transparent; color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 500; padding: 12px 10px 9px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--highlight); font-weight: 600; }
+.tab-badge { font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--critical-soft); color: var(--critical); }
+
+/* Panels */
+main { padding-block: 24px 48px; }
+.tabpanel { display: flex; flex-direction: column; gap: 20px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
 .panel-note { color: var(--muted); font-size: 13px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.empty { color: var(--ink-2); }
+.link-button { appearance: none; background: none; border: none; padding: 0; font: inherit; font-size: 14px; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
 /* The verdict */
 .verdict { gap: 18px; }
 .verdict-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
 .hero-label { color: var(--ink-2); font-size: 14px; }
-.hero { font-size: 52px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; }
+.hero { font-family: var(--font-display); font-size: 52px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; }
 .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
-.chip.over { color: var(--critical-text); }
-.chip.under { color: var(--good-text); }
+.chip.over { color: var(--critical); }
+.chip.under { color: var(--good); }
 .chip.none { color: var(--muted); }
 .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; }
 .figure-label { color: var(--muted); font-size: 13px; }
-.figure-value { font-size: 20px; font-weight: 600; }
+.figure-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .figure-sub { color: var(--ink-2); font-size: 13px; }
 
-.bullet { position: relative; height: 22px; background: color-mix(in srgb, var(--line) 55%, transparent); border-radius: 4px; }
+.bullet { position: relative; height: 22px; background: color-mix(in srgb, var(--line) 60%, transparent); border-radius: 4px; }
 .bullet-so-far, .bullet-projected { position: absolute; top: 0; bottom: 0; left: 0; }
 .bullet-projected { background: var(--projected); border-radius: 0 4px 4px 0; }
-.bullet-so-far { background: var(--ink-2); border-radius: 0 4px 4px 0; }
+.bullet-so-far { background: var(--so-far); border-radius: 0 4px 4px 0; }
 .bullet-plan { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); }
-.bullet-key { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); }
+.key-row { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); }
 .key { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
 .swatch.tick { width: 2px; height: 14px; border-radius: 0; background: var(--ink); }
+.swatch.so-far { background: var(--so-far); }
+.swatch.projected { background: var(--projected); }
+.swatch.seats { background: var(--seats); }
+.swatch.extra { background: var(--extra); }
+.swatch.api { background: var(--api); }
+
+/* The month by product */
+.split { display: flex; gap: 2px; height: 14px; }
+.split .seg:first-child { border-radius: 4px 0 0 4px; }
+.split .seg:last-child { border-radius: 0 4px 4px 0; }
+.split .seg:only-child { border-radius: 4px; }
+.products { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; }
+.product-name { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; }
 
 /* Alerts */
 .alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.alert { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line); border-left: 3px solid var(--critical); }
-.alert-kind { font-family: var(--font-data); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--critical-text); padding-top: 2px; }
+.alert { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line); background: color-mix(in srgb, var(--critical-soft) 55%, transparent); }
+.alert-kind { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--critical); padding-top: 2px; }
 .draft-tag { font-size: 12px; color: var(--muted); }
-.empty { color: var(--ink-2); }
 
 /* Where it went */
-.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); }
 .bars { display: flex; flex-direction: column; gap: 10px; position: relative; }
 .bar-row { display: grid; grid-template-columns: minmax(120px, 190px) 1fr minmax(84px, auto); align-items: center; gap: 12px; }
 .bar-name { font-size: 14px; overflow-wrap: anywhere; }
 .bar-name.unassigned { color: var(--ink-2); font-style: italic; }
 .bar-track { display: flex; gap: 2px; height: 18px; min-width: 0; }
 .seg { height: 100%; min-width: 2px; cursor: default; }
-.seg:last-child { border-radius: 0 4px 4px 0; }
+.bar-track .seg:last-child { border-radius: 0 4px 4px 0; }
 .seg.seats { background: var(--seats); }
 .seg.extra { background: var(--extra); }
 .seg.api { background: var(--api); }
 .seg:hover, .seg:focus-visible { filter: brightness(1.12); }
-.bar-total { font-family: var(--font-data); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tooltip { position: absolute; pointer-events: none; z-index: 5; background: var(--ink); color: var(--surface); border-radius: 6px; padding: 6px 10px; font-size: 13px; line-height: 1.35; max-width: 240px; }
+.bar-total { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tooltip { position: absolute; pointer-events: none; z-index: 4; background: var(--ink); color: var(--surface); border-radius: 6px; padding: 6px 10px; font-size: 13px; line-height: 1.35; max-width: 240px; }
 .tooltip strong { display: block; font-size: 14px; }
 
 /* Tables */
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
-th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; white-space: normal; padding-left: 0; }
-th { font-weight: 500; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
 td { font-variant-numeric: tabular-nums; }
-td.num { font-family: var(--font-data); font-size: 13px; }
 tr.total td { font-weight: 600; border-bottom: none; }
 tr.unassigned td:first-child { font-style: italic; color: var(--ink-2); }
 details > summary { cursor: pointer; color: var(--accent); font-size: 14px; }
 details[open] > summary { margin-bottom: 10px; }
 
-.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.reason { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; }
-.reason-amount { font-family: var(--font-data); font-size: 13px; text-align: right; }
-.reason-fix { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+/* Unassigned */
+.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
+.reason { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding-block: 12px; border-bottom: 1px solid var(--line); }
+.reason:last-child { border-bottom: none; }
+.reason-name { font-weight: 600; }
+.reason-amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.reason-fix { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; }
 
 .notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 14px; }
-.footer { color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Seats */
+.seat-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; }
+.seat-count { display: flex; flex-direction: column; gap: 2px; }
+.seat-count .figure-value { font-size: 18px; }
+.seat-count .warn { color: var(--critical); }
+.seat-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.search { appearance: none; font: inherit; font-size: 14px; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; width: min(320px, 100%); }
+.search::placeholder { color: var(--muted); }
+.seat-person { display: flex; flex-direction: column; }
+.seat-email { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+#seats-table td { vertical-align: middle; }
+#seats-table td:nth-child(2) { text-align: left; white-space: normal; color: var(--ink-2); }
+#seats-table th:nth-child(2) { text-align: left; }
+.seat-select { appearance: auto; font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; min-width: 128px; }
+.seat-select:disabled { color: var(--ink-2); opacity: 1; }
+.seat-select.none { color: var(--muted); }
+.row-status { display: block; font-size: 12px; color: var(--muted); min-height: 16px; text-align: right; }
+.row-status.failed { color: var(--critical); }
+.skeleton-row { height: 36px; border-radius: 6px; background: var(--skeleton); }
+.skeleton { display: flex; flex-direction: column; gap: 8px; }
+
+.footer { padding-block: 0 40px; }
+.footer .column { color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
 
 @media (max-width: 560px) {
+  h1 { font-size: 26px; }
   .hero { font-size: 44px; }
   .bar-row { grid-template-columns: 1fr auto; gap: 4px 12px; }
   .bar-track { grid-column: 1 / -1; grid-row: 2; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .seg { transition: filter 120ms ease; }
+  .skeleton-row { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.55; } }
 }
 </style>
 
-<main class="spend" aria-live="polite">
-  <header class="masthead">
-    <p class="eyebrow" id="eyebrow">AI spend</p>
-    <h1 id="title">AI spend</h1>
-    <p class="meta" id="meta"></p>
-  </header>
-
-  <section class="panel verdict" aria-labelledby="verdict-heading">
-    <h2 id="verdict-heading" hidden>Where this month is heading</h2>
-    <div class="verdict-top">
-      <div>
-        <p class="hero-label">On pace for</p>
-        <p class="hero" id="on-pace">—</p>
-      </div>
-      <span class="chip none" id="pace-chip">No plan yet</span>
+<header class="masthead gutter">
+  <div class="column">
+    <div class="masthead-text">
+      <p class="eyebrow" id="eyebrow">AI spend</p>
+      <h1 id="title">AI spend</h1>
+      <p class="meta" id="meta"></p>
     </div>
-    <div class="bullet" id="bullet" role="img" aria-label="Spend so far and projected month end, against the plan">
-      <div class="bullet-projected" id="bullet-projected"></div>
-      <div class="bullet-so-far" id="bullet-so-far"></div>
-      <div class="bullet-plan" id="bullet-plan" hidden></div>
-    </div>
-    <div class="bullet-key">
-      <span class="key"><span class="swatch" style="background: var(--ink-2)"></span>So far</span>
-      <span class="key"><span class="swatch" style="background: var(--projected)"></span>Rest of the month, projected</span>
-      <span class="key" id="plan-key" hidden><span class="swatch tick"></span>Plan</span>
-    </div>
-    <div class="figures">
-      <div><p class="figure-label">So far</p><p class="figure-value" id="so-far">—</p><p class="figure-sub" id="through"></p></div>
-      <div><p class="figure-label">Plan</p><p class="figure-value" id="plan">—</p><p class="figure-sub" id="plan-sub"></p></div>
-      <div><p class="figure-label">Next month, forecast</p><p class="figure-value" id="forecast">—</p><p class="figure-sub" id="forecast-sub"></p></div>
-    </div>
-  </section>
-
-  <section class="panel" aria-labelledby="alerts-heading">
-    <div class="panel-head">
-      <h2 id="alerts-heading">Alerts</h2>
-      <p class="panel-note">Drafts for a person to send. Nothing here was sent.</p>
-    </div>
-    <ul class="alerts" id="alerts"></ul>
-  </section>
-
-  <section class="panel" aria-labelledby="teams-heading">
-    <div class="panel-head">
-      <h2 id="teams-heading">Where it went, by team</h2>
-      <p class="panel-note" id="teams-note"></p>
-    </div>
-    <div class="legend" aria-hidden="true">
-      <span class="key"><span class="swatch" style="background: var(--seats)"></span>Seats</span>
-      <span class="key"><span class="swatch" style="background: var(--extra)"></span>Extra usage</span>
-      <span class="key"><span class="swatch" style="background: var(--api)"></span>API</span>
-    </div>
-    <div class="bars" id="bars"></div>
-    <details>
-      <summary>Show as a table</summary>
-      <div class="table-wrap"><table id="teams-table"></table></div>
-    </details>
-  </section>
-
-  <div class="grid">
-    <section class="panel" aria-labelledby="unassigned-heading">
-      <div class="panel-head"><h2 id="unassigned-heading">Unassigned, and how to place it</h2></div>
-      <ul class="reasons" id="reasons"></ul>
-    </section>
-    <section class="panel" aria-labelledby="vendors-heading">
-      <div class="panel-head"><h2 id="vendors-heading">By vendor</h2></div>
-      <div class="table-wrap"><table id="vendors-table"></table></div>
-    </section>
+    <a class="by-aircfo" href="https://aircfo.com" target="_blank" rel="noopener">by <img src="__AIRCFO_LOGO__" alt="airCFO" width="111" height="22"></a>
   </div>
+</header>
 
-  <section class="panel" aria-labelledby="change-heading">
-    <div class="panel-head">
-      <h2 id="change-heading">Change from last month</h2>
-      <p class="panel-note" id="change-note"></p>
-    </div>
-    <div class="table-wrap"><table id="change-table"></table></div>
-    <div id="models" hidden>
-      <h3 class="figure-label">Extra usage by model, biggest moves first</h3>
-      <div class="table-wrap"><table id="models-table"></table></div>
-    </div>
-  </section>
-
-  <div class="grid">
-    <section class="panel" aria-labelledby="pace-heading">
-      <div class="panel-head"><h2 id="pace-heading">This month by team</h2></div>
-      <div class="table-wrap"><table id="pace-table"></table></div>
-    </section>
-    <section class="panel" aria-labelledby="forecast-heading">
-      <div class="panel-head">
-        <h2 id="forecast-heading">Next month by team</h2>
-        <p class="panel-note" id="forecast-note"></p>
-      </div>
-      <div class="table-wrap"><table id="forecast-table"></table></div>
-    </section>
+<nav class="tabbar gutter" aria-label="Dashboard sections">
+  <div class="column tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true">Overview</button>
+    <button class="tab" role="tab" id="tab-spend" aria-controls="spend" aria-selected="false" tabindex="-1">Spend</button>
+    <button class="tab" role="tab" id="tab-unassigned" aria-controls="unassigned" aria-selected="false" tabindex="-1">Unassigned <span class="tab-badge" id="unassigned-badge" hidden></span></button>
+    <button class="tab" role="tab" id="tab-forecast" aria-controls="forecast" aria-selected="false" tabindex="-1">Forecast</button>
+    <button class="tab" role="tab" id="tab-people" aria-controls="people" aria-selected="false" tabindex="-1" hidden>People</button>
+    <button class="tab" role="tab" id="tab-seats" aria-controls="seats" aria-selected="false" tabindex="-1">Seats</button>
   </div>
+</nav>
 
-  <section class="panel" id="people-panel" aria-labelledby="people-heading" hidden>
-    <div class="panel-head">
-      <h2 id="people-heading">By person</h2>
-      <p class="panel-note">Shown because this company turned on the person view.</p>
-    </div>
-    <div class="table-wrap"><table id="people-table"></table></div>
-    <h3 class="figure-label">API keys</h3>
-    <div class="table-wrap"><table id="keys-table"></table></div>
-  </section>
+<main class="gutter" aria-live="polite">
+  <div class="column">
 
-  <section class="panel" aria-labelledby="notes-heading">
-    <div class="panel-head"><h2 id="notes-heading">Notes on the data</h2></div>
-    <ul class="notes" id="notes"></ul>
-  </section>
+    <section class="tabpanel" role="tabpanel" id="overview" aria-labelledby="tab-overview">
+      <section class="panel verdict" aria-labelledby="verdict-heading">
+        <h2 id="verdict-heading" hidden>Where this month is heading</h2>
+        <div class="verdict-top">
+          <div>
+            <p class="hero-label">On pace for</p>
+            <p class="hero" id="on-pace">—</p>
+          </div>
+          <span class="chip none" id="pace-chip">No plan yet</span>
+        </div>
+        <div class="bullet" id="bullet" role="img" aria-label="Spend so far and projected month end, against the plan">
+          <div class="bullet-projected" id="bullet-projected"></div>
+          <div class="bullet-so-far" id="bullet-so-far"></div>
+          <div class="bullet-plan" id="bullet-plan" hidden></div>
+        </div>
+        <div class="key-row">
+          <span class="key"><span class="swatch so-far"></span>So far</span>
+          <span class="key"><span class="swatch projected"></span>Rest of the month, projected</span>
+          <span class="key" id="plan-key" hidden><span class="swatch tick"></span>Plan</span>
+        </div>
+        <div class="figures">
+          <div><p class="figure-label">So far</p><p class="figure-value" id="so-far">—</p><p class="figure-sub" id="through"></p></div>
+          <div><p class="figure-label">Plan</p><p class="figure-value" id="plan">—</p><p class="figure-sub" id="plan-sub"></p></div>
+          <div><p class="figure-label">Next month, forecast</p><p class="figure-value" id="forecast-total">—</p><p class="figure-sub" id="forecast-sub"></p></div>
+        </div>
+      </section>
 
-  <footer class="footer">
-    <p id="made-with"></p>
-    <p>Read-only: nothing here changes seats, billing or keys, and nothing is sent.</p>
-  </footer>
+      <section class="panel" aria-labelledby="alerts-heading">
+        <div class="panel-head">
+          <h2 id="alerts-heading">Alerts</h2>
+          <p class="panel-note">Drafts for a person to send. Nothing here was sent.</p>
+        </div>
+        <ul class="alerts" id="alerts"></ul>
+      </section>
+
+      <section class="panel" aria-labelledby="split-heading">
+        <div class="panel-head">
+          <h2 id="split-heading">The month so far</h2>
+          <button class="link-button" type="button" data-go="spend">By team</button>
+        </div>
+        <div class="split" id="split" role="img"></div>
+        <div class="products" id="products"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="notes-heading">
+        <div class="panel-head"><h2 id="notes-heading">Notes on the data</h2></div>
+        <ul class="notes" id="notes"></ul>
+      </section>
+    </section>
+
+    <section class="tabpanel" role="tabpanel" id="spend" aria-labelledby="tab-spend" hidden>
+      <section class="panel" aria-labelledby="teams-heading">
+        <div class="panel-head">
+          <h2 id="teams-heading">Where it went, by team</h2>
+          <p class="panel-note" id="teams-note"></p>
+        </div>
+        <div class="key-row" aria-hidden="true">
+          <span class="key"><span class="swatch seats"></span>Seats</span>
+          <span class="key"><span class="swatch extra"></span>Extra usage</span>
+          <span class="key"><span class="swatch api"></span>API</span>
+        </div>
+        <div class="bars" id="bars"></div>
+        <details>
+          <summary>Show as a table</summary>
+          <div class="table-wrap"><table id="teams-table"></table></div>
+        </details>
+      </section>
+
+      <section class="panel" aria-labelledby="vendors-heading">
+        <div class="panel-head"><h2 id="vendors-heading">By vendor</h2></div>
+        <div class="table-wrap"><table id="vendors-table"></table></div>
+      </section>
+
+      <section class="panel" aria-labelledby="change-heading">
+        <div class="panel-head">
+          <h2 id="change-heading">Change from last month</h2>
+          <p class="panel-note" id="change-note"></p>
+        </div>
+        <div class="table-wrap"><table id="change-table"></table></div>
+        <div id="models" hidden>
+          <h3>Extra usage by model, biggest moves first</h3>
+          <div class="table-wrap"><table id="models-table"></table></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel" role="tabpanel" id="unassigned" aria-labelledby="tab-unassigned" hidden>
+      <section class="panel" aria-labelledby="reasons-heading">
+        <div class="panel-head">
+          <h2 id="reasons-heading">Unassigned, and how to place it</h2>
+          <p class="panel-note" id="reasons-note"></p>
+        </div>
+        <ul class="reasons" id="reasons"></ul>
+      </section>
+    </section>
+
+    <section class="tabpanel" role="tabpanel" id="forecast" aria-labelledby="tab-forecast" hidden>
+      <section class="panel" aria-labelledby="pace-heading">
+        <div class="panel-head">
+          <h2 id="pace-heading">This month by team</h2>
+          <p class="panel-note">The last 14 days' average daily usage, carried to the month's end.</p>
+        </div>
+        <div class="table-wrap"><table id="pace-table"></table></div>
+      </section>
+      <section class="panel" aria-labelledby="next-heading">
+        <div class="panel-head">
+          <h2 id="next-heading">Next month by team</h2>
+          <p class="panel-note" id="forecast-note"></p>
+        </div>
+        <div class="table-wrap"><table id="forecast-table"></table></div>
+      </section>
+    </section>
+
+    <section class="tabpanel" role="tabpanel" id="people" aria-labelledby="tab-people" hidden>
+      <section class="panel" aria-labelledby="people-heading">
+        <div class="panel-head">
+          <h2 id="people-heading">By person</h2>
+          <p class="panel-note">Shown because this company turned on the person view.</p>
+        </div>
+        <div class="table-wrap"><table id="people-table"></table></div>
+      </section>
+      <section class="panel" aria-labelledby="keys-heading">
+        <div class="panel-head"><h2 id="keys-heading">API keys</h2></div>
+        <div class="table-wrap"><table id="keys-table"></table></div>
+      </section>
+    </section>
+
+    <section class="tabpanel" role="tabpanel" id="seats" aria-labelledby="tab-seats" hidden>
+      <section class="panel" aria-labelledby="seat-counts-heading">
+        <div class="panel-head">
+          <h2 id="seat-counts-heading">Seats held</h2>
+          <p class="panel-note">Against the seats bought in settings</p>
+        </div>
+        <div class="seat-summary" id="seat-summary"><p class="empty">Counted once the roster loads.</p></div>
+      </section>
+      <section class="panel" aria-labelledby="roster-heading">
+        <div class="panel-head">
+          <h2 id="roster-heading">Who holds which seat</h2>
+          <p class="panel-note" id="roster-note">Change a seat here and the next refresh uses it.</p>
+        </div>
+        <div class="seat-tools" id="seat-tools" hidden>
+          <input class="search" id="seat-search" type="search" placeholder="Find a person or team" aria-label="Find a person or team" autocomplete="off">
+          <p class="panel-note" id="seat-shown"></p>
+        </div>
+        <div id="roster-body">
+          <div class="skeleton" aria-label="Loading the roster">
+            <div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+  </div>
 </main>
+
+<footer class="footer gutter">
+  <div class="column">
+    <p id="made-with"></p>
+    <p>Read-only on every financial system: nothing here changes billing or keys, and nothing is sent. The Seats tab changes only this page's roster.</p>
+  </div>
+</footer>
 
 <script type="application/json" id="spend-data">__DASHBOARD_JSON__</script>
 <script>
@@ -299,12 +444,16 @@ details[open] > summary { margin-bottom: 10px; }
     { field: "api_cents", name: "API", cls: "api" },
   ];
   const REASON_FIXES = {
-    "no team on the people list": "Give these people a team in people.csv, or add them to Ramp with a department.",
+    "no team on the people list": "Give these people a team in Ramp, or a team in the Seats tab if they aren't in Ramp.",
     "key with no team": "Tag these API keys with a department in Ramp, or give them an owner.",
     "empty seat": "Paid seats nobody holds: reclaim them, or correct the seats bought in settings.",
     "API spend not tied to a current key": "Spend Ramp counts but no current key carries, usually a key deleted or rotated this month.",
   };
+  const VENDORS = { anthropic: "Claude", openai: "ChatGPT" };
+  const VENDOR_COMPANIES = { anthropic: "Anthropic", openai: "OpenAI" };
+  const NO_SEAT = "none";
   const UNASSIGNED = "Unassigned";
+  const TAB_IDS = ["overview", "spend", "unassigned", "forecast", "people", "seats"];
 
   const byId = (id) => document.getElementById(id);
   const text = (el, value) => { el.textContent = value; return el; };
@@ -316,6 +465,8 @@ details[open] > summary { margin-bottom: 10px; }
   };
   const money = (cents) => (cents < 0 ? "-" : "") + "$" + (Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const wholeMoney = (cents) => "$" + Math.round(cents / 100).toLocaleString("en-US");
+  const titleCase = (value) => value.replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const sentence = (value) => value.charAt(0).toUpperCase() + value.slice(1);
   const monthName = (label) => {
     const [year, month] = label.split("-").map(Number);
     return new Date(Date.UTC(year, month - 1, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -331,6 +482,7 @@ details[open] > summary { margin-bottom: 10px; }
     if (before === 0) return sign + money(Math.abs(difference)) + " (new)";
     return sign + money(Math.abs(difference)) + " (" + sign + Math.round(Math.abs(difference) / before * 100) + "%)";
   };
+  const unassignedRow = (cells) => cells[0] === UNASSIGNED ? "unassigned" : "";
 
   function table(el, headings, rows, options) {
     const opts = options || {};
@@ -341,13 +493,43 @@ details[open] > summary { margin-bottom: 10px; }
     rows.forEach((cells) => {
       const row = body.insertRow();
       if (opts.rowClass) row.className = opts.rowClass(cells) || "";
-      cells.forEach((cell, index) => row.appendChild(make("td", index === 0 ? "" : "num", cell)));
+      cells.forEach((cell) => row.appendChild(make("td", "", cell)));
     });
     if (opts.total) {
       const row = body.insertRow();
       row.className = "total";
-      opts.total.forEach((cell, index) => row.appendChild(make("td", index === 0 ? "" : "num", cell)));
+      opts.total.forEach((cell) => row.appendChild(make("td", "", cell)));
     }
+  }
+
+  function tooltipFor(container) {
+    const tooltip = make("div", "tooltip");
+    tooltip.hidden = true;
+    container.appendChild(tooltip);
+    return {
+      show(mark, title, value) {
+        tooltip.replaceChildren(make("strong", "", value), document.createTextNode(title));
+        tooltip.hidden = false;
+        const box = container.getBoundingClientRect();
+        const spot = mark.getBoundingClientRect();
+        const left = Math.min(Math.max(spot.left - box.left + spot.width / 2 - tooltip.offsetWidth / 2, 0), box.width - tooltip.offsetWidth);
+        tooltip.style.left = left + "px";
+        tooltip.style.top = (spot.top - box.top - tooltip.offsetHeight - 6) + "px";
+      },
+      hide() { tooltip.hidden = true; },
+    };
+  }
+
+  function segment(cls, label, cents, tip) {
+    const mark = make("span", "seg " + cls);
+    mark.style.flex = cents + " 1 0";
+    mark.tabIndex = 0;
+    mark.setAttribute("aria-label", label + ": " + money(cents));
+    mark.addEventListener("pointerenter", () => tip.show(mark, label, money(cents)));
+    mark.addEventListener("focus", () => tip.show(mark, label, money(cents)));
+    mark.addEventListener("pointerleave", tip.hide);
+    mark.addEventListener("blur", tip.hide);
+    return mark;
   }
 
   const about = data.about;
@@ -355,18 +537,51 @@ details[open] > summary { margin-bottom: 10px; }
   const pace = data.pace;
   const forecast = data.forecast;
   const company = about.company || "Your company";
+  const through = pace.through || Object.values(spend.through || {}).sort()[0];
 
   // Masthead
-  text(byId("eyebrow"), monthName(about.month));
-  text(byId("title"), company + " AI spend");
-  const through = pace.through || Object.values(spend.through || {}).sort()[0];
+  text(byId("eyebrow"), "AI spend · " + monthName(about.month));
+  text(byId("title"), company);
   const metaParts = [];
   if (through) metaParts.push("Data through " + dayName(through));
   metaParts.push("refreshed " + dayName(about.made_on));
   metaParts.push(about.view === "person" ? "person view" : "teams only, small teams folded together");
   text(byId("meta"), metaParts.join(" · "));
 
-  // The verdict
+  // Tabs, routed on the link's #name so a tab can be bookmarked or sent
+  const tabs = TAB_IDS.map((id) => byId("tab-" + id));
+  function visibleTabs() { return tabs.filter((tab) => !tab.hidden); }
+  function showTab(id, moveFocus) {
+    const target = visibleTabs().find((tab) => tab.getAttribute("aria-controls") === id) || tabs[0];
+    tabs.forEach((tab) => {
+      const selected = tab === target;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      byId(tab.getAttribute("aria-controls")).hidden = !selected;
+    });
+    if (moveFocus) target.focus();
+  }
+  tabs.forEach((tab) => tab.addEventListener("click", () => { location.hash = tab.getAttribute("aria-controls"); }));
+  byId("tabs").addEventListener("keydown", (event) => {
+    const shown = visibleTabs();
+    const index = shown.indexOf(document.activeElement);
+    if (index < 0) return;
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    let next = null;
+    if (step) next = shown[(index + step + shown.length) % shown.length];
+    if (event.key === "Home") next = shown[0];
+    if (event.key === "End") next = shown[shown.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    location.hash = next.getAttribute("aria-controls");
+    next.focus();
+  });
+  document.querySelectorAll("[data-go]").forEach((button) => {
+    button.addEventListener("click", () => { location.hash = button.dataset.go; });
+  });
+  window.addEventListener("hashchange", () => showTab(location.hash.slice(1), false));
+
+  // Overview: the verdict
   text(byId("on-pace"), wholeMoney(pace.on_pace_for_cents));
   text(byId("so-far"), wholeMoney(pace.so_far_cents));
   text(byId("through"), through ? "through " + dayName(through) : "");
@@ -386,7 +601,7 @@ details[open] > summary { margin-bottom: 10px; }
   } else {
     text(byId("plan-sub"), "Saved once a month has full history behind it");
   }
-  text(byId("forecast"), wholeMoney(forecast.total_cents));
+  text(byId("forecast-total"), wholeMoney(forecast.total_cents));
   text(byId("forecast-sub"), monthName(forecast.month));
 
   const scale = Math.max(pace.on_pace_for_cents, pace.plan ? pace.plan.total_cents : 0, 1) * 1.04;
@@ -402,11 +617,9 @@ details[open] > summary { margin-bottom: 10px; }
     "So far " + wholeMoney(pace.so_far_cents) + ", on pace for " + wholeMoney(pace.on_pace_for_cents) +
     (pace.plan ? ", against a plan of " + wholeMoney(pace.plan.total_cents) : ""));
 
-  // Alerts
+  // Overview: alerts
   const alerts = byId("alerts");
-  if (data.alerts.length === 0) {
-    alerts.appendChild(make("li", "empty", "No alerts this month."));
-  }
+  if (data.alerts.length === 0) alerts.appendChild(make("li", "empty", "No alerts this month."));
   data.alerts.forEach((alert) => {
     const item = make("li", "alert");
     const [kind, ...rest] = alert.split(": ");
@@ -418,23 +631,38 @@ details[open] > summary { margin-bottom: 10px; }
     alerts.appendChild(item);
   });
 
-  // Where it went, by team
+  // Overview: the month by product
   const teams = spend.by_team;
+  const productTotals = PRODUCTS.map((product) => teams.reduce((sum, team) => sum + team[product.field], 0));
+  const split = byId("split");
+  const splitTip = tooltipFor(split.parentElement);
+  split.parentElement.style.position = "relative";
+  PRODUCTS.forEach((product, index) => {
+    const cents = productTotals[index];
+    if (cents > 0) split.appendChild(segment(product.cls, product.name, cents, splitTip));
+    const cell = make("div");
+    const name = make("p", "product-name");
+    name.appendChild(make("span", "swatch " + product.cls));
+    name.appendChild(document.createTextNode(product.name));
+    cell.appendChild(name);
+    cell.appendChild(make("p", "figure-value", money(cents)));
+    const share = spend.total_cents > 0 ? Math.round(cents / spend.total_cents * 100) : 0;
+    cell.appendChild(make("p", "figure-sub", share + "% of " + money(spend.total_cents)));
+    byId("products").appendChild(cell);
+  });
+  split.setAttribute("aria-label", PRODUCTS.map((product, index) => product.name + " " + money(productTotals[index])).join(", "));
+
+  // Overview: notes
+  const notes = byId("notes");
+  const changes = data.change_from_last_month;
+  const allNotes = [...new Set(data.notes.concat(changes ? changes.notes : []))];
+  if (allNotes.length === 0) notes.appendChild(make("li", "", "Nothing missing or partial."));
+  allNotes.forEach((note) => notes.appendChild(make("li", "", sentence(note))));
+
+  // Spend: by team
   const largest = Math.max(1, ...teams.map((team) => team.total_cents));
   const bars = byId("bars");
-  const tooltip = make("div", "tooltip");
-  tooltip.hidden = true;
-  bars.appendChild(tooltip);
-  const showTip = (segment, title, value) => {
-    tooltip.replaceChildren(make("strong", "", value), document.createTextNode(title));
-    tooltip.hidden = false;
-    const box = bars.getBoundingClientRect();
-    const mark = segment.getBoundingClientRect();
-    const left = Math.min(Math.max(mark.left - box.left + mark.width / 2 - tooltip.offsetWidth / 2, 0), box.width - tooltip.offsetWidth);
-    tooltip.style.left = left + "px";
-    tooltip.style.top = (mark.top - box.top - tooltip.offsetHeight - 6) + "px";
-  };
-  const hideTip = () => { tooltip.hidden = true; };
+  const barTip = tooltipFor(bars);
   teams.forEach((team) => {
     const row = make("div", "bar-row");
     row.appendChild(make("span", "bar-name" + (team.team === UNASSIGNED ? " unassigned" : ""), team.team));
@@ -442,17 +670,7 @@ details[open] > summary { margin-bottom: 10px; }
     track.style.width = (team.total_cents / largest * 100) + "%";
     PRODUCTS.forEach((product) => {
       const cents = team[product.field];
-      if (cents <= 0) return;
-      const segment = make("span", "seg " + product.cls);
-      segment.style.flex = cents + " 1 0";
-      segment.tabIndex = 0;
-      const label = team.team + " · " + product.name;
-      segment.setAttribute("aria-label", label + ": " + money(cents));
-      segment.addEventListener("pointerenter", () => showTip(segment, label, money(cents)));
-      segment.addEventListener("focus", () => showTip(segment, label, money(cents)));
-      segment.addEventListener("pointerleave", hideTip);
-      segment.addEventListener("blur", hideTip);
-      track.appendChild(segment);
+      if (cents > 0) track.appendChild(segment(product.cls, team.team + " · " + product.name, cents, barTip));
     });
     const holder = make("div");
     holder.style.minWidth = "0";
@@ -461,38 +679,22 @@ details[open] > summary { margin-bottom: 10px; }
     row.appendChild(make("span", "bar-total", money(team.total_cents)));
     bars.appendChild(row);
   });
-  const columnTotals = PRODUCTS.map((product) => teams.reduce((sum, team) => sum + team[product.field], 0));
   table(byId("teams-table"), ["Team", "Seats", "Extra usage", "API", "Total"],
     teams.map((team) => [team.team, ...PRODUCTS.map((product) => money(team[product.field])), money(team.total_cents)]),
-    { total: ["Total", ...columnTotals.map(money), money(spend.total_cents)],
-      rowClass: (cells) => cells[0] === UNASSIGNED ? "unassigned" : "" });
+    { total: ["Total", ...productTotals.map(money), money(spend.total_cents)], rowClass: unassignedRow });
   text(byId("teams-note"), money(spend.total_cents) + " this month" + (through ? ", through " + dayName(through) : ""));
 
-  // Unassigned
-  const reasons = byId("reasons");
-  if (spend.unassigned_by_reason.length === 0) {
-    reasons.appendChild(make("li", "empty", "Every dollar is on a team."));
-  }
-  spend.unassigned_by_reason.forEach((reason) => {
-    const item = make("li", "reason");
-    item.appendChild(make("span", "", reason.reason.charAt(0).toUpperCase() + reason.reason.slice(1)));
-    item.appendChild(make("span", "reason-amount", money(reason.total_cents)));
-    if (REASON_FIXES[reason.reason]) item.appendChild(make("span", "reason-fix", REASON_FIXES[reason.reason]));
-    reasons.appendChild(item);
-  });
-
-  // By vendor
-  const vendorName = (vendor) => ({ anthropic: "Anthropic", openai: "OpenAI" }[vendor] || vendor);
+  // Spend: by vendor
+  const vendorName = (vendor) => VENDOR_COMPANIES[vendor] || vendor;
   table(byId("vendors-table"), ["Vendor", "Seats", "Extra usage", "API", "Total"],
     spend.by_vendor.map((vendor) => [vendorName(vendor.vendor), ...PRODUCTS.map((product) => money(vendor[product.field])), money(vendor.total_cents)]));
 
-  // Change from last month
-  const changes = data.change_from_last_month;
+  // Spend: change from last month
   if (changes) {
     text(byId("change-note"), "Against " + monthName(changes.previous_month));
     table(byId("change-table"), ["Team", monthName(changes.previous_month), monthName(about.month), "Change"],
       changes.by_team.map((row) => [row.team, money(row.previous_cents), money(row.current_cents), change(row.previous_cents, row.current_cents)]),
-      { rowClass: (cells) => cells[0] === UNASSIGNED ? "unassigned" : "" });
+      { rowClass: unassignedRow });
     if (changes.by_model.length) {
       byId("models").hidden = false;
       table(byId("models-table"), ["Model", "Last month", "This month", "Change"],
@@ -502,35 +704,266 @@ details[open] > summary { margin-bottom: 10px; }
     byId("change-table").replaceWith(make("p", "empty", "No usage is saved for last month, so there's nothing to compare."));
   }
 
-  // This month and next, by team
+  // Unassigned
+  const reasons = byId("reasons");
+  const unassignedCents = spend.unassigned_by_reason.reduce((sum, reason) => sum + reason.total_cents, 0);
+  if (spend.unassigned_by_reason.length === 0) {
+    reasons.appendChild(make("li", "empty", "Every dollar is on a team."));
+  } else {
+    text(byId("reasons-note"), money(unassignedCents) + " of " + money(spend.total_cents) + " this month");
+    const badge = byId("unassigned-badge");
+    text(badge, wholeMoney(unassignedCents));
+    badge.hidden = false;
+  }
+  spend.unassigned_by_reason.forEach((reason) => {
+    const item = make("li", "reason");
+    item.appendChild(make("span", "reason-name", sentence(reason.reason)));
+    item.appendChild(make("span", "reason-amount", money(reason.total_cents)));
+    if (REASON_FIXES[reason.reason]) item.appendChild(make("span", "reason-fix", REASON_FIXES[reason.reason]));
+    reasons.appendChild(item);
+  });
+
+  // Forecast
   table(byId("pace-table"), ["Team", "So far", "On pace for"],
     pace.by_team.map((row) => [row.team, money(row.so_far_cents), money(row.on_pace_for_cents)]),
-    { total: ["Total", money(pace.so_far_cents), money(pace.on_pace_for_cents)],
-      rowClass: (cells) => cells[0] === UNASSIGNED ? "unassigned" : "" });
+    { total: ["Total", money(pace.so_far_cents), money(pace.on_pace_for_cents)], rowClass: unassignedRow });
   table(byId("forecast-table"), ["Team", "Forecast"],
     forecast.by_team.map((row) => [row.team, money(row.total_cents)]),
-    { total: ["Total", money(forecast.total_cents)],
-      rowClass: (cells) => cells[0] === UNASSIGNED ? "unassigned" : "" });
+    { total: ["Total", money(forecast.total_cents)], rowClass: unassignedRow });
   const spans = Object.entries(forecast.averaged_over || {})
     .filter(([, months]) => months.length)
     .map(([product, months]) => ({ "extra usage": "extra usage", api: "API" }[product] || product) +
       " averaged over " + months.length + (months.length === 1 ? " month" : " months"));
   text(byId("forecast-note"), monthName(forecast.month) + (spans.length ? "; " + spans.join(", ") : ""));
 
-  // The person view
+  // People, only in the person view
   if (spend.by_person) {
-    byId("people-panel").hidden = false;
+    byId("tab-people").hidden = false;
     table(byId("people-table"), ["Person", "Seats", "Extra usage", "API", "Total"],
       spend.by_person.map((person) => [person.person, ...PRODUCTS.map((product) => money(person[product.field])), money(person.total_cents)]));
     table(byId("keys-table"), ["Key", "Vendor", "Owner", "Team", "Spend"],
       (spend.api_keys || []).map((key) => [key.api_key, vendorName(key.vendor), key.owner || "no owner", key.team, money(key.total_cents)]));
   }
 
-  // Notes and footer
-  const notes = byId("notes");
-  const allNotes = data.notes.concat(changes ? changes.notes : []);
-  if (allNotes.length === 0) notes.appendChild(make("li", "", "Nothing missing or partial."));
-  [...new Set(allNotes)].forEach((note) => notes.appendChild(make("li", "", note.charAt(0).toUpperCase() + note.slice(1))));
-  text(byId("made-with"), "Made with " + about.tool + ", open-source AI spend analysis built on Ramp.");
+  text(byId("made-with"), "Made with " + about.tool + ", open-source AI spend analysis built on Ramp, by airCFO.");
+  showTab(location.hash.slice(1), false);
+
+  // Seats: the roster lives in this page's shared store, where Claude adds everyone from Ramp
+  // and anyone who can edit the page changes a seat; the next refresh reads it back.
+  const seatTypes = data.seat_types || {};
+  const seatVendors = Object.keys(VENDORS).filter((vendor) => (seatTypes[vendor] || []).length);
+  const rosterBody = byId("roster-body");
+  const seatRows = new Map();
+  const writes = new Map();
+  let people = [];
+  let canWrite = null;
+  let store = null;
+  let stopListening = null;
+
+  function rosterMessage(message, retry) {
+    const box = make("div", "seat-tools");
+    box.appendChild(make("p", "empty", message));
+    if (retry) {
+      const button = make("button", "link-button", "Try again");
+      button.type = "button";
+      button.addEventListener("click", listen);
+      box.appendChild(button);
+    }
+    rosterBody.replaceChildren(box);
+    byId("seat-tools").hidden = true;
+  }
+
+  function seatLabel(value) { return value === NO_SEAT ? "No account" : titleCase(value); }
+
+  function seatSelect(person, vendor) {
+    const select = make("select", "seat-select");
+    select.id = "seat-" + vendor + "-" + person.id;
+    select.setAttribute("aria-label", VENDORS[vendor] + " seat for " + (person.name || person.email || person.id));
+    const options = [NO_SEAT, ...seatTypes[vendor].map((plan) => plan.seat_type)];
+    options.forEach((value) => {
+      const option = make("option", "", seatLabel(value));
+      option.value = value;
+      select.appendChild(option);
+    });
+    select.addEventListener("change", () => saveSeat(person.id, vendor, select));
+    return select;
+  }
+
+  function setSelectValue(select, value) {
+    const wanted = value || NO_SEAT;
+    if (![...select.options].some((option) => option.value === wanted)) {
+      // A seat type settings no longer price: show it as it is, so nobody's seat changes silently.
+      const option = make("option", "", "Unpriced: " + wanted);
+      option.value = wanted;
+      select.appendChild(option);
+    }
+    select.value = wanted;
+    select.classList.toggle("none", wanted === NO_SEAT);
+  }
+
+  function rowFor(person) {
+    let entry = seatRows.get(person.id);
+    if (!entry) {
+      const row = document.createElement("tr");
+      const who = make("td");
+      const box = make("div", "seat-person");
+      const name = make("span", "seat-name");
+      const email = make("span", "seat-email");
+      box.append(name, email);
+      who.appendChild(box);
+      const team = make("td");
+      row.append(who, team);
+      const selects = {};
+      seatVendors.forEach((vendor) => {
+        const cell = make("td");
+        selects[vendor] = seatSelect(person, vendor);
+        cell.appendChild(selects[vendor]);
+        row.appendChild(cell);
+      });
+      const statusCell = make("td");
+      const status = make("span", "row-status");
+      status.setAttribute("role", "status");
+      statusCell.appendChild(status);
+      row.appendChild(statusCell);
+      entry = { row, name, email, team, selects, status };
+      seatRows.set(person.id, entry);
+    }
+    text(entry.name, person.name || person.email || person.id);
+    text(entry.email, person.name ? (person.email || person.id) : "");
+    text(entry.team, person.team || "No team");
+    seatVendors.forEach((vendor) => {
+      const select = entry.selects[vendor];
+      // Leave a seat being saved alone, so another viewer's update doesn't undo this one mid-save.
+      if (!writes.has(person.id + "/" + vendor)) setSelectValue(select, person[vendor]);
+      select.disabled = canWrite === false;
+    });
+    return entry;
+  }
+
+  function renderSummary() {
+    const summary = byId("seat-summary");
+    summary.replaceChildren();
+    seatVendors.forEach((vendor) => {
+      seatTypes[vendor].forEach((plan) => {
+        const held = people.filter((person) => (person[vendor] || NO_SEAT) === plan.seat_type).length;
+        const cell = make("div", "seat-count");
+        cell.appendChild(make("p", "figure-label", VENDORS[vendor] + " " + titleCase(plan.seat_type)));
+        cell.appendChild(make("p", "figure-value", held + " of " + plan.bought));
+        const gap = plan.bought - held;
+        const note = gap > 0 ? gap + (gap === 1 ? " seat" : " seats") + " bought and not held"
+          : gap < 0 ? Math.abs(gap) + " more held than bought" : "every seat bought is held";
+        cell.appendChild(make("p", "figure-sub" + (gap < 0 ? " warn" : ""), note));
+        summary.appendChild(cell);
+      });
+    });
+    if (!summary.children.length) summary.appendChild(make("p", "empty", "No seat types are priced in settings yet."));
+  }
+
+  function renderRoster() {
+    renderSummary();
+    if (!people.length) {
+      rosterMessage("Nobody is on the roster yet. Ask Claude to “set up the seats roster” and it adds everyone from Ramp.");
+      return;
+    }
+    let tableEl = byId("seats-table");
+    if (!tableEl) {
+      const wrap = make("div", "table-wrap");
+      tableEl = make("table");
+      tableEl.id = "seats-table";
+      const head = tableEl.createTHead().insertRow();
+      ["Person", "Team", ...seatVendors.map((vendor) => VENDORS[vendor] + " seat"), ""].forEach((heading) => head.appendChild(make("th", "", heading)));
+      tableEl.createTBody();
+      wrap.appendChild(tableEl);
+      rosterBody.replaceChildren(wrap);
+    }
+    byId("seat-tools").hidden = false;
+    const body = tableEl.tBodies[0];
+    const ordered = [...people].sort((a, b) =>
+      (a.team || "~").localeCompare(b.team || "~") || (a.name || a.id).localeCompare(b.name || b.id));
+    const wanted = ordered.map((person) => rowFor(person).row);
+    const current = [...body.rows];
+    if (wanted.length !== current.length || wanted.some((row, index) => row !== current[index])) body.replaceChildren(...wanted);
+    const present = new Set(people.map((person) => person.id));
+    [...seatRows.keys()].forEach((id) => { if (!present.has(id)) seatRows.delete(id); });
+    filterRoster();
+  }
+
+  function filterRoster() {
+    const query = byId("seat-search").value.trim().toLowerCase();
+    let shown = 0;
+    people.forEach((person) => {
+      const entry = seatRows.get(person.id);
+      if (!entry) return;
+      const match = !query || [person.name, person.email, person.id, person.team].some((field) => String(field || "").toLowerCase().includes(query));
+      entry.row.hidden = !match;
+      if (match) shown += 1;
+    });
+    text(byId("seat-shown"), query ? shown + " of " + people.length + " people" : people.length + " people");
+  }
+
+  function saveSeat(id, vendor, select) {
+    const key = id + "/" + vendor;
+    const entry = seatRows.get(id);
+    const before = (people.find((person) => person.id === id) || {})[vendor] || NO_SEAT;
+    const value = select.value;
+    select.classList.toggle("none", value === NO_SEAT);
+    entry.status.classList.remove("failed");
+    text(entry.status, "Saving…");
+    // One write at a time per person, so two quick changes to one row land in order.
+    const previous = writes.get(id) || Promise.resolve();
+    const write = previous.then(() => store.doc("seats/" + id).update({ [vendor]: value })).then(
+      () => { text(entry.status, "Saved"); },
+      (error) => {
+        setSelectValue(select, before);
+        entry.status.classList.add("failed");
+        if (error && error.code === "invalid_argument") {
+          canWrite = false;
+          text(entry.status, "Not saved");
+          text(byId("roster-note"), "You can see seats here but not change them. Ask whoever shared this page for edit access.");
+          seatRows.forEach((row) => Object.values(row.selects).forEach((each) => { each.disabled = true; }));
+        } else {
+          text(entry.status, "Not saved. Try again.");
+        }
+      });
+    writes.set(id, write);
+    writes.set(key, write);
+    write.finally(() => {
+      if (writes.get(key) === write) writes.delete(key);
+      if (writes.get(id) === write) writes.delete(id);
+    });
+  }
+
+  function listen() {
+    if (stopListening) stopListening();
+    rosterBody.replaceChildren(make("p", "empty", "Loading the roster…"));
+    stopListening = store.collection("seats").onSnapshot((snapshot) => {
+      people = snapshot.docs.filter((doc) => doc.exists).map((doc) => ({ id: doc.id, ...doc.data() }));
+      renderRoster();
+    }, () => {
+      stopListening = null;
+      rosterMessage("The roster didn't load.", true);
+    });
+  }
+
+  byId("seat-search").addEventListener("input", filterRoster);
+
+  async function startSeats() {
+    if (!seatVendors.length) {
+      renderSummary();
+      rosterMessage("Add seat prices to settings first; the roster offers the seat types settings price.");
+      return;
+    }
+    const claude = window.claude;
+    store = claude && claude.use ? await claude.use("db").catch(() => null) : null;
+    if (!store) {
+      rosterMessage("The roster opens when this page is viewed in Claude while signed in.");
+      return;
+    }
+    const viewer = await claude.use("user").catch(() => null);
+    canWrite = viewer ? await viewer.can("data.write").catch(() => null) : null;
+    if (canWrite === false) text(byId("roster-note"), "You can see seats here but not change them. Ask whoever shared this page for edit access.");
+    listen();
+  }
+  startSeats();
 })();
 </script>

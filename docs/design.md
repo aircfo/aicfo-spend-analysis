@@ -38,7 +38,7 @@ Claude gathers the inputs and presents the answers; the open-source tool does th
 - **Forecast:** this month is on pace for $2,400, 5% above last month.
 - **Alerts:** one spike, Engineering's API spend on the 14th at three times a normal day, drafted for someone to send.
 
-Claude shows this as a dashboard; the tool itself writes the same numbers to plain files.
+Claude shows this as a dashboard page in tabs, with the seats roster as its last tab; the tool itself writes the same numbers to plain files.
 
 **Words used here**
 
@@ -66,7 +66,7 @@ Three inputs, matching the picture above. Claude fetches the first one through t
 | --- | --- | --- |
 | Ramp | API spend for Anthropic and OpenAI by key, month to date, with each key's owner and department, from the Admin keys plugged into Ramp; each vendor's total for the same days, which also counts spend no current key carries; the people list (name, email, team, active) | Claude, through the Ramp connector |
 | claude.ai spend export | Each person's extra usage | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
-| People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Kept by hand or by Claude |
+| People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Written by Claude from the dashboard's Seats tab, or kept by hand |
 
 Settings (seat prices, seats bought, who sees person detail, alert thresholds) live in one small JSON file, `aicfo-spend.json`. It's JSON because Python 3.10 can't read TOML without an add-on package.
 
@@ -157,9 +157,10 @@ legacy/        the v0.3.0 scripts, removed as they're replaced
 Shared outputs show teams; whoever runs the tool can turn on the person view.
 
 - **Teams by default.** Dashboard data and summaries roll people up to teams before they're written; person detail stays in the company's folder.
+- **The seats roster names people, never their spend.** The page's Seats tab lists each person's name, email, team and seat types, so people can correct their seats where they look at the numbers. Anyone who can open the page sees it, and anyone given edit access can change a seat (decided 2026-10-28; limiting who reads it is one access rule on the page's database, `read: "admin"` on `seats`, if a company wants that later).
 - **Small teams fold together.** A one-person team is a person, so shared outputs fold teams under 3 people into "Other (small teams)". A team keeps its name only if at least 3 people spent in it both this month and last month, the two months compared; a key's owner counts as someone who spent in the key's team. "Other" holds at least 3 people too: while it holds fewer, the smallest named team joins it. Spikes are judged on the folded teams, and notes name only folded teams.
 
-`aicfo-spend dashboard <folder> [month]` writes the shared numbers to `out/<month>/dashboard.json`: the month by team, vendor and Unassigned reason, the change from last month, the pace, next month's forecast, the alert drafts and the notes. Amounts are whole cents, so no money passes through a float on its way to a chart. In the team view it also leaves out API key names, which often name their owner, and replaces any email in a note. The person view adds each person and each key. Unassigned shows in both views by reason and never by name, since it's the list of things to fix. Totals are the sums of the rounded rows, so the page adds up. A file for last month that can't be read stops the dashboard with an error naming it, because the forecast and the pace read last month too.
+`aicfo-spend dashboard <folder> [month]` writes the shared numbers to `out/<month>/dashboard.json`: the month by team, vendor and Unassigned reason, the change from last month, the pace, next month's forecast, the alert drafts, the notes, and each vendor's seat types with how many were bought, which the Seats tab offers. Amounts are whole cents, so no money passes through a float on its way to a chart. In the team view it also leaves out API key names, which often name their owner, and replaces any email in a note. The person view adds each person and each key. Unassigned shows in both views by reason and never by name, since it's the list of things to fix. Totals are the sums of the rounded rows, so the page adds up. A file for last month that can't be read stops the dashboard with an error naming it, because the forecast and the pace read last month too.
 - **Company data never enters a repo.** Test files are made up.
 - **A privacy scan runs before every commit**, checking the change against real names from the people list and the spend export.
 
@@ -212,6 +213,7 @@ The test and release workflows need a code owner's approval.
 | Excel workbooks | An optional `[excel]` extra |
 | Where the skill lives | In this repo, beside the engine, so one release carries both (moved from `claude-startup-finance` on 2026-10-28) |
 | How the skill gets the tool | Runs the engine it shipped with; a skill folder copied on its own downloads the pinned release instead |
+| The shared page | One airCFO-branded page in tabs: Overview, Spend, Unassigned, Forecast, People (person view only) and Seats. The seats roster is its Seats tab, kept in the page's own database, replacing a separate Claude Doc so there's one link (decided 2026-10-28) |
 | What an install gets | The release tag of the current version, named in the marketplace file; never the default branch |
 | Settings file | JSON (`aicfo-spend.json`), readable by Python 3.10 with no add-ons |
 | Marketplace listing | This repo is its own one-plugin marketplace, and no other marketplace lists it. The v0.3.0 skill is deleted from `claude-startup-finance`, since few if any outside installs use it (decided 2026-10-28) |

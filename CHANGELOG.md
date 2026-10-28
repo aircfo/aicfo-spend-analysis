@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
+- The shared dashboard is split into tabs (Overview, Spend, Unassigned, Forecast, People in the person view, and Seats) and wears airCFO's brand: its navy masthead and logo, Bitter and Inter, and chart colors drawn from its palette and checked for color-blind readers in both themes. A tab can be linked to by its name, such as `#seats`.
+- The Seats tab is the seats roster, replacing the separate Claude Doc: one row per person with a dropdown per vendor, kept in the page's own database so it survives every daily republish. Anyone who can open the page sees it (names, emails, teams and seat types, never spend); anyone given edit access can change a seat, and the next refresh writes `people.csv` from it. Setup moves an existing roster doc into it once.
+- `dashboard.json` lists each vendor's seat types and how many were bought, which the Seats tab offers and counts against.
+
 - The `ai-spend-analysis` Claude skill now lives in this repo, in `skills/ai-spend-analysis/`, and the repo installs as one plugin: `/plugin install ai-spend-analysis --marketplace aircfo/aicfo-spend-analysis`. The engine and the skill are released together under one version. It was copied from `claude-startup-finance`'s unmerged `feat/ai-spend-thin-wrapper` branch, where its earlier history is.
 - The skill's scripts' tests (`tests/skill/`), which now run in this repo's checks, type check included, and its behavior tests (`evals/`), run by hand with `claude plugin eval`.
 - `docs/releasing.md`: the release steps, including pinning the uploaded wheel's fingerprint.

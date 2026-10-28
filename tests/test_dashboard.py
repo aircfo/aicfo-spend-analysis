@@ -109,6 +109,12 @@ def test_the_team_view_shows_no_person_and_no_key_name(workspace: Path) -> None:
     assert "by_person" not in section(dashboard, "spend")
 
 
+def test_the_seat_types_settings_price_are_listed_for_the_seats_roster(workspace: Path) -> None:
+    dashboard = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
+
+    assert dashboard["seat_types"] == {"anthropic": [{"seat_type": "standard", "bought": len(TEAMS) + 1}]}
+
+
 def test_emails_in_a_note_are_replaced() -> None:
     note = "couldn't place pat.lee@example.com (or dee.o'hara+ai@sub.example.co.uk), so check people.csv"
 

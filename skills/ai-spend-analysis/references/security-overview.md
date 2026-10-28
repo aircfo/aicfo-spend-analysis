@@ -35,7 +35,7 @@ Everything lands in **one folder on the operator's computer**, outside any git r
 ## What leaves the folder
 
 - **Shared outputs.** The dashboard data shows teams by default. Teams under 3 people fold together, and no name, email or API key name is included. A person opts into the person view, which shows each person's spend. **Anyone a shared output reaches can read every number in it**, so sharing is the access control.
-- **The seats roster.** A Claude Doc the operator owns, with each active Ramp user's name, email, team and seat types, and no spend. It's private until the operator shares it, and anyone it's shared with can read it.
+- **The seats roster.** The dashboard page's Seats tab, kept in that page's own database: each active Ramp user's name, email, team and seat types, and no spend. **Everyone who can open the page can read it**, whatever the `visibility` setting, and anyone the operator gives edit access can change a seat. The page is private until the operator shares it.
 - **Fonts.** The dashboard page loads its fonts from Google Fonts, so each viewer's browser asks Google for them. No company data goes with that request.
 - **What Claude reads.** During a refresh, Claude reads Ramp's answers and the tool's summaries, under the operator's Claude plan terms. Ramp's answers include people's names. The spend export is saved by code; Claude doesn't need to read it.
 
