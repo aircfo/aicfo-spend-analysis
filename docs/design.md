@@ -65,7 +65,7 @@ Three inputs, matching the picture above. Claude fetches the first one through t
 | Input | What it gives | How it arrives |
 | --- | --- | --- |
 | Ramp | API spend for Anthropic and OpenAI by key, month to date, with each key's owner and department, from the Admin keys plugged into Ramp; each vendor's total for the same days, which also counts spend no current key carries; the people list (name, email, team, active) | Claude, through the Ramp connector |
-| claude.ai spend export | Each person's extra usage | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
+| claude.ai spend export | Each person's extra usage, and their use of each product and model: requests and tokens, $0 of extra usage included | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
 | People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Written by Claude from the dashboard's Seats tab, or kept by hand |
 
 Settings (seat prices, seats bought, who sees person detail, alert thresholds) live in one small JSON file, `aicfo-spend.json`. It's JSON because Python 3.10 can't read TOML without an add-on package.
@@ -104,6 +104,15 @@ Two lookups place almost every dollar, and whatever they can't place shows as Un
 
 The same table gives both views, by team and by person. In the person view, API spend shows under each key's name with its owner beside it, because one key often serves a whole app.
 
+## Who uses it
+
+Spend says what AI cost; usage says who relies on it. The claude.ai spend export lists everyone who used Claude in its days, $0 of extra usage included, with requests and tokens for each product and model, so it measures use within seats as well as beyond them. `report` writes it to `out/<month>/usage.csv` beside `spend.csv`, because usage isn't money and stays out of the spend table.
+
+- **Fresh tokens measure use.** Prompt tokens are uncached input plus cache reads and writes, and cache reads were 96% of airCFO's in September 2026: cheap, and little sign of work. So use is requests and fresh tokens (uncached input, cache writes and output), with cache reads kept apart.
+- **What's shown:** how many Claude seat holders used Claude; the share of fresh tokens the busiest tenth of people used, once there are 10 people; and use by team, product and model beside extra usage, since a model's share of the work and its share of the cost can differ a lot.
+- **Privacy:** the team view folds teams as spend does, and folds a product or model fewer than 3 people used into "Other products" or "Other models", since it would point at them. Like "Other (small teams)", each Other holds at least 3 people: while it holds fewer, the least used named one joins it. The person view adds each person, seat holders who never used Claude included.
+- **API usage** by model and token type is in Ramp's AI token usage, credited to each key's owner; it isn't read yet.
+
 ## Forecast and alerts
 
 The forecast is arithmetic anyone can redo by hand, and it stands in for a budget. Usage here means extra usage plus API; seats are a fixed monthly fee and are never averaged. A day's usage is the difference between that day's month-to-date download and the previous one, counting only API spend tied to a key, so the skill saves both spend downloads every day; a gap of several days is spread evenly across them.
@@ -136,6 +145,7 @@ Each vendor is one folder with one function that turns its saved files into rows
 ```text
 src/aicfo_spend/
   assign.py    who spent it
+  usage.py     who uses it, from the spend export's usage columns
   forecast.py  next month's forecast and the backtest
   daily.py     daily usage from month-to-date downloads
   pace.py      this month's projection and the alerts

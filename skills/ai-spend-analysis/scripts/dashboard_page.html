@@ -210,6 +210,7 @@ main { padding-block: 24px 48px; }
 .seg.seats { background: var(--seats); }
 .seg.extra { background: var(--extra); }
 .seg.api { background: var(--api); }
+.seg.usage { background: var(--accent); border-radius: 0 4px 4px 0; }
 .seg:hover, .seg:focus-visible { filter: brightness(1.12); }
 .bar-total { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pair { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -304,6 +305,7 @@ details[open] > summary { margin-bottom: 10px; }
   <div class="column tabs" role="tablist" id="tabs">
     <button class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true">Overview</button>
     <button class="tab" role="tab" id="tab-spend" aria-controls="spend" aria-selected="false" tabindex="-1">Spend</button>
+    <button class="tab" role="tab" id="tab-usage" aria-controls="usage" aria-selected="false" tabindex="-1">Usage</button>
     <button class="tab" role="tab" id="tab-unassigned" aria-controls="unassigned" aria-selected="false" tabindex="-1">Unassigned <span class="tab-badge" id="unassigned-badge" hidden></span></button>
     <button class="tab" role="tab" id="tab-forecast" aria-controls="forecast" aria-selected="false" tabindex="-1">Forecast</button>
     <button class="tab" role="tab" id="tab-people" aria-controls="people" aria-selected="false" tabindex="-1" hidden>People</button>
@@ -418,6 +420,42 @@ details[open] > summary { margin-bottom: 10px; }
           <h3>Extra usage by model, biggest moves first</h3>
           <div class="table-wrap"><table id="models-table"></table></div>
         </div>
+      </section>
+    </section>
+
+    <section class="tabpanel" role="tabpanel" id="usage" aria-labelledby="tab-usage" hidden>
+      <section class="panel" aria-labelledby="usage-heading">
+        <div class="panel-head">
+          <h2 id="usage-heading">Who uses Claude, and how much</h2>
+          <p class="panel-note" id="usage-note"></p>
+        </div>
+        <p class="lead">Use is counted in requests and fresh tokens: new input, cache writes and output. Cache reads, most of every prompt, are cheap and say little about the work done, so they're kept apart.</p>
+        <div class="figures" id="usage-figures"></div>
+      </section>
+      <section class="panel" aria-labelledby="usage-product-heading">
+        <div class="panel-head">
+          <h2 id="usage-product-heading">By product</h2>
+          <p class="panel-note">Share of fresh tokens, with the people using each and their extra usage</p>
+        </div>
+        <div class="bars" id="usage-product-bars"></div>
+      </section>
+      <section class="panel" aria-labelledby="usage-team-heading">
+        <div class="panel-head"><h2 id="usage-team-heading">By team</h2></div>
+        <div class="table-wrap"><table id="usage-team-table"></table></div>
+      </section>
+      <section class="panel" aria-labelledby="usage-model-heading">
+        <div class="panel-head">
+          <h2 id="usage-model-heading">By model</h2>
+          <p class="panel-note">A model's share of the work can differ a lot from its share of extra usage</p>
+        </div>
+        <div class="table-wrap"><table id="usage-model-table"></table></div>
+      </section>
+      <section class="panel" aria-labelledby="usage-people-heading" id="usage-people" hidden>
+        <div class="panel-head">
+          <h2 id="usage-people-heading">By person</h2>
+          <p class="panel-note">Shown because this company turned on the person view</p>
+        </div>
+        <div class="table-wrap"><table id="usage-people-table"></table></div>
       </section>
     </section>
 
@@ -548,7 +586,7 @@ details[open] > summary { margin-bottom: 10px; }
       fix: "Run the daily refresh. Ramp's numbers are normally a day behind.",
     },
   ];
-  const TAB_IDS = ["overview", "spend", "unassigned", "forecast", "people", "seats"];
+  const TAB_IDS = ["overview", "spend", "usage", "unassigned", "forecast", "people", "seats"];
 
   const byId = (id) => document.getElementById(id);
   const text = (el, value) => { el.textContent = value; return el; };
@@ -662,6 +700,26 @@ details[open] > summary { margin-bottom: 10px; }
   }
 
   // Last month above this month for each team, on one scale, with the move written beside them.
+  // One bar per row, scaled to the largest, with a label of the caller's choosing beside it.
+  function valueBars(container, rows, nameOf, valueOf, labelOf) {
+    const tip = tooltipFor(container);
+    const largest = Math.max(1, ...rows.map(valueOf));
+    rows.forEach((row) => {
+      const line = make("div", "bar-row");
+      line.appendChild(make("span", "bar-name", nameOf(row)));
+      const track = make("div", "bar-track");
+      const bar = make("span", "seg usage");
+      bar.style.width = (valueOf(row) / largest * 100) + "%";
+      track.appendChild(hoverable(bar, nameOf(row), labelOf(row), tip));
+      const holder = make("div");
+      holder.style.minWidth = "0";
+      holder.appendChild(track);
+      line.appendChild(holder);
+      line.appendChild(make("span", "bar-total", labelOf(row)));
+      container.appendChild(line);
+    });
+  }
+
   function pairedBars(container, rows, previousName, currentName) {
     const tip = tooltipFor(container);
     const largest = Math.max(1, ...rows.flatMap((row) => [row.previous_cents, row.current_cents]));
@@ -953,6 +1011,48 @@ details[open] > summary { margin-bottom: 10px; }
     ", plus the last 14 days' average daily usage for each day left. Seats are a flat fee, so they aren't projected."));
   forecastNotes.appendChild(make("li", "", monthName(forecast.month) + ": seats at their price, plus each team's average monthly usage over the last 3 complete months" +
     (spans.length ? " (" + spans.join(", ") + " so far)" : "") + "."));
+
+  // Usage: who uses Claude and how much, from the claude.ai spend export
+  const usage = data.usage;
+  const tokens = (count) => count >= 1e9 ? (count / 1e9).toFixed(1) + "B" : count >= 1e6 ? (count / 1e6).toFixed(1) + "M"
+    : count >= 1e3 ? Math.round(count / 1e3) + "K" : String(count);
+  const peopleCount = (count) => count + (count === 1 ? " person" : " people");
+  if (!usage) {
+    byId("usage-figures").replaceWith(make("p", "empty", "No usage to show yet: it comes from a claude.ai spend export saved this month. Ask Claude to refresh."));
+  } else {
+    text(byId("usage-note"), dayName(usage.covers.start) + " to " + dayName(usage.covers.end));
+    const totalFresh = usage.by_product.reduce((sum, row) => sum + row.fresh_tokens, 0);
+    const totalRequests = usage.by_product.reduce((sum, row) => sum + row.requests, 0);
+    [
+      ["Seat holders using Claude", usage.active_seat_holders + " of " + usage.seat_holders,
+        percentOf(usage.active_seat_holders, usage.seat_holders) + "% of Claude seats"],
+      ["Busiest tenth of people", usage.busiest_tenth_share_percent === null ? "—" : usage.busiest_tenth_share_percent + "%",
+        usage.busiest_tenth_share_percent === null ? "needs 10 or more people" : "of all fresh tokens"],
+      ["Requests", totalRequests.toLocaleString("en-US"), tokens(totalFresh) + " fresh tokens"],
+    ].forEach(([label, value, sub]) => {
+      const cell = make("div");
+      cell.append(make("p", "figure-label", label), make("p", "figure-value", value), make("p", "figure-sub", sub));
+      byId("usage-figures").appendChild(cell);
+    });
+    valueBars(byId("usage-product-bars"), usage.by_product, (row) => row.product, (row) => row.fresh_tokens,
+      (row) => percentOf(row.fresh_tokens, totalFresh) + "% · " + peopleCount(row.people) + " · " + money(row.extra_usage_cents));
+    table(byId("usage-team-table"), ["Team", "Seats in use", "Requests per seat", "Fresh tokens", "Extra usage"],
+      usage.by_team.map((row) => [row.team, row.active_seat_holders + " of " + row.seat_holders,
+        row.seat_holders ? Math.round(row.requests / row.seat_holders).toLocaleString("en-US") : "—",
+        tokens(row.fresh_tokens), money(row.extra_usage_cents)]),
+      { rowClass: unassignedRow });
+    table(byId("usage-model-table"), ["Model", "Share of fresh tokens", "Extra usage", "Share of extra usage"],
+      usage.by_model.map((row) => {
+        const extraTotal = usage.by_model.reduce((sum, each) => sum + each.extra_usage_cents, 0);
+        return [row.model, percentOf(row.fresh_tokens, totalFresh) + "%", money(row.extra_usage_cents), percentOf(row.extra_usage_cents, extraTotal) + "%"];
+      }));
+    if (usage.by_person) {
+      byId("usage-people").hidden = false;
+      table(byId("usage-people-table"), ["Person", "Team", "Requests", "Fresh tokens", "Extra usage"],
+        usage.by_person.map((row) => [row.person + (row.claude_seat_holder ? "" : " (no Claude seat)"), row.team,
+          row.requests.toLocaleString("en-US"), tokens(row.fresh_tokens), money(row.extra_usage_cents)]));
+    }
+  }
 
   // People, only in the person view
   if (spend.by_person) {

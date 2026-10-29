@@ -44,7 +44,7 @@ aicfo-spend pace ~/acme-ai-spend
 aicfo-spend dashboard ~/acme-ai-spend
 ```
 
-`report` shows the month by team and vendor, and how it moved from last month. `forecast` projects next month; add `--as-of 2026-08-31 --score 2026-09` to replay a past forecast and see how far off it was. `pace` shows where this month stands and drafts the two alerts: a team's day spiking, and the month on pace to run well over its plan. `dashboard` writes all of it to `out/<month>/dashboard.json` for a shared page, rolled up to teams, with teams under 3 people folded together, unless the settings turn on the person view.
+`report` shows the month by team and vendor, how it moved from last month, and who used Claude and how much (by team, product and model). `forecast` projects next month; add `--as-of 2026-08-31 --score 2026-09` to replay a past forecast and see how far off it was. `pace` shows where this month stands and drafts the two alerts: a team's day spiking, and the month on pace to run well over its plan. `dashboard` writes all of it to `out/<month>/dashboard.json` for a shared page, rolled up to teams, with teams under 3 people folded together, unless the settings turn on the person view.
 
 Spend downloads cover the month to date, from the 1st; the people list is one day's snapshot. `ramp-provider-totals` is Ramp's AI spend summary (cost grouped by provider) for the same days as `ramp-api-keys`, so spend no current key carries is counted too. Ramp's answers are saved as Ramp returns them, with every page joined into one list. In Claude, the skill does these steps for you.
 
