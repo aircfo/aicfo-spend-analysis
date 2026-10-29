@@ -20,6 +20,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from aicfo_spend import __version__
+from aicfo_spend.bills import Bill, check_bills, read_bills
 from aicfo_spend.errors import InputError
 from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after, known_change_note
 from aicfo_spend.months import Month
@@ -107,7 +108,26 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
         "notes": notes if show_people else [without_emails(note) for note in notes],
         "seat_types": _seat_types(settings),
         "usage": _usage_section(build_usage(workspace, month), team_name, show_people),
+        "bills": _bills_section([previous, spend], read_bills(workspace, settings)),
     }
+
+
+def _bills_section(months: list[MonthSpend], bills: list[Bill]) -> list[Json]:
+    """Each month's check against its bills, last month first: early in a month the one just
+    closed is the one that can tie. Company-wide lines name no one, so every view shows them."""
+    section: list[Json] = []
+    for spend in months:
+        checks = check_bills(spend, bills)
+        if checks:
+            section.append({"month": spend.month.label, "lines": [
+                {"vendor": check.vendor, "product": check.product, "kind": check.kind,
+                 "billed_cents": cents(check.billed), "credit_cents": cents(check.credit),
+                 "counted_cents": cents(check.counted),
+                 "counted_through": check.counted_through.isoformat() if check.counted_through else None,
+                 "ties": check.ties}
+                for check in checks
+            ]})
+    return section
 
 
 def write_dashboard(workspace: Path, month: Month, dashboard: Json) -> Path:

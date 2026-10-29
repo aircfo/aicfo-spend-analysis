@@ -256,6 +256,23 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
 3. **Run the numbers.** Run `report <month>`, `pace <month>` and `dashboard <month>`. On the
    1st to the 3rd, also run `report` for the month before, since it has just closed, and
    compare its claude.ai export with the roster as in Setup step 4.3.
+   **Then check it against the bills.** Find what Anthropic and OpenAI charged that month:
+   call `ramp_get_transactions` for each vendor's card charges and `ramp_search_bills` for
+   bills paid through Ramp, and read each one's receipt or invoice for what it paid for.
+   Add one row per charge to `$FOLDER/bills.csv`, with the columns
+   `month,vendor,product,amount_usd,months,kind,credit_usd,charge_id,note`:
+   - `month` is the month it pays for; `vendor` is `anthropic` or `openai`, as the tool names
+     them; `product` is `seats`, `extra usage` or `api`.
+   - `months` is `12` for a year paid up front (the engine counts a twelfth each month), else blank.
+   - `kind` is `credits` for prepaid credits, which is how Claude Team sells extra usage and
+     how the API consoles usually charge, else blank for an invoice. For credits, `credit_usd`
+     is the credit bought when a bundle sells it for less ($250 of credit for $200), else blank.
+   - `charge_id` is the charge's id in Ramp. Add only charges whose id isn't in the file yet;
+     the engine refuses a charge entered twice.
+   Ask the operator about anything paid outside Ramp and any charge whose receipt doesn't say
+   what it was for; never guess a line. Then run `report` for that month again, which says which
+   lines tie, within $1 or 0.5%, and which don't, and run `dashboard <month>` again for the month
+   being refreshed, so the page shows the check. Lead the summary with any line that doesn't tie.
 4. **Update the page.** Run `python3 "$SKILL/scripts/build_dashboard_page.py" "$FOLDER" <month>`.
    It writes `$FOLDER/out/<month>/dashboard.html`, one page holding the engine's numbers, so
    nothing is retyped, and `aircfo-logo.png` beside it. Publish the page with the Artifact

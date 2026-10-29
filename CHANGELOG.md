@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
+- A check against the bills. `bills.csv` lists what the vendors charged each month; `report` and the Spend tab's "Against the bills" panel say which seat and invoice lines tie, within $1 or 0.5%, and by how much the rest are off. A year's seats paid up front count a twelfth each month. Prepaid credits, the way Claude Team sells extra usage, show what was paid, the credit it bought and what was used, since they tie over time rather than each month. A charge id entered twice and a vendor the tool doesn't read are refused, and the page shows last month's check beside this month's. Refresh step 3 has Claude fill the file from Ramp's charges and receipts when a month closes.
 - API spend by cost category (R&D, go-to-market, cost of revenue and the like), from a `Cost category` tag on the key in Ramp or `api_cost_categories` in settings. `report` lists it, `spend.csv` has a `cost_category` column, and the Spend tab has an "API by what it's for" panel. Setup step 7 has Claude propose a category for each key for the operator to confirm.
 - `known_changes` in settings: what history can't show (a new project's API key, a retired tool) by month, team and product, added to the forecast and named in its notes.
 - `report` on a month that has ended says how its forecast did against doing nothing, calling it last month's total; a forecast that loses is the sign to change the method.

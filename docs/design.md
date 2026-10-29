@@ -56,7 +56,7 @@ v1 is done when these three things are true. The first two are commands that pri
 2. **The forecast is scored.** `aicfo-spend forecast --as-of 2026-08-31 --score 2026-09` prints how far the forecast was from September's actual total, in dollars and percent. No target is set, because one month of history is too thin to set one.
 3. **A second vendor fits.** OpenAI's API spend and real ChatGPT seats show up beside Anthropic's, and the pull request that adds them changes only OpenAI's folder.
 
-**Not in v1:** checking spend against invoices or card charges, companies not on Ramp (described under Inputs, built later), a FOCUS export, budgets, department-head sign-off, an accounting-system tie-out, splitting a shared key, currencies other than USD, a web UI, and sending anything (alerts and summaries are drafts).
+**Not in v1:** companies not on Ramp (described under Inputs, built later), a FOCUS export, budgets, department-head sign-off, an accounting-system tie-out, splitting a shared key, currencies other than USD, a web UI, and sending anything (alerts and summaries are drafts).
 
 ## Inputs
 
@@ -114,6 +114,16 @@ Spend says what AI cost; usage says who relies on it. The claude.ai spend export
 - **What's shown:** how many Claude seat holders used Claude; the share of fresh tokens the busiest tenth of people used, once there are 10 people; and use by team, product and model beside extra usage, since a model's share of the work and its share of the cost can differ a lot.
 - **Privacy:** the team view folds teams as spend does, and folds a product or model fewer than 3 people used into "Other products" or "Other models", since it would point at them. Like "Other (small teams)", each Other holds at least 3 people: while it holds fewer, the least used named one joins it. The person view adds each person, seat holders who never used Claude included.
 - **API usage** by model and token type is in Ramp's AI token usage, credited to each key's owner; it isn't read yet.
+
+## Against the bills
+
+The numbers are only as good as their match with what the vendors charged, so each closed month is checked against its bills. `bills.csv` in the company's folder has one row per charge: the month it pays for, vendor (as the tool names it: `anthropic`, `openai` or a vendor in settings' seats), product, dollars, how many months it covers, its kind, for credits the credit it bought, and its id in Ramp. A charge id entered twice is refused, so a refresh run twice can't count a charge twice. Claude fills it on the 1st to the 3rd from Ramp's card charges and bills, reading each receipt for what it paid for, and asks about anything paid elsewhere.
+
+- **Seats** tie when the bill is within $1 or 0.5% of seats bought times their price, whichever margin is more. A year paid up front counts a twelfth in each month it covers. A seat line that doesn't tie usually means settings' seats bought or prices are out of date.
+- **Usage billed by invoice** for the month ties the same way, once the month is counted to its last day.
+- **Prepaid credits**, which is how Claude Team sells extra usage (in bundles, up to 30% off) and how the API consoles usually charge, are bought ahead, so a month's purchases don't match its use. A bundle often sells credit for less than it carries ($250 for $200), so the line shows what was paid, the credit it bought and what was used, with no verdict; the credit bought less what's used ties over time against the balance the vendor shows.
+
+`report` prints the check once `bills.csv` exists, and the Spend tab's "Against the bills" panel shows it for last month and this one, since early in a month the one just closed is the one that can tie. Bills name no one, so every view shows them.
 
 ## Forecast and alerts
 
@@ -223,7 +233,7 @@ The test and release workflows need a code owner's approval.
 | An API key's cost category | Its Ramp `Cost category` tag, else settings' `api_cost_categories`, else Uncategorized; Claude proposes categories at setup and the operator confirms them (decided 2026-10-29) |
 | Paid seats nobody uses | Unassigned, as the signal to reclaim them; seats bought come from settings |
 | Who sees what | Team and person views; shared outputs show teams, and teams under 3 people fold into "Other" |
-| Checking spend against bills | Not in v1; a person reviews the dashboard, and September must match v0.3.0's numbers |
+| Checking spend against bills | `bills.csv`, filled by Claude from Ramp's charges and receipts each month; seats and invoices must tie within $1 or 0.5%, while prepaid credits show bought beside used (decided 2026-10-29) |
 | Budgets | None; the forecast is the yardstick |
 | Department-head sign-off | Not in v1 |
 | Next month's API forecast | Last complete month's spend on current keys, plus known changes (it beat the 3-month average 27% to 43% on airCFO's history) |
