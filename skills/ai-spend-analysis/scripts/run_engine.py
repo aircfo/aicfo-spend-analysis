@@ -29,10 +29,10 @@ from pathlib import Path
 # Kept equal to the engine's own version by a test, so a release can't ship a skill
 # that downloads an older engine than the one beside it. Each release pins the
 # fingerprint of the wheel it uploads (docs/releasing.md).
-ENGINE_VERSION = "0.3.2"
+ENGINE_VERSION = "0.3.3"
 WHEEL_NAME = f"aicfo_spend_analysis-{ENGINE_VERSION}-py3-none-any.whl"
 WHEEL_URL = f"https://github.com/aircfo/aicfo-spend-analysis/releases/download/v{ENGINE_VERSION}/{WHEEL_NAME}"
-WHEEL_SHA256 = "61ecf637e66d3ee312346a073a6856183f26b16bf0ede03dc09df37b992c6e3c"
+WHEEL_SHA256 = "81d5a76ea9a57ca596956848e7b98639dba45b3b3c5d7f372aa0042bc5d4f6c6"
 ENGINE_FOLDER = ".engine"
 MIN_PYTHON = (3, 10)
 

@@ -9,7 +9,7 @@ Open-source AI spend analysis, built on Ramp. Each month it answers two question
 
 ## Status
 
-v0.3.2 is the latest release (v0.3.0 was the first that installs as a Claude plugin); [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
+v0.3.3 is the latest release (v0.3.0 was the first that installs as a Claude plugin); [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
 
 ## In Claude
 
@@ -24,7 +24,7 @@ That needs Claude Code 2.1.275 or later, and installs the tagged release the mar
 ## Without Claude
 
 ```
-uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.3.2
+uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.3.3
 aicfo-spend init ~/acme-ai-spend --company "Acme"
 aicfo-spend settings ~/acme-ai-spend
 ```
