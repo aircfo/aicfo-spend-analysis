@@ -435,7 +435,7 @@ details[open] > summary { margin-bottom: 10px; }
           <p class="panel-note">What the vendors charged, from bills.csv, beside what's counted here</p>
         </div>
         <div class="table-wrap"><table id="bills-table"></table></div>
-        <p class="panel-note" id="bills-credits-note" hidden>Credits are bought ahead, so they tie over time, not each month: what's bought less what's used should match the balance the vendor shows.</p>
+        <p class="panel-note" id="bills-credits-note" hidden>Credits are bought ahead, often for less than the credit they carry, so they tie over time, not each month: the credit bought less what's used should match the balance the vendor shows.</p>
       </section>
 
       <section class="panel" aria-labelledby="change-heading">
@@ -708,7 +708,7 @@ details[open] > summary { margin-bottom: 10px; }
   };
 
   function billResult(bill) {
-    if (bill.kind === "credits") return "Prepaid credits, see below";
+    if (bill.kind === "credits") return "Paid " + money(bill.billed_cents) + " for " + money(bill.credit_cents) + " of credit";
     if (bill.counted_through) return "Counted through " + dayName(bill.counted_through) + ", so it can be checked once the month ends";
     if (bill.ties) return "✓ Ties";
     const gap = bill.counted_cents - bill.billed_cents;
@@ -1174,18 +1174,21 @@ details[open] > summary { margin-bottom: 10px; }
   }
 
   // Spend: against the bills
-  const bills = data.bills || [];
-  if (bills.length) {
+  // Last month first: early in a month the one just closed is the one that can tie.
+  const billMonths = data.bills || [];
+  if (billMonths.length) {
     byId("bills-panel").hidden = false;
-    byId("bills-credits-note").hidden = !bills.some((bill) => bill.kind === "credits");
-    table(byId("bills-table"), ["Line", "Billed", "Counted", "Result"],
-      bills.map((bill) => [
+    const lines = billMonths.flatMap((section) => section.lines.map((bill) => ({ ...bill, month: section.month })));
+    byId("bills-credits-note").hidden = !lines.some((bill) => bill.kind === "credits");
+    table(byId("bills-table"), ["Month", "Line", "Billed", "Counted", "Result"],
+      lines.map((bill) => [
+        monthName(bill.month),
         vendorName(bill.vendor) + " " + (bill.product === "api" ? "API" : bill.product) + (bill.kind === "credits" ? " (credits)" : ""),
         money(bill.billed_cents),
         money(bill.counted_cents),
         billResult(bill),
       ]),
-      { rowClass: (cells) => cells[3].startsWith("✕") ? "off" : "" });
+      { rowClass: (cells) => cells[4].startsWith("✕") ? "off" : "" });
   }
 
   // Spend: change from last month

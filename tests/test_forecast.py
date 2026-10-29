@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from aicfo_spend.cli import main
-from aicfo_spend.forecast import describe_score, forecast_after
+from aicfo_spend.forecast import describe_forecast, describe_score, forecast_after
 from aicfo_spend.months import Month
 from aicfo_spend.report import MonthSpend, build_month, total
 from aicfo_spend.settings import SETTINGS_FILE_NAME, load_settings
@@ -156,7 +156,7 @@ def test_a_known_change_for_the_month_is_added_and_said(workspace: Path) -> None
     forecast = forecast_after(workspace, load_settings(workspace), AUG_31)
 
     assert forecast.by_team["Engineering"][PRODUCT_API] == Decimal("350.00")
-    assert "includes a known change: +$200.00 of api for Engineering (new review bot)" in forecast.notes
+    assert "includes a known change: +$200.00 of api for Engineering (new review bot)" in describe_forecast(forecast)
 
 
 def test_a_known_change_can_be_a_cut(workspace: Path) -> None:

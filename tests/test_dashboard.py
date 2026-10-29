@@ -223,3 +223,17 @@ def test_a_month_that_has_not_started_has_no_dashboard(workspace: Path, capsys: 
     assert main(["dashboard", str(workspace), "2099-01"]) == 1
 
     assert "2099-01 hasn't started yet" in capsys.readouterr().err
+
+
+def test_the_team_view_says_a_known_change_for_its_folded_team_without_the_operators_note(workspace: Path) -> None:
+    settings = json.loads((workspace / SETTINGS_FILE_NAME).read_text(encoding="utf-8"))
+    change = {"month": "2026-10", "team": "Sales", "product": "api", "amount_usd": 400, "note": "Pat's outbound agent"}
+    (workspace / SETTINGS_FILE_NAME).write_text(json.dumps({**settings, "known_changes": [change]}), encoding="utf-8")
+
+    team_view = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
+    use_person_view(workspace)
+    person_view = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
+
+    assert "includes a known change: +$400.00 of api for Other (small teams)" in strings(team_view["notes"])
+    assert "Sales" not in json.dumps(team_view) and "Pat" not in json.dumps(team_view)
+    assert "includes a known change: +$400.00 of api for Sales (Pat's outbound agent)" in strings(person_view["notes"])
