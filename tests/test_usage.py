@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from aicfo_spend.cli import main
-from aicfo_spend.dashboard import OTHER_PRODUCTS, build_dashboard
+from aicfo_spend.dashboard import OTHER_MODELS, OTHER_PRODUCTS, build_dashboard
 from aicfo_spend.months import Month
 from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, save_raw
 from aicfo_spend.settings import SETTINGS_FILE_NAME, load_settings
@@ -80,14 +80,40 @@ def test_report_prints_usage_and_writes_usage_csv(tmp_path: Path, capsys: pytest
 def test_the_team_view_folds_products_few_people_use_and_names_no_one(tmp_path: Path) -> None:
     folder = new_workspace(tmp_path)
     save_usage(folder, *((f"p{n}@example.com", "Cowork", 10, 100, 0, 0, "0") for n in range(3)),
-               ("pat.lee@example.com", "Claude Code", 50, 900, 0, 0, "5"))
+               *((f"c{n}@example.com", "Claude Code", 50, 900, 0, 0, "5") for n in range(2)),
+               ("pat.lee@example.com", "Chat", 5, 50, 0, 0, "0"))
 
     usage = build_dashboard(folder, load_settings(folder), SEPTEMBER, EARLY_OCTOBER)["usage"]
 
     assert isinstance(usage, dict)
-    assert [row["product"] for row in usage["by_product"]] == ["Cowork", OTHER_PRODUCTS]
+    assert [(row["product"], row["people"]) for row in usage["by_product"]] == [("Cowork", 3), (OTHER_PRODUCTS, 3)]
     assert "by_person" not in usage
     assert "@" not in json.dumps(usage)
+
+
+def test_the_team_views_other_products_never_holds_fewer_than_three_people(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_usage(folder, *((f"p{n}@example.com", "Cowork", 10, 100, 0, 0, "0") for n in range(3)),
+               ("pat.lee@example.com", "Claude Code", 50, 900, 0, 0, "412"))
+
+    usage = build_dashboard(folder, load_settings(folder), SEPTEMBER, EARLY_OCTOBER)["usage"]
+
+    assert isinstance(usage, dict)
+    # One person's Claude Code alone would point at them, so Cowork joins it.
+    assert [(row["product"], row["people"]) for row in usage["by_product"]] == [(OTHER_PRODUCTS, 4)]
+    assert [row["model"] for row in usage["by_model"]] == ["claude-sonnet"]
+
+
+def test_the_team_view_folds_models_few_people_use(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    export = usage_export(*((f"p{n}@example.com", "Chat", 10, 100, 0, 0, "0") for n in range(4)))
+    rare = export.decode().replace("p3@example.com,,Chat,claude-sonnet", "p3@example.com,,Chat,claude-opus")
+    save_raw(folder, CLAUDE_SPEND_EXPORT, SEPTEMBER.first_day, SEPTEMBER.last_day, rare.encode(), saved_at=SAVED_AT)
+
+    usage = build_dashboard(folder, load_settings(folder), SEPTEMBER, EARLY_OCTOBER)["usage"]
+
+    assert isinstance(usage, dict)
+    assert [row["model"] for row in usage["by_model"]] == [OTHER_MODELS]
 
 
 def test_the_person_view_lists_seat_holders_who_never_used_claude(tmp_path: Path) -> None:

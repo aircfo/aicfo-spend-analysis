@@ -193,7 +193,8 @@ Talk to the operator one step at a time; they mostly confirm.
    `Department` tag, and show the operator the list with each key's spend. Write only what
    they confirm to `api_cost_categories` in settings, key name to category:
    `{"checkout-bot": "Cost of revenue", "pr-reviewer": "R&D"}`. A key in neither place shows
-   as Uncategorized; offer this step again when the report says so.
+   as Uncategorized; offer this step again when the report says so. Categories show on the
+   shared page in every view, so use finance labels, never a person's name.
 8. **First refresh**, then **schedule it**. Run the Daily refresh. Its first run also saves
    last month whole: Ramp's per-key spend and vendor totals for last month's 1st to its last
    day, so the forecast and the change from last month have something to stand on. The
@@ -258,14 +259,20 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    **Then check it against the bills.** Find what Anthropic and OpenAI charged that month:
    call `ramp_get_transactions` for each vendor's card charges and `ramp_search_bills` for
    bills paid through Ramp, and read each one's receipt or invoice for what it paid for.
-   Add one row per charge to `$FOLDER/bills.csv` (columns `month,vendor,product,amount_usd,months,kind,note`):
-   `month` is the month it pays for; `product` is `seats`, `extra usage` or `api`; `months`
-   is `12` for a year paid up front (the engine counts a twelfth each month), else blank;
-   `kind` is `credits` for prepaid credits, which is how Claude Team sells extra usage and
-   how the API consoles usually charge, else blank for an invoice. Ask the operator about
-   anything paid outside Ramp and any charge whose receipt doesn't say what it was for;
-   never guess a line. Run `report` for that month again: it says which lines tie, within $1
-   or 0.5%, and which don't. Lead the summary with any line that doesn't tie.
+   Add one row per charge to `$FOLDER/bills.csv`, with the columns
+   `month,vendor,product,amount_usd,months,kind,credit_usd,charge_id,note`:
+   - `month` is the month it pays for; `vendor` is `anthropic` or `openai`, as the tool names
+     them; `product` is `seats`, `extra usage` or `api`.
+   - `months` is `12` for a year paid up front (the engine counts a twelfth each month), else blank.
+   - `kind` is `credits` for prepaid credits, which is how Claude Team sells extra usage and
+     how the API consoles usually charge, else blank for an invoice. For credits, `credit_usd`
+     is the credit bought when a bundle sells it for less ($250 of credit for $200), else blank.
+   - `charge_id` is the charge's id in Ramp. Add only charges whose id isn't in the file yet;
+     the engine refuses a charge entered twice.
+   Ask the operator about anything paid outside Ramp and any charge whose receipt doesn't say
+   what it was for; never guess a line. Then run `report` for that month again, which says which
+   lines tie, within $1 or 0.5%, and which don't, and run `dashboard <month>` again for the month
+   being refreshed, so the page shows the check. Lead the summary with any line that doesn't tie.
    **Then the seat recommendations.** Ask the operator what came of each open one in the
    last run's list, and record it with `decide <id> done` or `declined` (with `--on` for the
    day and `--note`). Then run `recommend`. Give its list to the operator in this conversation
@@ -292,7 +299,8 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    new project's API key or a tool being retired, add it to `aicfo-spend.json` as an item of
    `known_changes`: `{"month": "YYYY-MM", "team": "<team>", "product": "api" or "extra usage",
    "amount_usd": <dollars a month, negative for a cut>, "note": "<what it is>"}`, and check it with
-   `settings`. The forecast adds it and says so.
+   `settings`. The forecast adds it and says so. The shared page shows the amount and team but
+   not the note, which stays in the operator's own outputs.
 6. **Show the results.** Give the page's link. If any source is more than 2 days behind
    yesterday, lead with that and how to bring it up to date, as the page's Overview does.
    Then the pace line, then the alerts, then the notes, and finish with the team table from `report`. Present the alerts

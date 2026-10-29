@@ -214,7 +214,7 @@ def _run_report(args: argparse.Namespace) -> int:
         if check:
             print("\n" + check)
     if (workspace / BILLS_FILE_NAME).exists():
-        print("\n" + summarize_bills(month, check_bills(spend, read_bills(workspace))))
+        print("\n" + summarize_bills(month, check_bills(spend, read_bills(workspace, settings))))
     usage = build_usage(workspace, month)
     print("\n" + summarize_usage(usage))
     usage_output = output.with_name(USAGE_FILE_NAME)
