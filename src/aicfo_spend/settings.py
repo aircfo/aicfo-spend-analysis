@@ -21,7 +21,9 @@ SETTINGS_FILE_NAME = "aicfo-spend.json"
 Visibility = Literal["team", "person"]
 VISIBILITIES: tuple[Visibility, ...] = ("team", "person")
 
-TOP_LEVEL_KEYS = ("company_name", "visibility", "seats", "alerts", "known_changes", "api_cost_categories")
+TOP_LEVEL_KEYS = (
+    "company_name", "visibility", "seats", "alerts", "known_changes", "api_cost_categories", "other_ai_vendors",
+)
 KNOWN_CHANGE_KEYS = ("month", "team", "product", "amount_usd", "note")
 # The usage products a known change can move; seats follow the people file instead.
 KNOWN_CHANGE_PRODUCTS = ("extra usage", "api")
@@ -68,6 +70,8 @@ class Settings:
     known_changes: tuple[KnownChange, ...] = ()
     # API key name, in lower case -> what its spend is for. A "Cost category" tag on the key in Ramp wins.
     api_cost_categories: Mapping[str, str] = field(default_factory=dict)
+    # Other AI vendors paid through Ramp, named as Ramp names the payee, such as "Cursor".
+    other_ai_vendors: tuple[str, ...] = ()
 
 
 def load_settings(workspace: Path) -> Settings:
@@ -101,7 +105,23 @@ def parse_settings(raw: object) -> Settings:
             key.strip().lower(): _text(category, f"api_cost_categories.{key}").strip()
             for key, category in _object(top.get("api_cost_categories", {}), "api_cost_categories").items()
         },
+        other_ai_vendors=_other_ai_vendors(top.get("other_ai_vendors", [])),
     )
+
+
+def _other_ai_vendors(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        raise SettingsError('other_ai_vendors must be a list of vendor names, like ["Cursor", "Perplexity"]')
+    names = tuple(_text(name, f"other_ai_vendors item {number}").strip() for number, name in enumerate(value, start=1))
+    if any(name.lower() in ("anthropic", "openai") for name in names):
+        raise SettingsError("other_ai_vendors is for vendors besides Anthropic and OpenAI, which the tool already reads")
+    seen: set[str] = set()
+    for name in names:
+        # Ramp's payees are matched whatever their case, so two spellings would count one vendor twice.
+        if name.casefold() in seen:
+            raise SettingsError(f"other_ai_vendors lists {name!r} twice; list each vendor once")
+        seen.add(name.casefold())
+    return names
 
 
 def _object(value: object, where: str) -> dict[str, object]:

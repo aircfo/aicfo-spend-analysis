@@ -64,7 +64,7 @@ Three inputs, matching the picture above. Claude fetches the first one through t
 
 | Input | What it gives | How it arrives |
 | --- | --- | --- |
-| Ramp | API spend for Anthropic and OpenAI by key, month to date, with each key's owner and department, from the Admin keys plugged into Ramp; each vendor's total for the same days, which also counts spend no current key carries; the people list (name, email, team, active) | Claude, through the Ramp connector |
+| Ramp | API spend for Anthropic and OpenAI by key, month to date, with each key's owner and department, from the Admin keys plugged into Ramp; each vendor's total for the same days, which also counts spend no current key carries; the people list (name, email, team, active); spend by vendor, for other AI vendors | Claude, through the Ramp connector |
 | claude.ai spend export | Each person's extra usage, and their use of each product and model: requests and tokens, $0 of extra usage included | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
 | People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Written by Claude from the dashboard's Seats tab, or kept by hand |
 
@@ -114,6 +114,12 @@ Spend says what AI cost; usage says who relies on it. The claude.ai spend export
 - **What's shown:** how many Claude seat holders used Claude; the share of fresh tokens the busiest tenth of people used, once there are 10 people; and use by team, product and model beside extra usage, since a model's share of the work and its share of the cost can differ a lot.
 - **Privacy:** the team view folds teams as spend does, and folds a product or model fewer than 3 people used into "Other products" or "Other models", since it would point at them. Like "Other (small teams)", each Other holds at least 3 people: while it holds fewer, the least used named one joins it. The person view adds each person, seat holders who never used Claude included.
 - **API usage** by model and token type is in Ramp's AI token usage, credited to each key's owner; it isn't read yet.
+
+## Other AI vendors
+
+Anthropic and OpenAI are where most companies' AI money goes, but not all of it. At setup, Claude reads six months of the company's Ramp spend by vendor (the reporting tool's `spend` dataset, grouped by payee) and picks out the AI vendors: model APIs and gateways, AI assistants and coding tools, and AI developer tools. It asks about vendors where AI may be only part of the bill, such as a cloud provider, and leaves out tools that merely have AI features (Clay, at airCFO). The operator confirms the list, which goes into settings as `other_ai_vendors`, named as Ramp names the payee. For each, Claude says whether Ramp's AI spend settings can connect it, so its usage can come in like Anthropic's and OpenAI's.
+
+The daily refresh saves the month's spend by vendor (`ramp-vendor-spend`, Ramp's answer as it comes or cut down to payee and amount; a page that says more follow is refused, and settings refuse a vendor listed twice), and `report` and the Spend tab's "Other AI tools" panel show what each listed vendor was paid. Ramp's spend report says what was paid, not what for or by whom, so this spend stays out of the teams, the totals and the forecast until a vendor can be read the way Anthropic and OpenAI are (see Adding a vendor). Vendor names name no one, so every view shows them.
 
 ## Against the bills
 
@@ -245,6 +251,7 @@ The test and release workflows need a code owner's approval.
 | People list | Ramp's user list, plus seat type and anyone not in Ramp kept by hand |
 | An API key's team | Its Ramp department tag, else its owner's team |
 | Shared API keys | Each belongs to one team; nothing is split |
+| Other AI vendors | Claude proposes them from Ramp's spend by vendor at setup, the operator confirms; shown apart from the teams, totals and forecast (decided 2026-10-29) |
 | An API key's cost category | Its Ramp `Cost category` tag, else settings' `api_cost_categories`, else Uncategorized; Claude proposes categories at setup and the operator confirms them (decided 2026-10-29) |
 | Paid seats nobody uses | Unassigned, as the signal to reclaim them; seats bought come from settings |
 | Seat recommendations | Rules over the last three whole months, each holding in two; kept in an operator-only ledger that reports what done ones saved (decided 2026-10-29) |

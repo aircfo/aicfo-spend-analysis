@@ -24,6 +24,7 @@ from aicfo_spend.bills import Bill, check_bills, read_bills
 from aicfo_spend.errors import InputError
 from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after, known_change_note
 from aicfo_spend.months import Month
+from aicfo_spend.other_vendors import OtherAiSpend, other_ai_spend
 from aicfo_spend.pace import Pace, pace_of
 from aicfo_spend.report import (
     ZERO,
@@ -108,6 +109,7 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
         "notes": notes if show_people else [without_emails(note) for note in notes],
         "seat_types": _seat_types(settings),
         "usage": _usage_section(build_usage(workspace, month), team_name, show_people),
+        "other_ai_vendors": _other_ai_section(other_ai_spend(workspace, month, settings)),
         "bills": _bills_section([previous, spend], read_bills(workspace, settings)),
     }
 
@@ -189,6 +191,16 @@ def without_emails(text: str) -> str:
 
 def renamed(rows: Iterable[SpendRow], team_name: Callable[[str], str]) -> list[SpendRow]:
     return [replace(row, team=team_name(row.team)) for row in rows]
+
+
+def _other_ai_section(spend: OtherAiSpend | None) -> Json | None:
+    # Vendor names name no one, so every view shows them.
+    if spend is None:
+        return None
+    return {
+        "through": spend.through.isoformat() if spend.through else None,
+        "vendors": [{"vendor": name, "total_cents": cents(amount)} for name, amount in spend.vendors],
+    }
 
 
 def _spend_section(spend: MonthSpend, rows: list[SpendRow], show_people: bool) -> Json:

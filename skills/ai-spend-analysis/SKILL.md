@@ -79,6 +79,22 @@ Talk to the operator one step at a time; they mostly confirm.
    plugged into Ramp is listed there. If Anthropic or OpenAI is missing, the **Ramp admin**
    adds the key in Ramp's AI spend settings. Offer a short message the operator can
    forward, and carry on.
+
+   **Then look for other AI vendors.** Call `ramp_reporting_query` on the `spend` dataset
+   with the dimension `payee` and the measure `amount`, over the last 6 months, ordered by
+   amount, `query_scope` `complete`. Pick out the AI vendors among the payees:
+   - **model APIs and gateways**, such as Mistral, Cohere, Together, Fireworks or OpenRouter;
+   - **AI assistants and coding tools**, such as Cursor, Perplexity, Granola or Wispr;
+   - **AI developer tools**, such as LangChain, Pinecone or Hugging Face.
+   Ask about vendors where AI may be only part of the bill, such as Google Cloud, Microsoft,
+   AWS, GitHub or Notion, and don't count a tool just for having AI features (Clay, for
+   example, is data enrichment). Show the operator the list with each vendor's 6-month
+   spend. Write the ones they confirm to `other_ai_vendors` in settings, named exactly as
+   Ramp names the payee, and check it with `settings`. For each one, say whether Ramp's AI
+   spend settings can connect it, as `ramp_get_ai_token_spend_connections` shows for the
+   providers already there; if so, the Ramp admin adds its key the same way. Until the
+   tool reads a vendor's own usage, its spend shows on the Spend tab as "Other AI tools",
+   kept out of the teams, totals and forecast.
 3. **Seats.** For each vendor, each seat type's monthly price and how many were bought.
    Examples: Claude Team standard and premium, or ChatGPT Business.
    - **With Claude in Chrome,** read them yourself, then confirm with the operator:
@@ -239,6 +255,14 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
      "$FOLDER/inbox/seats-read"`, which leaves out everyone already on it. Write its batches as in
      Setup step 4.2, and name the new people in the summary so someone checks their seats. Someone no longer active in Ramp stays on the roster, since their seat may
      still be paid for; name them in the summary too.
+   - **Other AI vendors:** only when settings list `other_ai_vendors`. Call
+     `ramp_reporting_query` on the `spend` dataset with the dimension `payee` and the
+     measure `amount`, from `<first>` to the end of `<yesterday>`, `query_scope` `complete` and
+     `page_size` 1000, so the answer is one page; the engine refuses a page that says more follow.
+     If the answer was saved to a file, save that file as it is. Otherwise write only the
+     rows for the listed vendors as `{"data": [{"payee": "<name>", "amount": <dollars>}]}` to
+     `$FOLDER/inbox/ramp-vendor-spend.json`. Then run
+     `save ramp-vendor-spend --start <first> --end <yesterday> --file <that file>`.
    - Delete each inbox file once its save succeeds.
    - **The roster:** redo Setup step 4.4 every run, which writes `people.csv` from the Seats
      tab, so a seat changed there counts from this refresh on. Name in the summary anyone
