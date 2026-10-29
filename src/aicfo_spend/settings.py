@@ -14,13 +14,17 @@ from pathlib import Path
 from typing import Literal
 
 from aicfo_spend.errors import UserError
+from aicfo_spend.months import Month
 
 SETTINGS_FILE_NAME = "aicfo-spend.json"
 
 Visibility = Literal["team", "person"]
 VISIBILITIES: tuple[Visibility, ...] = ("team", "person")
 
-TOP_LEVEL_KEYS = ("company_name", "visibility", "seats", "alerts")
+TOP_LEVEL_KEYS = ("company_name", "visibility", "seats", "alerts", "known_changes")
+KNOWN_CHANGE_KEYS = ("month", "team", "product", "amount_usd", "note")
+# The usage products a known change can move; seats follow the people file instead.
+KNOWN_CHANGE_PRODUCTS = ("extra usage", "api")
 SEAT_PLAN_KEYS = ("price_usd", "bought")
 ALERT_KEYS = ("spike_multiple", "spike_min_usd", "over_pace_percent")
 
@@ -43,12 +47,25 @@ class AlertThresholds:
 
 
 @dataclass(frozen=True)
+class KnownChange:
+    """Something the operator expects that history can't show, like a new project's API key."""
+
+    month: Month
+    team: str
+    product: str
+    # Negative for a cut, such as a key being retired.
+    amount_usd: Decimal
+    note: str
+
+
+@dataclass(frozen=True)
 class Settings:
     company_name: str = ""
     visibility: Visibility = "team"
     # vendor -> seat type -> plan, e.g. seats["anthropic"]["premium"]
     seats: Mapping[str, Mapping[str, SeatPlan]] = field(default_factory=dict)
     alerts: AlertThresholds = field(default_factory=AlertThresholds)
+    known_changes: tuple[KnownChange, ...] = ()
 
 
 def load_settings(workspace: Path) -> Settings:
@@ -77,6 +94,7 @@ def parse_settings(raw: object) -> Settings:
         visibility=_visibility(top.get("visibility", "team")),
         seats=_seats(top.get("seats", {})),
         alerts=_alerts(top.get("alerts", {})),
+        known_changes=_known_changes(top.get("known_changes", [])),
     )
 
 
@@ -160,3 +178,33 @@ def _alerts(value: object) -> AlertThresholds:
             fields.get("over_pace_percent", defaults.over_pace_percent), "alerts.over_pace_percent"
         ),
     )
+
+
+def _known_changes(value: object) -> tuple[KnownChange, ...]:
+    if not isinstance(value, list):
+        raise SettingsError("known_changes must be a list, like [ { ... } ]")
+    changes = []
+    for number, item in enumerate(value, start=1):
+        where = f"known_changes item {number}"
+        fields = _object(item, where)
+        _reject_unknown_keys(fields, KNOWN_CHANGE_KEYS, where)
+        month_text = _text(fields.get("month"), f"{where}.month")
+        try:
+            month = Month.parse(month_text)
+        except UserError:
+            raise SettingsError(f"{where}.month must be a month like 2026-11, not {month_text!r}") from None
+        product = fields.get("product")
+        if product not in KNOWN_CHANGE_PRODUCTS:
+            raise SettingsError(f'{where}.product must be "api" or "extra usage", not {product!r}')
+        amount = fields.get("amount_usd")
+        # bool is a subclass of int in Python, so true/false must be ruled out first.
+        if isinstance(amount, bool) or not isinstance(amount, (int, Decimal)):
+            raise SettingsError(f"{where}.amount_usd must be a dollar amount, like 300 or -120.50")
+        changes.append(KnownChange(
+            month=month,
+            team=_text(fields.get("team"), f"{where}.team").strip(),
+            product=str(product),
+            amount_usd=Decimal(amount),
+            note=_text(fields.get("note", ""), f"{where}.note"),
+        ))
+    return tuple(changes)

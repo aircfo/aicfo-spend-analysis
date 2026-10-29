@@ -1009,8 +1009,8 @@ details[open] > summary { margin-bottom: 10px; }
   forecastNotes.appendChild(make("li", "", monthName(about.month) + ": what's been spent so far" +
     (pace.through ? " (through " + dayName(pace.through) + ")" : "") +
     ", plus the last 14 days' average daily usage for each day left. Seats are a flat fee, so they aren't projected."));
-  forecastNotes.appendChild(make("li", "", monthName(forecast.month) + ": seats at their price, plus each team's average monthly usage over the last 3 complete months" +
-    (spans.length ? " (" + spans.join(", ") + " so far)" : "") + "."));
+  forecastNotes.appendChild(make("li", "", monthName(forecast.month) + ": seats at their price, extra usage at each team's average over the last 3 complete months" +
+    (spans.length ? " (" + spans.join(", ") + " so far)" : "") + ", and API at last month's spend on current keys, plus any known changes in the notes."));
 
   // Usage: who uses Claude and how much, from the claude.ai spend export
   const usage = data.usage;

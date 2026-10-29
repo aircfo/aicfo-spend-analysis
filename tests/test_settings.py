@@ -65,6 +65,19 @@ def test_keeps_default_alert_numbers_the_file_leaves_out() -> None:
         ({"seats": {"anthropic": {"standard": {"price_usd": 20}}}}, "needs both price_usd and bought"),
         ({"alerts": {"spike_multiple": 0}}, "alerts.spike_multiple must be more than 0"),
         ({"alerts": {"spike_after": 3}}, "alerts has unexpected keys ['spike_after']"),
+        ({"known_changes": {}}, "known_changes must be a list"),
+        (
+            {"known_changes": [{"month": "November", "team": "Eng", "product": "api", "amount_usd": 10}]},
+            "known_changes item 1.month must be a month like 2026-11, not 'November'",
+        ),
+        (
+            {"known_changes": [{"month": "2026-11", "team": "Eng", "product": "seats", "amount_usd": 10}]},
+            'known_changes item 1.product must be "api" or "extra usage"',
+        ),
+        (
+            {"known_changes": [{"month": "2026-11", "team": "Eng", "product": "api", "amount_usd": "300"}]},
+            "known_changes item 1.amount_usd must be a dollar amount",
+        ),
     ],
 )
 def test_rejects_settings_with_a_message_that_says_what_to_fix(raw: object, message: str) -> None:

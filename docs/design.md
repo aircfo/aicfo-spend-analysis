@@ -68,7 +68,7 @@ Three inputs, matching the picture above. Claude fetches the first one through t
 | claude.ai spend export | Each person's extra usage, and their use of each product and model: requests and tokens, $0 of extra usage included | The existing browser script, or the export button. It covers only the last 90 days, so it's saved at least monthly |
 | People file | Seat type for each person who holds a seat, plus anyone not in Ramp | Written by Claude from the dashboard's Seats tab, or kept by hand |
 
-Settings (seat prices, seats bought, who sees person detail, alert thresholds) live in one small JSON file, `aicfo-spend.json`. It's JSON because Python 3.10 can't read TOML without an add-on package.
+Settings (seat prices, seats bought, who sees person detail, alert thresholds, known changes) live in one small JSON file, `aicfo-spend.json`. It's JSON because Python 3.10 can't read TOML without an add-on package.
 
 **Ramp holds the Admin keys, and the tool never touches one.** The tool doesn't call Claude or Ramp either: it reads files in a folder, which Claude fills through the Ramp connector or a person fills with exports from Ramp.
 
@@ -118,7 +118,11 @@ Spend says what AI cost; usage says who relies on it. The claude.ai spend export
 The forecast is arithmetic anyone can redo by hand, and it stands in for a budget. Usage here means extra usage plus API; seats are a fixed monthly fee and are never averaged. A day's usage is the difference between that day's month-to-date download and the previous one, counting only API spend tied to a key, so the skill saves both spend downloads every day; a gap of several days is spread evenly across them.
 
 - **This month:** seats + usage so far + the last 14 days' average daily usage × days left. `aicfo-spend pace <folder>` prints it by team. API spend not tied to a current key is added as it stands, never projected and never checked for spikes: it's mostly spend on keys deleted during the month, so on the day of a deletion it moves out of a team's numbers rather than adding new spend.
-- **Next month:** seats × price + each team's average monthly usage over the last 3 complete months. Extra usage and API are averaged separately, each over the months that have a whole month of it, so a source saved only recently isn't diluted by months it wasn't saved for. `aicfo-spend forecast <folder>` prints it.
+- **Next month:** seats × price + extra usage + API + known changes.
+  - **Extra usage:** each team's average over the last 3 complete months, over the months that have a whole month of it, so a source saved only recently isn't diluted by months it wasn't saved for.
+  - **API:** last complete month's spend on current keys. On airCFO's twelve months of Ramp history (Nov 2025 to Oct 2026), last month's API spend missed the next by 27% on average, the 3-month average by 43%: API spend moves in steps as keys start and projects end, and an average lags each one. Spend no current key carries is left out, since a deleted key doesn't spend again.
+  - **Known changes:** what history can't show, like a new project's key or a tool being retired, listed in settings as `known_changes` (month, team, product, dollars, note) and named in the forecast's notes.
+  - `aicfo-spend forecast <folder>` prints it.
 - **Change from last month:** by team and model, and by person where the person view is on. `aicfo-spend report` prints it under the month's totals, with a note when last month is missing a download.
 
 **Two alerts**, always drafted, never sent:
@@ -131,6 +135,8 @@ The forecast is arithmetic anyone can redo by hand, and it stands in for a budge
 The three alert numbers (2×, $25, 25%) are defaults, editable in settings.
 
 **The backtest** (done criterion 2) replays the forecast as if it were Aug 31 and reports how far off September was. Per-person history before Aug 31 is one month, so that limit is shown beside the score rather than tuned away.
+
+**The forecast check.** Once a month has ended, `report` says how far its forecast was from what happened (the plan saved at its start, else a replay that says so), beside how far doing nothing, calling it last month's total, would have been. A forecast that loses to doing nothing is the sign to change the method, as the 3-month API average did.
 
 ## Adding a vendor
 
@@ -217,6 +223,7 @@ The test and release workflows need a code owner's approval.
 | Checking spend against bills | Not in v1; a person reviews the dashboard, and September must match v0.3.0's numbers |
 | Budgets | None; the forecast is the yardstick |
 | Department-head sign-off | Not in v1 |
+| Next month's API forecast | Last complete month's spend on current keys, plus known changes (it beat the 3-month average 27% to 43% on airCFO's history) |
 | This month's projection | Seats + usage so far + the last 14 days' average daily usage × days left |
 | Alert thresholds | Spike over twice the 28-day median and $25 above it; pace 25% over the forecast; all editable in settings |
 | Names | Package `aicfo-spend-analysis`, import `aicfo_spend`, command `aicfo-spend` |
