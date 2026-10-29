@@ -10,6 +10,8 @@ from pathlib import Path
 from aicfo_spend.errors import InputError
 
 DEPARTMENT_TAG = "department"
+# What a key's spend is for (cost of revenue, R&D, sales and marketing...), when the company tags it in Ramp.
+COST_CATEGORY_TAG = "cost category"
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,7 @@ class KeySpend:
     owner_email: str
     department_tag: str
     amount_usd: Decimal
+    cost_category_tag: str = ""
 
 
 def read_people(path: Path) -> dict[str, RampPerson]:
@@ -84,8 +87,9 @@ def parse_key_spend(document: object, label: str) -> list[KeySpend]:
                 vendor=_text(key.get("provider")).lower() or "(unknown vendor)",
                 key_name=key_name,
                 owner_email=owner_email,
-                department_tag=_department_tag(key.get("tags")),
+                department_tag=_tag(key.get("tags"), DEPARTMENT_TAG),
                 amount_usd=amount,
+                cost_category_tag=_tag(key.get("tags"), COST_CATEGORY_TAG),
             )
         )
     return spend
@@ -133,11 +137,12 @@ def _key_amount(cost: object, where: str) -> Decimal:
     return Decimal(cents) / 100
 
 
-def _department_tag(tags: object) -> str:
+def _tag(tags: object, name: str) -> str:
+    """A key's tag value by the tag's name, matched without regard to case; "" when it has none."""
     if not isinstance(tags, list):
         return ""
     for tag in tags:
-        if isinstance(tag, dict) and _text(tag.get("key")).strip().lower() == DEPARTMENT_TAG:
+        if isinstance(tag, dict) and _text(tag.get("key")).strip().lower() == name:
             return _text(tag.get("value")).strip()
     return ""
 

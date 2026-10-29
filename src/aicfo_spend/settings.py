@@ -21,7 +21,7 @@ SETTINGS_FILE_NAME = "aicfo-spend.json"
 Visibility = Literal["team", "person"]
 VISIBILITIES: tuple[Visibility, ...] = ("team", "person")
 
-TOP_LEVEL_KEYS = ("company_name", "visibility", "seats", "alerts", "known_changes")
+TOP_LEVEL_KEYS = ("company_name", "visibility", "seats", "alerts", "known_changes", "api_cost_categories")
 KNOWN_CHANGE_KEYS = ("month", "team", "product", "amount_usd", "note")
 # The usage products a known change can move; seats follow the people file instead.
 KNOWN_CHANGE_PRODUCTS = ("extra usage", "api")
@@ -66,6 +66,8 @@ class Settings:
     seats: Mapping[str, Mapping[str, SeatPlan]] = field(default_factory=dict)
     alerts: AlertThresholds = field(default_factory=AlertThresholds)
     known_changes: tuple[KnownChange, ...] = ()
+    # API key name, in lower case -> what its spend is for. A "Cost category" tag on the key in Ramp wins.
+    api_cost_categories: Mapping[str, str] = field(default_factory=dict)
 
 
 def load_settings(workspace: Path) -> Settings:
@@ -95,6 +97,10 @@ def parse_settings(raw: object) -> Settings:
         seats=_seats(top.get("seats", {})),
         alerts=_alerts(top.get("alerts", {})),
         known_changes=_known_changes(top.get("known_changes", [])),
+        api_cost_categories={
+            key.strip().lower(): _text(category, f"api_cost_categories.{key}").strip()
+            for key, category in _object(top.get("api_cost_categories", {}), "api_cost_categories").items()
+        },
     )
 
 

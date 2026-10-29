@@ -402,6 +402,14 @@ details[open] > summary { margin-bottom: 10px; }
         </details>
       </section>
 
+      <section class="panel" aria-labelledby="category-heading" id="category-panel" hidden>
+        <div class="panel-head">
+          <h2 id="category-heading">API by what it's for</h2>
+          <p class="panel-note">From each key's "Cost category" tag in Ramp, or the settings</p>
+        </div>
+        <div class="bars" id="category-bars"></div>
+      </section>
+
       <section class="panel" aria-labelledby="change-heading">
         <div class="panel-head">
           <h2 id="change-heading">Change from last month</h2>
@@ -944,6 +952,15 @@ details[open] > summary { margin-bottom: 10px; }
   stackedBars(byId("vendor-bars"), spend.by_vendor, (vendor) => vendorName(vendor.vendor));
   table(byId("vendors-table"), ["Vendor", "Seats", "Extra usage", "API", "Total"],
     spend.by_vendor.map((vendor) => [vendorName(vendor.vendor), ...PRODUCTS.map((product) => money(vendor[product.field])), money(vendor.total_cents)]));
+
+  // Spend: API by cost category
+  const categories = spend.api_by_cost_category || [];
+  if (categories.length) {
+    byId("category-panel").hidden = false;
+    const apiTotal = categories.reduce((sum, row) => sum + row.total_cents, 0);
+    valueBars(byId("category-bars"), categories, (row) => row.category, (row) => Math.max(row.total_cents, 0),
+      (row) => money(row.total_cents) + " · " + percentOf(row.total_cents, apiTotal) + "%");
+  }
 
   // Spend: change from last month
   if (changes) {
