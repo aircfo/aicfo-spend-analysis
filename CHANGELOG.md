@@ -2,7 +2,7 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semantic versioning](https://semver.org/). Each release's wheel is attached to its GitHub Release. The `ai-spend-analysis` skill ships in the same release; a copy of its folder on its own pins that wheel by SHA-256.
 
-## [Unreleased]
+## [0.3.2] — 2026-10-29
 
 ### Added
 
@@ -31,7 +31,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 - The skill and the page name claude.ai's real pages: the export at claude.ai/analytics, with its MTD and Last month presets, and the members at claude.ai/admin-settings/members. It finds the export in Downloads by the days in its name, instead of asking the operator to change Chrome's download folder.
 - `report --compare` says that comparing with an export is the skill's `roster_to_people.py --compare`, instead of argparse's generic error.
-
 - The plugin installs and updates over https. The marketplace file named the repo as a `github` source, which Claude Code clones over SSH, so installing failed on any computer without a GitHub SSH key ("Permission denied (publickey)"). It takes effect as soon as it's on `main`, since installs read the marketplace file from there.
 
 ## [0.3.1] — 2026-10-28

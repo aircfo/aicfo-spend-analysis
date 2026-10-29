@@ -11,7 +11,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/aircfo/aicfo-spend-analysis.git",
-        "ref": "v0.3.1"
+        "ref": "v0.3.2"
       },
       "description": "Where your company's AI spend went and where it's heading: seats, extra usage and API spend by person and team, with this month's pace, next month's forecast and spike alerts. Built on Ramp. Read-only; it drafts alerts and never sends.",
       "category": "finance",
