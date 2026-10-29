@@ -325,6 +325,8 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    "amount_usd": <dollars a month, negative for a cut>, "note": "<what it is>"}`, and check it with
    `settings`. The forecast adds it and says so. The shared page shows the amount and team but
    not the note, which stays in the operator's own outputs.
+   For a "what if" that isn't decided yet, such as hiring five engineers or a price rise at
+   renewal, point the operator to the scenario on the page's Forecast tab instead; it saves nothing.
 6. **Show the results.** Give the page's link. If any source is more than 2 days behind
    yesterday, lead with that and how to bring it up to date, as the page's Overview does.
    Then the pace line, then the alerts, then the notes, and finish with the team table from `report`. Present the alerts

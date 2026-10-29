@@ -170,6 +170,15 @@ The three alert numbers (2×, $25, 25%) are defaults, editable in settings.
 
 **The forecast check.** Once a month has ended, `report` says how far its forecast was from what happened (the plan saved at its start, else a replay that says so), beside how far doing nothing, calling it last month's total, would have been. A forecast that loses to doing nothing is the sign to change the method, as the 3-month API average did. It isn't scored while either month is saved only in part, since a partial month reads as a big miss that says nothing about the method.
 
+**The scenario.** Below the forecast, the Forecast tab lets anyone with the page try "what if" for next month without changing anything: it runs in the viewer's browser and isn't saved.
+
+- **New hires by team:** each gets a Claude seat at its price, on Premium for a chosen share of them, and uses as much extra usage as the average Claude seat holder on that team does now (the company's average for a team with none). They fill empty seats of their type first, which are already paid for, so only hires beyond those add seat cost.
+- **Extra usage and API on current keys,** each up or down by a percentage, for heavier use or a model change. Known changes are added as they are rather than scaled, so the forecast carries each folded team's known changes by product.
+- **New API spend,** dollars and cents a month for a project's key that isn't running yet.
+- **Seat prices,** up or down by a percentage, as at a renewal.
+
+It shows the forecast, the scenario and the change, in total and by team. The page data carries what it needs: each team's Claude seat holders in the forecast, and each seat type's price and how many are bought and held. A change that's certain belongs in `known_changes` instead, where the forecast itself counts it.
+
 ## Adding a vendor
 
 Each vendor is one folder with one function that turns its saved files into rows of the plain table, plus a short guide and a test.
@@ -260,6 +269,7 @@ The test and release workflows need a code owner's approval.
 | Budgets | None; the forecast is the yardstick |
 | Department-head sign-off | Not in v1 |
 | Next month's API forecast | Last complete month's spend on current keys, plus known changes (it beat the 3-month average 27% to 43% on airCFO's history) |
+| What-if for next month | A scenario on the Forecast tab, in the viewer's browser only: new hires by team, Premium share, extra usage, API, new API spend and seat prices; certain changes go in `known_changes` (decided 2026-10-29) |
 | This month's projection | Seats + usage so far + the last 14 days' average daily usage × days left |
 | Alert thresholds | Spike over twice the 28-day median and $25 above it; pace 25% over the forecast; all editable in settings |
 | Names | Package `aicfo-spend-analysis`, import `aicfo_spend`, command `aicfo-spend` |

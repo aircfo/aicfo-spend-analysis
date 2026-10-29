@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import replace
 from datetime import date
@@ -39,6 +39,7 @@ from aicfo_spend.report import (
     totals_by,
 )
 from aicfo_spend.settings import Settings
+from aicfo_spend.sources.people import PeopleFileRow, read_people_file
 from aicfo_spend.spend_table import PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
 from aicfo_spend.usage import (
     MonthUsage,
@@ -83,6 +84,7 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
         change = _change_section(spend, previous, rows, renamed(previous.rows, team_name), show_people)
     else:
         notes.append(f"no usage is saved for {previous.month.label}, so there's no change from last month to show")
+    usage = build_usage(workspace, month)
     # The same gap can surface in the month, its pace and the forecast; say it once.
     # A known change's note is the operator's own words and its team may be one that folds, so
     # the team view says only the folded team and the amount.
@@ -104,11 +106,11 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
         "spend": _spend_section(spend, rows, show_people),
         "change_from_last_month": change,
         "pace": _pace_section(pace),
-        "forecast": _forecast_section(forecast, team_name),
+        "forecast": _forecast_section(forecast, team_name, usage.seat_holders),
         "alerts": pace.alerts,
         "notes": notes if show_people else [without_emails(note) for note in notes],
-        "seat_types": _seat_types(settings),
-        "usage": _usage_section(build_usage(workspace, month), team_name, show_people),
+        "seat_types": _seat_types(settings, read_people_file(workspace)),
+        "usage": _usage_section(usage, team_name, show_people),
         "other_ai_vendors": _other_ai_section(other_ai_spend(workspace, month, settings)),
         "bills": _bills_section([previous, spend], read_bills(workspace, settings)),
     }
@@ -274,8 +276,12 @@ def _pace_section(pace: Pace) -> Json:
     }
 
 
-def _forecast_section(forecast: Forecast, team_name: Callable[[str], str]) -> Json:
+def _forecast_section(forecast: Forecast, team_name: Callable[[str], str], seat_holders: dict[str, str]) -> Json:
     by_team: Amounts = {}
+    # Claude seat holders per team, which the page's scenario uses for each team's extra usage per seat.
+    holders: dict[str, int] = defaultdict(int)
+    for team in seat_holders.values():
+        holders[team_name(team)] += 1
     for team, amounts in forecast.by_team.items():
         merged = by_team.setdefault(team_name(team), {product: ZERO for product in PRODUCTS})
         for product, amount in amounts.items():
@@ -286,6 +292,20 @@ def _forecast_section(forecast: Forecast, team_name: Callable[[str], str]) -> Js
         "total_cents": _total_cents(by_team),
         "by_team": _table("team", by_team, team_order(by_team)),
         "averaged_over": {product: [month.label for month in forecast.history[product]] for product in USAGE_PRODUCTS},
+        "seat_holders": dict(sorted(holders.items())),
+        "known_changes": _known_change_cents(forecast, team_name),
+    }
+
+
+def _known_change_cents(forecast: Forecast, team_name: Callable[[str], str]) -> dict[str, Json]:
+    """Each team's known changes by product, which the page's scenario adds as they are instead of
+    scaling them with the extra usage and API levers."""
+    amounts: dict[str, dict[str, Decimal]] = defaultdict(lambda: defaultdict(lambda: ZERO))
+    for team, change in forecast.known_changes:
+        amounts[team_name(team)][change.product] += change.amount_usd
+    return {
+        team: {f"{product.replace(' ', '_')}_cents": cents(amount) for product, amount in sorted(products.items())}
+        for team, products in sorted(amounts.items())
     }
 
 
@@ -361,10 +381,15 @@ def _usage_cells(totals: Totals) -> Json:
             "cache_read_tokens": totals.cache_read_tokens, "extra_usage_cents": cents(totals.extra_usd)}
 
 
-def _seat_types(settings: Settings) -> Json:
-    """Each vendor's seat types and how many were bought, for the page's seats roster to offer."""
+def _seat_types(settings: Settings, people_file: list[PeopleFileRow]) -> Json:
+    """Each vendor's seat types with their price, how many were bought and how many are held: the
+    Seats tab offers the types, and the Forecast tab's scenario fills empty seats before buying more."""
+    held = Counter((row.vendor, row.seat_type) for row in people_file if row.vendor)
     return {
-        vendor: [{"seat_type": seat_type, "bought": plan.bought} for seat_type, plan in sorted(plans.items())]
+        vendor: [
+            {"seat_type": seat_type, "bought": plan.bought, "held": held[(vendor, seat_type)], "price_cents": cents(plan.price_usd)}
+            for seat_type, plan in sorted(plans.items())
+        ]
         for vendor, plans in sorted(settings.seats.items())
     }
 

@@ -109,10 +109,18 @@ def test_the_team_view_shows_no_person_and_no_key_name(workspace: Path) -> None:
     assert "by_person" not in section(dashboard, "spend")
 
 
-def test_the_seat_types_settings_price_are_listed_for_the_seats_roster(workspace: Path) -> None:
+def test_the_seat_types_settings_price_are_listed_with_how_many_are_held(workspace: Path) -> None:
     dashboard = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
 
-    assert dashboard["seat_types"] == {"anthropic": [{"seat_type": "standard", "bought": len(TEAMS) + 1}]}
+    assert dashboard["seat_types"] == {
+        "anthropic": [{"seat_type": "standard", "bought": len(TEAMS) + 1, "held": len(TEAMS), "price_cents": 2500}]
+    }
+
+
+def test_the_forecast_counts_each_teams_claude_seat_holders_for_the_scenario(workspace: Path) -> None:
+    dashboard = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
+
+    assert section(dashboard, "forecast")["seat_holders"] == {"Engineering": 3, "Other (small teams)": 3}
 
 
 def test_emails_in_a_note_are_replaced() -> None:
@@ -229,3 +237,17 @@ def test_the_team_view_says_a_known_change_for_its_folded_team_without_the_opera
     assert "includes a known change: +$400.00 of api for Other (small teams)" in strings(team_view["notes"])
     assert "Sales" not in json.dumps(team_view) and "Pat" not in json.dumps(team_view)
     assert "includes a known change: +$400.00 of api for Sales (Pat's outbound agent)" in strings(person_view["notes"])
+
+
+def test_the_forecast_carries_known_changes_by_folded_team_for_the_scenario(workspace: Path) -> None:
+    settings = json.loads((workspace / SETTINGS_FILE_NAME).read_text(encoding="utf-8"))
+    changes = [{"month": "2026-10", "team": "Sales", "product": "api", "amount_usd": 400},
+               {"month": "2026-10", "team": "Engineering", "product": "extra usage", "amount_usd": -50}]
+    (workspace / SETTINGS_FILE_NAME).write_text(json.dumps({**settings, "known_changes": changes}), encoding="utf-8")
+
+    dashboard = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
+
+    assert section(dashboard, "forecast")["known_changes"] == {
+        "Engineering": {"extra_usage_cents": -5000},
+        "Other (small teams)": {"api_cents": 40000},
+    }
