@@ -171,7 +171,7 @@ The three alert numbers (2×, $25, 25%) are defaults, editable in settings.
 
 **The forecast check.** Once a month has ended, `report` says how far its forecast was from what happened (the plan saved at its start, else a replay that says so), beside how far doing nothing, calling it last month's total, would have been. A forecast that loses to doing nothing is the sign to change the method, as the 3-month API average did. It isn't scored while either month is saved only in part, since a partial month reads as a big miss that says nothing about the method.
 
-**The scenario.** Below the forecast, the Forecast tab lets anyone with the page try "what if" for next month without changing anything: it runs in the viewer's browser and isn't saved.
+**The scenario.** Right below the monthly spend chart, the Forecast tab's "What If" section lets anyone with the page try changes to next month without changing anything: it runs in the viewer's browser and isn't saved.
 
 - **New hires by team:** each gets a Claude seat at its price, on Premium for a chosen share of them, and uses as much extra usage as the average Claude seat holder on that team does now (the company's average for a team with none). They fill empty seats of their type first, which are already paid for, so only hires beyond those add seat cost.
 - **Extra usage and API on current keys,** each up or down by a percentage, for heavier use or a model change. Known changes are added as they are rather than scaled, so the forecast carries each folded team's known changes by product.

@@ -215,7 +215,7 @@ tr.off td:last-child { color: var(--over); font-weight: 600; }
 .figure-label { font-size: 13px; color: var(--muted); }
 .figure-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
-.scenario-actions { display: flex; gap: 16px; }
+.scenario-actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
 
 /* Seats */
 .seat-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px 20px; }
@@ -439,21 +439,12 @@ footer ul { margin: 8px 0 0; padding-left: 18px; }
         <div class="months" id="months" role="img"></div>
       </section>
 
-      <section class="panel" aria-labelledby="next-heading">
+      <section class="panel" aria-labelledby="scenario-heading" id="scenario-panel">
         <div class="panel-head">
-          <h2 id="next-heading">Next Month by Team</h2>
-          <button class="link-button" type="button" id="what-if">What if…</button>
-        </div>
-        <div class="table-wrap"><table id="next-table"></table></div>
-        <p class="aside" id="method"></p>
-      </section>
-
-      <section class="panel" aria-labelledby="scenario-heading" id="scenario-panel" hidden>
-        <div class="panel-head">
-          <h2 id="scenario-heading">What If for <span id="scenario-month"></span></h2>
+          <h2 id="scenario-heading">What If: <span id="scenario-month"></span></h2>
           <div class="scenario-actions">
+            <span class="aside">Try changes to next month's forecast; nothing is saved</span>
             <button type="button" class="link-button" id="scenario-reset">Reset</button>
-            <button type="button" class="link-button" id="scenario-close">Close</button>
           </div>
         </div>
         <div class="levers">
@@ -490,6 +481,16 @@ footer ul { margin: 8px 0 0; padding-left: 18px; }
         <div class="table-wrap"><table id="scenario-table"></table></div>
         <ul class="notes" id="scenario-notes"></ul>
       </section>
+
+      <section class="panel" aria-labelledby="next-heading">
+        <div class="panel-head">
+          <h2 id="next-heading">Next Month by Team</h2>
+          <span class="aside">Forecast as it stands</span>
+        </div>
+        <div class="table-wrap"><table id="next-table"></table></div>
+        <p class="aside" id="method"></p>
+      </section>
+
     </section>
 
     <section class="tabpanel" role="tabpanel" id="seats" aria-labelledby="tab-seats" hidden>
@@ -1193,8 +1194,6 @@ footer ul { margin: 8px 0 0; padding-left: 18px; }
   }).filter(Boolean);
   const knownCount = Object.keys(forecast.known_changes || {}).length;
   text(byId("method"), "Seats at today's prices; " + listOf(basis) + (knownCount ? "; plus planned changes" : "") + ".");
-  byId("what-if").addEventListener("click", () => { byId("scenario-panel").hidden = false; byId("scenario-panel").scrollIntoView({ block: "start" }); });
-  byId("scenario-close").addEventListener("click", () => { byId("scenario-panel").hidden = true; });
   scenario(forecast, data.seat_types || {});
 
   // Savings: everything the rules found, and what done ones saved
@@ -1317,7 +1316,7 @@ footer ul { margin: 8px 0 0; padding-left: 18px; }
       const focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.team : null;
       el.replaceChildren();
       const head = el.createTHead().insertRow();
-      ["Team", "New hires", "Forecast", "Scenario", "Change"].forEach((heading) => head.appendChild(make("th", "", heading)));
+      ["Team", "New hires", "Forecast", "What if", "Change"].forEach((heading) => head.appendChild(make("th", "", heading)));
       const body = el.createTBody();
       rows.forEach((row) => {
         const tr = body.insertRow();
