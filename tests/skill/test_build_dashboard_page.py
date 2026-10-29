@@ -1,7 +1,6 @@
 """The dashboard page builder: the engine's data goes into the page whole, and can't break out of it."""
 from __future__ import annotations
 
-import base64
 import json
 import re
 import tempfile
@@ -50,16 +49,12 @@ class BuildPageTest(unittest.TestCase):
 
         self.assertNotIn(builder.DATA_SLOT, page)
         self.assertNotIn(builder.TITLE_SLOT, page)
-        self.assertNotIn(builder.LOGO_SLOT, page)
 
-    def test_the_airCFO_logo_travels_inside_the_page(self) -> None:
-        logo = builder.LOGO.read_bytes()
+    def test_the_page_shows_the_logo_published_beside_it(self) -> None:
+        page = builder.build_page(dashboard(), builder.TEMPLATE.read_text(encoding="utf-8"))
 
-        page = builder.build_page(dashboard(), builder.TEMPLATE.read_text(encoding="utf-8"), logo)
-
-        uri = re.search(r'src="data:image/png;base64,([A-Za-z0-9+/=]+)"', page)
-        assert uri is not None
-        self.assertEqual(base64.b64decode(uri.group(1)), logo)
+        self.assertIn(f'src="{builder.LOGO.name}"', page)
+        self.assertNotIn("data:image", page)
 
     def test_the_page_loads_nothing_from_elsewhere_but_its_fonts(self) -> None:
         template = builder.TEMPLATE.read_text(encoding="utf-8")
@@ -91,6 +86,13 @@ class FolderTest(unittest.TestCase):
         page = (self.folder / "out/2026-10/dashboard.html").read_text(encoding="utf-8")
         self.assertEqual(embedded(page), dashboard(month="2026-10"))
         self.assertFalse((self.folder / "out/2026-09/dashboard.html").exists())
+
+    def test_puts_the_logo_beside_the_page_so_it_publishes_with_it(self) -> None:
+        self.save("2026-10")
+
+        builder.main([str(self.folder)])
+
+        self.assertEqual((self.folder / "out/2026-10/aircfo-logo.png").read_bytes(), builder.LOGO.read_bytes())
 
     def test_says_what_to_run_when_there_is_no_data(self) -> None:
         with self.assertRaises(SystemExit) as refused:

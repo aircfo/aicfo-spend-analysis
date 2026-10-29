@@ -63,6 +63,62 @@ def test_settings_command_exits_1_with_a_plain_message(
     assert capsys.readouterr().err.startswith('aicfo-spend: visibility must be "team" or "person"')
 
 
+def a_workspace(tmp_path: Path) -> Path:
+    main(["init", str(tmp_path / "acme"), "--company", "Acme"])
+    return tmp_path / "acme"
+
+
+def an_export(folder: Path, name: str) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / name
+    path.write_text("user_email,account_uuid,product,model,total_net_spend_usd,total_gross_spend_usd\n", encoding="utf-8")
+    return path
+
+
+def test_save_refuses_an_export_named_for_other_days(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    workspace = a_workspace(tmp_path)
+    export = an_export(tmp_path / "Downloads", "spend-report-acme-2026-10-01-to-2026-10-27.csv")
+
+    status = main(["save", str(workspace), "claude-spend-export", "--start", "2026-10-01", "--end", "2026-10-28",
+                   "--file", str(export)])
+
+    assert status == 1
+    assert "is named for 2026-10-01 to 2026-10-27, but --start and --end say 2026-10-01 to 2026-10-28" in capsys.readouterr().err
+    assert not list((workspace / "raw").glob("*/*"))
+
+
+def test_save_can_remove_the_downloaded_copy_once_it_is_saved(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    workspace = a_workspace(tmp_path)
+    export = an_export(tmp_path / "Downloads", "spend-report-acme-2026-10-01-to-2026-10-28.csv")
+
+    status = main(["save", str(workspace), "claude-spend-export", "--start", "2026-10-01", "--end", "2026-10-28",
+                   "--file", str(export), "--remove-original"])
+
+    assert status == 0
+    assert not export.exists()
+    assert len(list((workspace / "raw" / "2026-10").glob("claude-spend-export_2026-10-01_2026-10-28_saved-*.csv"))) == 1
+    assert f"Removed {export}" in capsys.readouterr().out
+
+
+def test_save_keeps_the_original_when_the_save_is_refused(tmp_path: Path) -> None:
+    workspace = a_workspace(tmp_path)
+    export = an_export(tmp_path / "Downloads", "spend-report-acme-2026-10-01-to-2026-10-27.csv")
+
+    main(["save", str(workspace), "claude-spend-export", "--start", "2026-10-01", "--end", "2026-10-28",
+          "--file", str(export), "--remove-original"])
+
+    assert export.exists()
+
+
+def test_report_compare_points_to_the_skills_roster_script(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    workspace = a_workspace(tmp_path)
+
+    status = main(["report", str(workspace), "2026-10", "--compare", "export.csv"])
+
+    assert status == 1
+    assert "roster_to_people.py" in capsys.readouterr().err
+
+
 def test_runs_from_a_checkout_without_installing() -> None:
     # Cloud routines can't install packages, so they run the tool in place like this.
     result = subprocess.run(

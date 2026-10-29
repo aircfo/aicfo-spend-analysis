@@ -2,13 +2,15 @@
 """Write the engine's people.csv from the seats roster people edit.
 
 Usage:
-  python3 roster_to_people.py <folder> <roster rows file> [--compare <claude.ai spend export>]
+  python3 roster_to_people.py <folder> <Seats tab rows> [--compare <claude.ai spend export>]
 
 The roster is the dashboard page's Seats tab, one row per person: name, email, team, and a
-seat per vendor. Claude reads its rows from the page's database and writes them to a JSON file:
+seat per vendor. <Seats tab rows> is the folder ArtifactData's `list` saves them into with
+`out_dir`, one file per person, as it comes:
 
-  {"rows": [{"name": "Pat Lee", "email": "pat@acme.com", "team": "Sales",
-             "seats": {"anthropic": "Standard", "openai": "No account"}}]}
+  {"name": "Pat Lee", "email": "pat@acme.com", "team": "Sales", "anthropic": "standard", "openai": "none"}
+
+It can also be one JSON file of rows: {"rows": [{"name", "email", "team", "seats": {...}}]}.
 
 This writes <folder>/people.csv: one row per seat held. A seat type must be one the
 settings file prices. Name and team are written only where the engine can't get them from
@@ -28,9 +30,12 @@ import os
 import sys
 from collections import Counter
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 NO_SEAT = {"", "no account", "none", "no seat"}
+# Every other field of a Seats tab row is a vendor's seat.
+ROW_FIELDS = {"name", "email", "team"}
 PEOPLE_COLUMNS = ("email", "name", "team", "vendor", "seat_type")
 
 
@@ -142,19 +147,51 @@ def priced_seats(folder: Path) -> dict[str, set[str]]:
     }
 
 
-def newest_ramp_people(folder: Path) -> dict[str, tuple[str, str]]:
-    """Ramp's newest saved people list, as lowercase email -> (name, team)."""
+def read_roster(path: Path) -> object:
+    """The roster's rows, from the Seats tab's download folder or from one rows file."""
+    if not path.is_dir():
+        return json.loads(path.read_text(encoding="utf-8"))
+    # ArtifactData saves a collection's files under a folder named for it.
+    folder = path / "seats" if (path / "seats").is_dir() else path
+    rows: list[object] = []
+    for person in sorted(folder.glob("*.json")):
+        fields = json.loads(person.read_text(encoding="utf-8"))
+        if not isinstance(fields, dict):
+            rows.append(fields)  # people_rows names the row that isn't a person
+            continue
+        seats = {key: value for key, value in fields.items() if key not in ROW_FIELDS}
+        rows.append({"name": fields.get("name", ""), "email": fields.get("email", ""), "team": fields.get("team", ""),
+                     "seats": seats})
+    return {"rows": rows}
+
+
+@dataclass(frozen=True)
+class RampUser:
+    email: str
+    name: str
+    team: str
+    active: bool
+
+
+def ramp_users(folder: Path) -> list[RampUser]:
+    """Everyone on Ramp's newest saved people list, emails in lowercase."""
     snapshots = sorted((folder / "raw").glob("*/ramp-people_*.json"), key=lambda path: path.name)
     if not snapshots:
-        return {}
+        return []
     document = json.loads(snapshots[-1].read_text(encoding="utf-8-sig"))
-    people: dict[str, tuple[str, str]] = {}
+    users: list[RampUser] = []
     for user in document.get("users", []) if isinstance(document, dict) else []:
         if not isinstance(user, dict) or not isinstance(user.get("email"), str):
             continue
         name = " ".join(str(user.get(part) or "").strip() for part in ("first_name", "last_name")).strip()
-        people[user["email"].strip().lower()] = (name, str(user.get("department_name") or "").strip())
-    return people
+        team = str(user.get("department_name") or "").strip()
+        users.append(RampUser(user["email"].strip().lower(), name, team, not user.get("is_inactive")))
+    return users
+
+
+def newest_ramp_people(folder: Path) -> dict[str, tuple[str, str]]:
+    """Ramp's newest saved people list, as lowercase email -> (name, team)."""
+    return {user.email: (user.name, user.team) for user in ramp_users(folder)}
 
 
 def write_people_csv(folder: Path, rows: list[dict[str, str]]) -> Path:
@@ -174,7 +211,7 @@ def main(argv: Sequence[str]) -> int:
     if len(argv) not in (2, 4) or (len(argv) == 4 and argv[2] != "--compare"):
         raise SystemExit(__doc__)
     folder, roster_file = Path(argv[0]).expanduser(), Path(argv[1]).expanduser()
-    roster = json.loads(roster_file.read_text(encoding="utf-8"))
+    roster = read_roster(roster_file)
     try:
         rows, summary = people_rows(roster, priced_seats(folder), newest_ramp_people(folder))
     except RosterError as error:

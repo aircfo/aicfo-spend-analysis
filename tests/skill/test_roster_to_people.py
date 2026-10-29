@@ -112,5 +112,30 @@ class FolderTest(unittest.TestCase):
                 )
 
 
+class SeatsTabDownloadTest(unittest.TestCase):
+    def test_reads_the_seats_tab_download_one_file_per_person_as_it_comes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            download = Path(temporary) / "seats-read"
+            (download / "seats").mkdir(parents=True)
+            for email, team, seat in (("pat.lee@example.com", "Sales", "standard"), ("jo.park@example.com", "", "none")):
+                (download / "seats" / f"{email}.json").write_text(json.dumps(
+                    {"name": "", "email": email, "team": team, "anthropic": seat, "openai": "none"}
+                ), encoding="utf-8")
+
+            rows = roster.read_roster(download)
+
+            self.assertEqual(rows, {"rows": [
+                {"name": "", "email": "jo.park@example.com", "team": "", "seats": {"anthropic": "none", "openai": "none"}},
+                {"name": "", "email": "pat.lee@example.com", "team": "Sales", "seats": {"anthropic": "standard", "openai": "none"}},
+            ]})
+
+    def test_a_rows_file_still_reads_as_before(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            rows_file = Path(temporary) / "roster-rows.json"
+            rows_file.write_text(json.dumps({"rows": [person("pat.lee@example.com", "Sales")]}), encoding="utf-8")
+
+            self.assertEqual(roster.read_roster(rows_file), {"rows": [person("pat.lee@example.com", "Sales")]})
+
+
 if __name__ == "__main__":
     unittest.main()

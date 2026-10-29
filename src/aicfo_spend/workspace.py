@@ -9,6 +9,8 @@ from aicfo_spend.errors import UserError
 from aicfo_spend.settings import SETTINGS_FILE_NAME
 
 PEOPLE_FILE_NAME = "people.csv"
+# The Claude skill keeps its published page's link here.
+DASHBOARD_URL_FILE_NAME = "dashboard-url.txt"
 # One row per seat a person holds. name and team are only needed for people Ramp doesn't know.
 PEOPLE_COLUMNS = ("email", "name", "team", "vendor", "seat_type")
 
@@ -42,7 +44,7 @@ def create_workspace(folder: Path, company_name: str) -> list[Path]:
         raise WorkspaceError(f"{folder} is a file, not a folder")
     settings_path = folder / SETTINGS_FILE_NAME
     if settings_path.exists():
-        raise WorkspaceError(f"{folder} is already a workspace; its {SETTINGS_FILE_NAME} was left as is")
+        raise WorkspaceError(f"{folder} is already in use, so nothing in it was changed. {_in_use(folder)}")
 
     created: list[Path] = []
     for path in (folder, folder / "raw", folder / "out"):
@@ -59,3 +61,16 @@ def create_workspace(folder: Path, company_name: str) -> list[Path]:
         people_path.write_text(",".join(PEOPLE_COLUMNS) + "\n", encoding="utf-8")
         created.append(people_path)
     return created
+
+
+def _in_use(folder: Path) -> str:
+    """What an existing workspace already holds, so nobody mistakes it for an empty one."""
+    held = [f"its {SETTINGS_FILE_NAME}"]
+    downloads = [path for path in (folder / "raw").glob("*/*") if path.is_file()]
+    if downloads:
+        held.append(f"{len(downloads)} saved downloads")
+    url_file = folder / DASHBOARD_URL_FILE_NAME
+    if url_file.is_file() and url_file.read_text(encoding="utf-8").strip():
+        held.append(f"a published dashboard at {url_file.read_text(encoding='utf-8').strip()}")
+    listing = held[0] if len(held) == 1 else ", ".join(held[:-1]) + " and " + held[-1]
+    return f"It has {listing}. To carry on with it, skip init; to start fresh, choose a new folder."
