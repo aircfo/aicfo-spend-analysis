@@ -132,6 +132,11 @@ def parse_vendor_spend(document: object, label: str) -> dict[str, Decimal]:
     table = table.get("table") if isinstance(table, dict) else None
     spend: dict[str, Decimal] = {}
     if isinstance(table, dict):
+        page = table.get("page")
+        if isinstance(page, dict) and page.get("next"):
+            raise InputError(
+                f"{label} is one page of Ramp's answer and more follow; ask with page_size 1000, or join every page's rows into one file"
+            )
         for entry in _list(table, "data", label):
             cells = _object(entry, label).get("cells")
             payee, amount = "", None

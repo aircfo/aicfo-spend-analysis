@@ -69,6 +69,7 @@ def test_shows_nothing_until_settings_name_a_vendor(tmp_path: Path) -> None:
         ({"other_ai_vendors": "Cursor"}, "other_ai_vendors must be a list of vendor names"),
         ({"other_ai_vendors": [7]}, "other_ai_vendors item 1 must be text in quotes"),
         ({"other_ai_vendors": ["Anthropic"]}, "other_ai_vendors is for vendors besides Anthropic and OpenAI"),
+        ({"other_ai_vendors": ["Cursor", "cursor"]}, "other_ai_vendors lists 'cursor' twice; list each vendor once"),
     ],
 )
 def test_rejects_an_other_ai_vendors_setting_with_a_message_that_says_what_to_fix(raw: object, message: str) -> None:
@@ -95,3 +96,11 @@ def test_the_dashboard_shows_other_ai_vendors_in_the_team_view(tmp_path: Path) -
     dashboard = build_dashboard(folder, load_settings(folder), SEPTEMBER, date(2026, 10, 5))
 
     assert dashboard["other_ai_vendors"] == {"through": "2026-09-28", "vendors": [{"vendor": "Cursor", "total_cents": 48000}]}
+
+
+def test_refuses_one_page_of_an_answer_that_has_more() -> None:
+    answer = json.loads(ANSWER, parse_float=Decimal)
+    answer["response"]["table"]["page"] = {"next": "page-2"}
+
+    with pytest.raises(InputError, match="one page of Ramp's answer and more follow"):
+        parse_vendor_spend(answer, "answer")

@@ -115,6 +115,12 @@ def _other_ai_vendors(value: object) -> tuple[str, ...]:
     names = tuple(_text(name, f"other_ai_vendors item {number}").strip() for number, name in enumerate(value, start=1))
     if any(name.lower() in ("anthropic", "openai") for name in names):
         raise SettingsError("other_ai_vendors is for vendors besides Anthropic and OpenAI, which the tool already reads")
+    seen: set[str] = set()
+    for name in names:
+        # Ramp's payees are matched whatever their case, so two spellings would count one vendor twice.
+        if name.casefold() in seen:
+            raise SettingsError(f"other_ai_vendors lists {name!r} twice; list each vendor once")
+        seen.add(name.casefold())
     return names
 
 

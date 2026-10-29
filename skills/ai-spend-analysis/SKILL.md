@@ -257,7 +257,8 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
      still be paid for; name them in the summary too.
    - **Other AI vendors:** only when settings list `other_ai_vendors`. Call
      `ramp_reporting_query` on the `spend` dataset with the dimension `payee` and the
-     measure `amount`, from `<first>` to the end of `<yesterday>`, `query_scope` `complete`.
+     measure `amount`, from `<first>` to the end of `<yesterday>`, `query_scope` `complete` and
+     `page_size` 1000, so the answer is one page; the engine refuses a page that says more follow.
      If the answer was saved to a file, save that file as it is. Otherwise write only the
      rows for the listed vendors as `{"data": [{"payee": "<name>", "amount": <dollars>}]}` to
      `$FOLDER/inbox/ramp-vendor-spend.json`. Then run
