@@ -183,10 +183,12 @@ Talk to the operator one step at a time; they mostly confirm.
    No `ArtifactData` tool in this session? Keep the roster in `people.csv` by hand instead.
    It has one row per seat held: `email`, `vendor` and `seat_type`, plus `name` and `team`
    only for someone Ramp doesn't know.
-5. **Who sees what.** `visibility` is `"team"` by default: shared outputs show teams, and
-   teams under 3 people fold together. Set `"person"` only when the operator says the
-   company has decided everyone with the link may see each person's spend. Never change
-   it yourself.
+5. **Who sees what.** `visibility` is `"person"` by default: the page names each person with
+   their spend, use and seat recommendations, because seeing who uses AI and what it costs
+   is the point. Tell the operator so, and that anyone they share the page with sees it. Set
+   `"team"` only when the operator asks for teams only: then the page rolls people up to
+   teams, folds teams under 3 people together, and keeps recommendations that name someone
+   off the page. Never change it yourself.
 6. **Extra usage.** On Claude Team, each person's extra usage comes only from the claude.ai
    spend export. There are three ways to get it:
    - **Claude in Chrome (easiest):** with the extension connected and signed in to claude.ai
@@ -201,7 +203,10 @@ Talk to the operator one step at a time; they mostly confirm.
      is the one to recommend when the daily refresh will run unattended, because it needs
      neither Chrome nor a Claude session.
    **The export only reaches back 90 days, so a month that isn't saved within 90 days is
-   lost.** Save last month whole and this month so far (step 2 of the refresh).
+   lost.** At setup, save the two whole months before this one, the month before last with
+   the export's custom dates (its 1st to its last day), so seat recommendations and the
+   forecast have history from the first refresh. After that, save last month whole and this
+   month so far (step 2 of the refresh).
 7. **What each API key is for.** The report splits API spend by cost category, such as R&D,
    go-to-market or cost of revenue, which is how a finance team books it. A key with a
    `Cost category` tag in Ramp uses that tag. For the rest, call `ramp_api_key_spend` for
@@ -299,10 +304,10 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    being refreshed, so the page shows the check. Lead the summary with any line that doesn't tie.
    **Then the seat recommendations.** Ask the operator what came of each open one in the
    last run's list, and record it with `decide <id> done` or `declined` (with `--on` for the
-   day and `--note`). Then run `recommend`. Give its list to the operator in this conversation
-   only: it names people and their use, so it never goes on the page, in a draft for others,
-   or in `summary.txt`, which says only how many are open. Say that an upgrade's saving is
-   at most that much, and that a reclaim saves money only once seats bought goes down.
+   day and `--note`). Then run `recommend` and give the operator its list. The page's Savings
+   tab shows the same list, naming people unless `visibility` is `"team"`, and leaves out
+   anything marked done or declined. Say that an upgrade's saving is at most that much, and
+   that a reclaim saves money only once seats bought goes down.
 4. **Update the page.** Run `python3 "$SKILL/scripts/build_dashboard_page.py" "$FOLDER" <month>`.
    It writes `$FOLDER/out/<month>/dashboard.html`, one page holding the engine's numbers, so
    nothing is retyped, and `aircfo-logo.png` beside it. Publish the page with the Artifact
@@ -361,7 +366,7 @@ re-adds the right organization's Admin key in Ramp.
 - **Visibility is the operator's call**, as Setup step 5 says. Anyone who can open a shared
   output can download its rows, the Seats tab's included.
 - **Drafts only.** Alerts and summaries are written for a person to send.
-- **Seat recommendations are for the operator.** Never put `recommendations.csv` or its names on the page or in anything shared.
+- **Recommendations follow `visibility`.** With `"team"`, never put a recommendation that names someone on the page or in anything shared.
 - **Company data stays in `$FOLDER` and the published page.** Never copy it into a repo or anywhere else.
 - **Run only the engine the launcher picks.** Never edit files in `raw/` or `.engine/`.
 
@@ -374,6 +379,6 @@ re-adds the right organization's Admin key in Ramp.
 | `scripts/seat_rows.py` | Builds the Seats tab's rows from Ramp's people list, the defaults and the member lists read in Chrome, as ready-to-write batches |
 | `scripts/roster_to_people.py` | Writes the engine's `people.csv` from the Seats tab's rows as ArtifactData saves them, checking every seat type against settings; `--compare` checks them against a spend export |
 | `scripts/build_dashboard_page.py` | Puts the engine's `dashboard.json` into `dashboard_page.html`, giving one page to publish that carries its own data, with the logo beside it |
-| `scripts/dashboard_page.html` | The page, in tabs: Overview (alerts, the month's verdict, the month by product as a donut, notes), Spend (by team, by vendor and the change from last month, as charts), Usage (who uses Claude and how much, by team, product and model), Unassigned (what each reason means and who fixes it), Forecast (this month and next in one table), People (person view only) and Seats, the editable roster |
+| `scripts/dashboard_page.html` | The page, in tabs: Overview (the month's verdict and why, four numbers, spend vs. plan by team, savings opportunities, top spenders), Spend (every team against plan, vendors, API by purpose, other AI tools, everyone, API keys, what isn't on a team, the bill check), Usage (who uses Claude, by team, product and model, top users), Forecast (monthly spend and next month by team, with a what-if), Seats (seat use and the editable roster) and Savings (opportunities and what done ones saved) |
 | `scripts/aircfo-logo.png` | The airCFO wordmark in the page's masthead, published beside the page |
 | `references/security-overview.md` | One page for an IT or security reviewer: what data goes where, and who can see it |

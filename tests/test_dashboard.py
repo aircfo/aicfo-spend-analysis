@@ -11,7 +11,7 @@ from aicfo_spend.raw_store import RAMP_API_KEYS, RAMP_PEOPLE, save_raw
 from aicfo_spend.settings import SETTINGS_FILE_NAME, load_settings
 from aicfo_spend.spend_table import UNASSIGNED
 from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_user
-from tests.workspaces import SAVED_AT, SEPTEMBER, new_workspace, save_month
+from tests.workspaces import SAVED_AT, SEPTEMBER, fill_september, new_workspace, save_month
 
 OCTOBER = Month(2026, 10)
 EARLY_OCTOBER = date(2026, 10, 5)
@@ -55,7 +55,7 @@ def acme(tmp_path: Path, teams: dict[str, str]) -> Path:
     seat_holders = "".join(f"{email},,,anthropic,standard\n" for email in teams)
     folder = new_workspace(tmp_path, seat_holders, with_ramp_people=False)
     (folder / SETTINGS_FILE_NAME).write_text(
-        '{"company_name": "Acme", "seats": {"anthropic": {"standard": {"price_usd": 25, "bought": %d}}}}'
+        '{"company_name": "Acme", "visibility": "team", "seats": {"anthropic": {"standard": {"price_usd": 25, "bought": %d}}}}'
         % (len(teams) + 1),
         encoding="utf-8",
     )
@@ -113,7 +113,7 @@ def test_the_seat_types_settings_price_are_listed_with_how_many_are_held(workspa
     dashboard = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
 
     assert dashboard["seat_types"] == {
-        "anthropic": [{"seat_type": "standard", "bought": len(TEAMS) + 1, "held": len(TEAMS), "price_cents": 2500}]
+        "anthropic": [{"seat_type": "standard", "bought": len(TEAMS) + 1, "held": len(TEAMS), "active": None, "price_cents": 2500}]
     }
 
 
@@ -251,3 +251,28 @@ def test_the_forecast_carries_known_changes_by_folded_team_for_the_scenario(work
         "Engineering": {"extra_usage_cents": -5000},
         "Other (small teams)": {"api_cents": 40000},
     }
+
+
+def test_the_pace_and_plan_are_split_by_product_so_the_page_can_say_what_moved(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, Month(2026, 8), backend_cents=15000, extra_usage=(("pat.lee@example.com", "claude-opus", "60"),))
+    fill_september(folder)
+
+    dashboard = build_dashboard(folder, load_settings(folder), SEPTEMBER, EARLY_OCTOBER)
+
+    by_product = {row["product"]: row for row in as_list(section(dashboard, "pace")["by_product"])}
+    # The plan, made Aug 31, carried August's $150 of API; September spent $303 on it.
+    assert (by_product["api"]["plan_cents"], by_product["api"]["on_pace_for_cents"]) == (15000, 30300)
+    assert by_product["seats"]["plan_cents"] == by_product["seats"]["on_pace_for_cents"] == 7500
+    assert [row["month"] for row in as_list(dashboard["history"])] == ["2026-08"]
+
+
+def test_the_person_view_names_people_from_ramp_and_gives_each_their_team(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    fill_september(folder)
+
+    dashboard = build_dashboard(folder, load_settings(folder), SEPTEMBER, EARLY_OCTOBER)
+
+    assert dashboard["people_names"] == {"pat.lee@example.com": "Pat Lee", "sam.cho@example.com": "Sam Cho"}
+    teams = {row["person"]: row["team"] for row in as_list(section(dashboard, "spend")["by_person"])}
+    assert teams["pat.lee@example.com"] == "Sales"

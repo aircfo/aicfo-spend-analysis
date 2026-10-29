@@ -23,7 +23,7 @@ def test_writes_settings_that_load_with_the_default_alert_numbers(tmp_path: Path
     settings = load_settings(workspace)
 
     assert settings.company_name == "Acme"
-    assert settings.visibility == "team"
+    assert settings.visibility == "person"
     assert settings.seats == {}
     assert settings.alerts == AlertThresholds()
 

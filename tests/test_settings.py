@@ -30,7 +30,7 @@ def test_fills_in_defaults_when_the_file_is_empty() -> None:
     settings = parse_settings({})
 
     assert settings.company_name == ""
-    assert settings.visibility == "team"
+    assert settings.visibility == "person"
     assert settings.seats == {}
     assert settings.alerts == AlertThresholds()
 

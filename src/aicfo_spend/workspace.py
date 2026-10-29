@@ -52,7 +52,7 @@ def create_workspace(folder: Path, company_name: str) -> list[Path]:
             path.mkdir(parents=True)
             created.append(path)
 
-    template = {"company_name": company_name, "visibility": "team", "seats": {}, "alerts": DEFAULT_ALERTS}
+    template = {"company_name": company_name, "visibility": "person", "seats": {}, "alerts": DEFAULT_ALERTS}
     settings_path.write_text(json.dumps(template, indent=2) + "\n", encoding="utf-8")
     created.append(settings_path)
 

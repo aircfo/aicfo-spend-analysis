@@ -2,273 +2,231 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@600;700&family=Inter:wght@400;500;600&display=swap">
 <style>
-/* Layout: an airCFO navy masthead, a sticky row of tabs, then one reading column per tab.
-   The month's verdict opens the first tab; detail, fixes, the forecast and seats each get their own. */
+/* Layout: a navy masthead holding the tabs, then one column per tab that a finance lead reads
+   top to bottom: the verdict before the detail, money in whole dollars, a few words per label. */
 :root {
-  --page: #f5f7fb;
+  --page: #f4f6f9;
   --surface: #ffffff;
   --ink: #132c3a;
   --ink-2: #3b5361;
-  --muted: #5e7280;
-  --line: #dce3ea;
-  --accent: #3c6e82;
-  --highlight: #ff971e;
+  --muted: #607482;
+  --line: #dde4ea;
   --masthead: #132c3a;
   --masthead-ink: #f5f7fb;
   --masthead-muted: #9fc7d3;
+  --highlight: #ff971e;
+  --over: #c4561d;
+  --over-soft: #fbe9df;
+  --under: #2c7d86;
+  --under-soft: #e1f0f1;
+  --flat: #b3c1cc;
+  --chip-ink: #8a3a12;
   --seats: #245a9c;
   --extra: #e07800;
   --api: #0fa3a8;
-  --so-far: #3b5361;
   --projected: #b9c7d2;
-  --critical: #b4372a;
-  --critical-soft: #fbeae7;
   --warning: #8a5a00;
   --warning-soft: #fff3d6;
-  --good: #2e7d4f;
   --skeleton: #e6ebf0;
-  --font-display: "Bitter", Georgia, "Times New Roman", serif;
+  --font-display: "Bitter", Georgia, serif;
   --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --page: #0b1a23;
-    --surface: #132c3a;
-    --ink: #eef3f6;
-    --ink-2: #c3d0d8;
-    --muted: #8ea3b0;
-    --line: #24404f;
-    --accent: #7fcada;
-    --highlight: #ff971e;
-    --masthead: #0f2532;
-    --masthead-ink: #f5f7fb;
-    --masthead-muted: #9fc7d3;
-    --seats: #4c80d2;
-    --extra: #d4730f;
-    --api: #1ea79b;
-    --so-far: #c3d0d8;
-    --projected: #3f5a69;
-    --critical: #f08a7e;
-    --critical-soft: #3a2326;
-    --warning: #f2c46b;
-    --warning-soft: #3a3120;
-    --good: #6ccb94;
-    --skeleton: #1d3a49;
+    --page: #0b1a23; --surface: #132c3a; --ink: #eef3f6; --ink-2: #c3d0d8; --muted: #8ea3b0; --line: #24404f;
+    --masthead: #0f2532; --masthead-ink: #f5f7fb; --masthead-muted: #9fc7d3;
+    --over: #f0874f; --over-soft: #3b2619; --under: #5cc0c8; --under-soft: #173a40; --flat: #46606e; --chip-ink: #ffb68c;
+    --seats: #4c80d2; --extra: #d4730f; --api: #1ea79b; --projected: #3f5a69;
+    --warning: #f2c46b; --warning-soft: #3a3120; --skeleton: #1d3a49;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --page: #0b1a23;
-  --surface: #132c3a;
-  --ink: #eef3f6;
-  --ink-2: #c3d0d8;
-  --muted: #8ea3b0;
-  --line: #24404f;
-  --accent: #7fcada;
-  --highlight: #ff971e;
-  --masthead: #0f2532;
-  --masthead-ink: #f5f7fb;
-  --masthead-muted: #9fc7d3;
-  --seats: #4c80d2;
-  --extra: #d4730f;
-  --api: #1ea79b;
-  --so-far: #c3d0d8;
-  --projected: #3f5a69;
-  --critical: #f08a7e;
-  --critical-soft: #3a2326;
-  --warning: #f2c46b;
-  --warning-soft: #3a3120;
-  --good: #6ccb94;
-  --skeleton: #1d3a49;
+  --page: #0b1a23; --surface: #132c3a; --ink: #eef3f6; --ink-2: #c3d0d8; --muted: #8ea3b0; --line: #24404f;
+  --masthead: #0f2532; --masthead-ink: #f5f7fb; --masthead-muted: #9fc7d3;
+  --over: #f0874f; --over-soft: #3b2619; --under: #5cc0c8; --under-soft: #173a40; --flat: #46606e; --chip-ink: #ffb68c;
+  --seats: #4c80d2; --extra: #d4730f; --api: #1ea79b; --projected: #3f5a69;
+  --warning: #f2c46b; --warning-soft: #3a3120; --skeleton: #1d3a49;
   color-scheme: dark;
 }
 
 /* Tabs, panels and controls set their own display, so hidden has to win over all of them. */
 [hidden] { display: none !important; }
-body {
-  background: var(--page);
-  color: var(--ink);
-  font-family: var(--font-ui);
-  font-size: 15px;
-  line-height: 1.5;
-}
+body { background: var(--page); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.45; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--masthead); }
 .gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .column { max-width: 1040px; margin-inline: auto; }
-h1, h2, h3 { margin: 0; text-wrap: balance; }
-h2 { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
-h3 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+h1, h2 { margin: 0; text-wrap: balance; }
 p { margin: 0; }
-a { color: var(--accent); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--highlight); outline-offset: 2px; }
 
-/* Masthead */
-.masthead { background: var(--masthead); color: var(--masthead-ink); padding-block: 22px 20px; }
-.masthead .column { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
-.masthead-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* Masthead and tabs */
+.masthead { background: var(--masthead); color: var(--masthead-ink); padding-block: 20px 0; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.masthead-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 24px; }
 .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--masthead-muted); }
-h1 { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
-.meta { color: var(--masthead-muted); font-size: 14px; }
-.by-aircfo { display: inline-flex; align-items: center; gap: 8px; color: var(--masthead-muted); font-size: 12px; text-decoration: none; }
-.by-aircfo img { height: 22px; width: auto; display: block; }
-
-/* Tabs */
-.tabbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
-.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1.15; }
+.masthead-right { display: flex; align-items: center; gap: 14px; }
+.fresh { font-size: 13px; color: var(--masthead-ink); border: 1px solid color-mix(in srgb, var(--masthead-muted) 50%, transparent); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.fresh.behind { background: var(--warning-soft); color: var(--warning); border-color: transparent; font-weight: 600; }
+.by-aircfo { display: inline-flex; }
+.by-aircfo img { height: 20px; width: auto; display: block; }
+.tabs { display: flex; gap: 2px; margin-top: 16px; overflow-x: auto; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
-.tab { appearance: none; background: none; border: none; border-bottom: 3px solid transparent; color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 500; padding: 12px 10px 9px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
-.tab:hover { color: var(--ink); }
-.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--highlight); font-weight: 600; }
-.tab-badge { font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--critical-soft); color: var(--critical); }
+.tab { appearance: none; background: none; border: none; border-bottom: 3px solid transparent; color: var(--masthead-muted); font: inherit; font-size: 14px; font-weight: 500; padding: 10px 12px 9px; cursor: pointer; white-space: nowrap; }
+.tab:hover { color: var(--masthead-ink); }
+.tab[aria-selected="true"] { color: var(--masthead-ink); border-bottom-color: var(--highlight); font-weight: 600; }
 
-/* Panels */
-main { padding-block: 24px 48px; }
-.tabpanel { display: flex; flex-direction: column; gap: 20px; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
-.panel-note { color: var(--muted); font-size: 13px; }
-.levers { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px 24px; margin-bottom: 20px; }
-.lever { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; }
-.lever .figure-label { grid-column: 1 / -1; }
-.lever input[type="range"] { width: 100%; accent-color: var(--accent); }
-.lever output { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 4.5ch; text-align: right; }
-.lever-number, .hires-input { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-variant-numeric: tabular-nums; }
-.lever-number { grid-column: 1 / -1; width: 100%; }
-.hires-input { width: 72px; text-align: right; }
-.scenario-figures { margin-bottom: 16px; }
-.scenario-actions { margin-top: 10px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-.empty { color: var(--ink-2); }
-.link-button { appearance: none; background: none; border: none; padding: 0; font: inherit; font-size: 14px; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+main { padding-block: 28px 40px; }
+.tabpanel { display: flex; flex-direction: column; gap: 22px; }
+
+/* Shared pieces */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+h2 { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+.aside { font-size: 13px; color: var(--muted); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+@media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+.empty { color: var(--ink-2); font-size: 14px; }
+.link-button { appearance: none; background: none; border: none; padding: 0; font: inherit; font-size: 14px; color: var(--under); font-weight: 500; cursor: pointer; text-decoration: none; }
+.link-button:hover { text-decoration: underline; }
+.over-text { color: var(--over); }
+.under-text { color: var(--under); }
+
+/* Data that has fallen behind, and alerts: shown only when there is something to say */
+.banner { border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.banner.stale { background: var(--warning-soft); color: var(--ink); }
+.banner.stale strong { color: var(--warning); }
+.banner.alert { background: var(--over-soft); }
+.banner.alert strong { color: var(--chip-ink); }
 
 /* The verdict */
-.verdict { gap: 18px; }
-.verdict-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
-.hero-label { color: var(--ink-2); font-size: 14px; }
-.hero { font-family: var(--font-display); font-size: 52px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; }
-.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
-.chip.over { color: var(--critical); }
-tr.off td:last-child { color: var(--critical); font-weight: 600; }
-.chip.under { color: var(--good); }
-.chip.none { color: var(--muted); }
-.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; }
-.figure-label { color: var(--muted); font-size: 13px; }
-.figure-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.figure-sub { color: var(--ink-2); font-size: 13px; }
+.verdict { display: flex; flex-direction: column; gap: 8px; }
+.verdict-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.hero { font-family: var(--font-display); font-size: 46px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: lining-nums tabular-nums; }
+.hero-label { font-size: 16px; color: var(--ink-2); }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.chip.over { background: var(--over-soft); color: var(--chip-ink); }
+.chip.under { background: var(--under-soft); color: var(--under); }
+.chip.none { background: var(--line); color: var(--ink-2); }
+.why { font-size: 17px; color: var(--ink-2); max-width: 66ch; }
+.why b { color: var(--ink); font-weight: 600; }
 
-.bullet { position: relative; height: 22px; background: color-mix(in srgb, var(--line) 60%, transparent); border-radius: 4px; }
-.bullet-so-far, .bullet-projected { position: absolute; top: 0; bottom: 0; left: 0; }
-.bullet-projected { background: var(--projected); border-radius: 0 4px 4px 0; }
-.bullet-so-far { background: var(--so-far); border-radius: 0 4px 4px 0; }
-.bullet-plan { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); }
-.key-row { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); }
-.key { display: inline-flex; align-items: center; gap: 6px; }
-.swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
-.swatch.tick { width: 2px; height: 14px; border-radius: 0; background: var(--ink); }
-.swatch.so-far { background: var(--so-far); }
-.swatch.projected { background: var(--projected); }
-.swatch.seats { background: var(--seats); }
-.swatch.extra { background: var(--extra); }
-.swatch.api { background: var(--api); }
-.swatch.previous { background: var(--projected); }
-.swatch.current { background: var(--accent); }
+/* A strip of a few numbers */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.kpis.three { grid-template-columns: repeat(3, 1fr); }
+.kpi { padding: 14px 18px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi + .kpi { border-left: 1px solid var(--line); }
+.kpi-label { font-size: 13px; color: var(--muted); }
+.kpi-value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kpi-value.over { color: var(--over); }
+.kpi-value.under, .kpi-value.save { color: var(--under); }
+.kpi-sub { font-size: 13px; color: var(--ink-2); }
+@media (max-width: 760px) {
+  .kpis, .kpis.three { grid-template-columns: repeat(2, 1fr); }
+  .kpi:nth-child(odd) { border-left: none; }
+  .kpi:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
 
-/* The month by product: a donut, its total in the middle, a legend beside it */
-.donut-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 40px; }
-.donut { position: relative; width: 200px; max-width: 100%; aspect-ratio: 1; flex: none; }
-.donut svg { display: block; width: 100%; height: 100%; }
-.donut-arc { fill: none; stroke-width: 30; cursor: default; transition: opacity 120ms ease; }
-.donut-arc.seats { stroke: var(--seats); }
-.donut-arc.extra { stroke: var(--extra); }
-.donut-arc.api { stroke: var(--api); }
-.donut-arc:focus { outline: none; }
-.donut.focused .donut-arc:not(.active) { opacity: 0.35; }
-.donut-track { fill: none; stroke: var(--line); stroke-width: 30; }
-.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; padding: 40px; }
-.donut-value { font-family: var(--font-display); font-size: 24px; font-weight: 600; font-variant-numeric: lining-nums tabular-nums; }
-.donut-label { color: var(--muted); font-size: 13px; }
-.donut-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; flex: 1 1 220px; min-width: 0; }
-.donut-legend li { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 2px 10px; }
-.donut-legend .swatch { align-self: center; }
-.legend-name { color: var(--ink-2); font-size: 14px; }
-.legend-value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
-.legend-share { grid-column: 2 / -1; color: var(--muted); font-size: 13px; }
+/* Against plan: contributions centred on zero */
+.diverge { display: flex; flex-direction: column; gap: 6px; }
+.drow { display: grid; grid-template-columns: minmax(110px, 170px) 1fr 76px; align-items: center; gap: 10px; font-size: 14px; }
+.drow .name { overflow-wrap: anywhere; }
+.drow .name.muted { color: var(--ink-2); font-style: italic; }
+.track { position: relative; height: 16px; }
+.track::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line); }
+.dbar { position: absolute; top: 2px; height: 12px; }
+.dbar.over { left: 50%; background: var(--over); border-radius: 0 3px 3px 0; }
+.dbar.under { right: 50%; background: var(--under); border-radius: 3px 0 0 3px; }
+.dval { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+.dval.over { color: var(--over); }
+.dval.under { color: var(--under); }
+.dval.flat { color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
 
-/* Out-of-date data */
-.stale { border-color: color-mix(in srgb, var(--warning) 45%, var(--line)); background: var(--warning-soft); }
-.stale h2 { color: var(--warning); font-family: var(--font-ui); font-size: 15px; }
-.stale-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.stale-what { font-weight: 600; }
-.stale-fix { color: var(--ink-2); font-size: 14px; max-width: 75ch; }
+/* Savings opportunities */
+.actions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.action { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.action:first-child { border-top: none; padding-top: 2px; }
+.action-title { font-weight: 600; }
+.action-value { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.action-value.save { color: var(--under); }
+.action-why { grid-column: 1 / -1; font-size: 14px; color: var(--ink-2); }
+.action-who { font-size: 12px; color: var(--muted); }
+.fyi { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+.fyi + .fyi { border-top: none; padding-top: 0; margin-top: 6px; }
+.fyi b { color: var(--ink-2); font-weight: 600; }
+.panel-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; font-size: 13px; color: var(--muted); }
 
-/* Alerts */
-.alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.alert { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line); background: color-mix(in srgb, var(--critical-soft) 55%, transparent); }
-.alert-kind { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--critical); padding-top: 2px; }
-.draft-tag { font-size: 12px; color: var(--muted); }
-
-/* Where it went */
-.bars { display: flex; flex-direction: column; gap: 10px; position: relative; }
-.bar-row { display: grid; grid-template-columns: minmax(120px, 190px) 1fr minmax(84px, auto); align-items: center; gap: 12px; }
-.bar-name { font-size: 14px; overflow-wrap: anywhere; }
-.bar-name.unassigned { color: var(--ink-2); font-style: italic; }
-.bar-track { display: flex; gap: 2px; height: 18px; min-width: 0; }
-.seg { height: 100%; min-width: 2px; cursor: default; }
-.bar-track .seg:last-child { border-radius: 0 4px 4px 0; }
-.seg.seats { background: var(--seats); }
-.seg.extra { background: var(--extra); }
-.seg.api { background: var(--api); }
-.seg.usage { background: var(--accent); border-radius: 0 4px 4px 0; }
-.seg:hover, .seg:focus-visible { filter: brightness(1.12); }
-.bar-total { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pair { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.pair-bar { height: 9px; min-width: 2px; border-radius: 0 3px 3px 0; }
-.pair-bar.previous { background: var(--projected); }
-.pair-bar.current { background: var(--accent); }
-.bar-total .up { color: var(--critical); }
-.bar-total .down { color: var(--good); }
-.tooltip { position: absolute; pointer-events: none; z-index: 4; background: var(--ink); color: var(--surface); border-radius: 6px; padding: 6px 10px; font-size: 13px; line-height: 1.35; max-width: 240px; }
-.tooltip strong { display: block; font-size: 14px; }
+/* Bars: one value per row */
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: minmax(110px, 170px) 1fr minmax(84px, auto); align-items: center; gap: 10px; font-size: 14px; }
+.bar-name { overflow-wrap: anywhere; }
+.bar-track { height: 14px; min-width: 0; }
+.bar-fill { height: 100%; min-width: 2px; border-radius: 0 3px 3px 0; background: var(--under); }
+.bar-label { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink-2); }
 
 /* Tables */
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
-th:first-child, td:first-child { text-align: left; white-space: normal; padding-left: 0; }
-th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+th:first-child, td:first-child { text-align: left; padding-left: 0; white-space: normal; }
+th.left, td.left { text-align: left; }
+td.left { color: var(--ink-2); }
+th { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 td { font-variant-numeric: tabular-nums; }
-tr.total td { font-weight: 600; border-bottom: none; }
-tr.unassigned td:first-child { font-style: italic; color: var(--ink-2); }
-details > summary { cursor: pointer; color: var(--accent); font-size: 14px; }
-details[open] > summary { margin-bottom: 10px; }
+tbody tr:last-child td { border-bottom: none; }
+tr.total td { font-weight: 600; border-top: 1px solid var(--line); border-bottom: none; }
+tr.muted td:first-child { font-style: italic; color: var(--ink-2); }
+td.strong { font-weight: 600; }
+tr.off td:last-child { color: var(--over); font-weight: 600; }
+.mini { display: inline-block; height: 6px; border-radius: 2px; background: var(--flat); vertical-align: middle; margin-right: 8px; }
+.search { appearance: none; font: inherit; font-size: 14px; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; width: min(300px, 100%); }
+.search::placeholder { color: var(--muted); }
 
-/* Unassigned */
-.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
-.lead { color: var(--ink-2); max-width: 68ch; }
-.reason { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; padding-block: 16px; border-bottom: 1px solid var(--line); }
-.reason:last-child { border-bottom: none; }
-.reason-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.reason-name { font-weight: 600; }
-.reason-where { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
-.reason-amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-.reason-body { grid-column: 1 / -1; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 14px; max-width: 80ch; }
-.reason-body dt { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 2px; }
-.reason-body dd { margin: 0; color: var(--ink-2); }
-@media (max-width: 560px) { .reason-body { grid-template-columns: 1fr; } .reason-body dd { margin-bottom: 6px; } }
+/* Monthly spend: actual months, this month so far and projected, next month forecast */
+.months { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 14px; align-items: end; height: 220px; padding-top: 24px; }
+.month-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 100%; min-width: 0; }
+.month-value { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.month-stack { position: relative; width: min(64px, 80%); display: flex; flex-direction: column-reverse; }
+.month-bar { width: 100%; }
+.month-bar.actual { background: var(--ink-2); }
+.month-bar.so-far { background: var(--ink-2); }
+.month-bar.projected { background: var(--projected); border-radius: 4px 4px 0 0; }
+.month-bar.forecast { background: repeating-linear-gradient(135deg, var(--projected) 0 6px, transparent 6px 10px); border: 1px solid var(--projected); border-bottom: none; border-radius: 4px 4px 0 0; }
+.month-stack > .month-bar:last-child { border-radius: 4px 4px 0 0; }
+.plan-tick { position: absolute; left: -8px; right: -8px; height: 2px; background: var(--over); }
+.month-name { font-size: 13px; color: var(--ink-2); text-align: center; }
+.month-name small { display: block; color: var(--muted); font-size: 12px; }
 
-.notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 14px; }
+/* The what-if scenario */
+.levers { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px 24px; }
+.lever { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; }
+.lever .figure-label { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.lever input[type="range"] { width: 100%; accent-color: var(--under); }
+.lever output { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 4.5ch; text-align: right; }
+.lever-number, .hires-input { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-variant-numeric: tabular-nums; }
+.lever-number { grid-column: 1 / -1; width: 100%; }
+.hires-input { width: 72px; text-align: right; }
+.scenario-figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.figure-label { font-size: 13px; color: var(--muted); }
+.figure-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+.scenario-actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
 
 /* Seats */
-.seat-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; }
-.seat-count { display: flex; flex-direction: column; gap: 2px; }
-.seat-count .figure-value { font-size: 18px; }
-.seat-count .warn { color: var(--critical); }
+.seat-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px 20px; }
+.seat-count { display: flex; flex-direction: column; gap: 4px; }
+.seat-count .figure-value { font-size: 20px; }
+.seat-count .warn { color: var(--over); }
+.use-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--line); }
+.use-bar span { height: 100%; }
+.use-bar .used { background: var(--under); }
+.use-bar .idle { background: var(--flat); }
 .seat-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
-.search { appearance: none; font: inherit; font-size: 14px; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; width: min(320px, 100%); }
-.search::placeholder { color: var(--muted); }
 .seat-person { display: flex; flex-direction: column; }
 .seat-email { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 #seats-table td { vertical-align: middle; }
@@ -278,24 +236,23 @@ details[open] > summary { margin-bottom: 10px; }
 .seat-select:disabled { color: var(--ink-2); opacity: 1; }
 .seat-select.none { color: var(--muted); }
 .row-status { display: block; font-size: 12px; color: var(--muted); min-height: 16px; text-align: right; }
-.row-status.failed { color: var(--critical); }
-.skeleton-row { height: 36px; border-radius: 6px; background: var(--skeleton); }
+.row-status.failed { color: var(--over); }
 .skeleton { display: flex; flex-direction: column; gap: 8px; }
+.skeleton-row { height: 36px; border-radius: 6px; background: var(--skeleton); }
 
-.footer { padding-block: 0 40px; }
-.footer .column { color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+footer { padding-block: 0 36px; font-size: 13px; color: var(--muted); }
+footer details { margin-top: 6px; }
+footer summary { cursor: pointer; color: var(--ink-2); }
+footer ul { margin: 8px 0 0; padding-left: 18px; }
 
 @media (max-width: 560px) {
-  h1 { font-size: 26px; }
-  .hero { font-size: 44px; }
-  .bar-row { grid-template-columns: 1fr auto; gap: 4px 12px; }
-  .bar-track { grid-column: 1 / -1; grid-row: 2; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .donut-arc { transition: none; }
+  h1 { font-size: 24px; }
+  .hero { font-size: 38px; }
+  .bar-row, .drow { grid-template-columns: 1fr auto; }
+  .bar-track, .track { grid-column: 1 / -1; grid-row: 2; }
+  .months { gap: 8px; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .seg { transition: filter 120ms ease; }
   .skeleton-row { animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: 0.55; } }
 }
@@ -303,220 +260,192 @@ details[open] > summary { margin-bottom: 10px; }
 
 <header class="masthead gutter">
   <div class="column">
-    <div class="masthead-text">
-      <p class="eyebrow" id="eyebrow">AI spend</p>
-      <h1 id="title">AI spend</h1>
-      <p class="meta" id="meta"></p>
+    <div class="masthead-row">
+      <div>
+        <p class="eyebrow" id="eyebrow">AI spend</p>
+        <h1 id="title">AI spend</h1>
+      </div>
+      <div class="masthead-right">
+        <span class="fresh" id="fresh" hidden></span>
+        <a class="by-aircfo" href="https://aircfo.com" target="_blank" rel="noopener"><img src="aircfo-logo.png" alt="airCFO" width="101" height="20"></a>
+      </div>
     </div>
-    <a class="by-aircfo" href="https://aircfo.com" target="_blank" rel="noopener">by <img src="aircfo-logo.png" alt="airCFO" width="111" height="22"></a>
+    <nav class="tabs" role="tablist" id="tabs" aria-label="Dashboard sections">
+      <button class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true">Overview</button>
+      <button class="tab" role="tab" id="tab-spend" aria-controls="spend" aria-selected="false" tabindex="-1">Spend</button>
+      <button class="tab" role="tab" id="tab-usage" aria-controls="usage" aria-selected="false" tabindex="-1">Usage</button>
+      <button class="tab" role="tab" id="tab-forecast" aria-controls="forecast" aria-selected="false" tabindex="-1">Forecast</button>
+      <button class="tab" role="tab" id="tab-seats" aria-controls="seats" aria-selected="false" tabindex="-1">Seats</button>
+      <button class="tab" role="tab" id="tab-savings" aria-controls="savings" aria-selected="false" tabindex="-1">Savings</button>
+    </nav>
   </div>
 </header>
 
-<nav class="tabbar gutter" aria-label="Dashboard sections">
-  <div class="column tabs" role="tablist" id="tabs">
-    <button class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true">Overview</button>
-    <button class="tab" role="tab" id="tab-spend" aria-controls="spend" aria-selected="false" tabindex="-1">Spend</button>
-    <button class="tab" role="tab" id="tab-usage" aria-controls="usage" aria-selected="false" tabindex="-1">Usage</button>
-    <button class="tab" role="tab" id="tab-unassigned" aria-controls="unassigned" aria-selected="false" tabindex="-1">Unassigned <span class="tab-badge" id="unassigned-badge" hidden></span></button>
-    <button class="tab" role="tab" id="tab-forecast" aria-controls="forecast" aria-selected="false" tabindex="-1">Forecast</button>
-    <button class="tab" role="tab" id="tab-people" aria-controls="people" aria-selected="false" tabindex="-1" hidden>People</button>
-    <button class="tab" role="tab" id="tab-seats" aria-controls="seats" aria-selected="false" tabindex="-1">Seats</button>
-  </div>
-</nav>
-
-<main class="gutter" aria-live="polite">
+<main class="gutter">
   <div class="column">
 
     <section class="tabpanel" role="tabpanel" id="overview" aria-labelledby="tab-overview">
-      <section class="panel stale" id="stale" role="status" aria-labelledby="stale-heading" hidden>
-        <h2 id="stale-heading">Some of this month's data is out of date</h2>
-        <ul class="stale-list" id="stale-list"></ul>
-      </section>
+      <div class="banner stale" id="stale" role="status" hidden></div>
+      <div class="banner alert" id="alerts" hidden></div>
 
-      <section class="panel" aria-labelledby="alerts-heading">
-        <div class="panel-head"><h2 id="alerts-heading">Alerts</h2></div>
-        <ul class="alerts" id="alerts"></ul>
-      </section>
-
-      <section class="panel verdict" aria-labelledby="verdict-heading">
-        <h2 id="verdict-heading" hidden>Where this month is heading</h2>
-        <div class="verdict-top">
-          <div>
-            <p class="hero-label">On pace for</p>
-            <p class="hero" id="on-pace">—</p>
-          </div>
+      <section class="verdict" aria-label="Where this month is heading">
+        <div class="verdict-line">
+          <span class="hero-label">On pace for</span>
+          <span class="hero" id="on-pace">—</span>
           <span class="chip none" id="pace-chip">No plan yet</span>
         </div>
-        <div class="bullet" id="bullet" role="img" aria-label="Spend so far and projected month end, against the plan">
-          <div class="bullet-projected" id="bullet-projected"></div>
-          <div class="bullet-so-far" id="bullet-so-far"></div>
-          <div class="bullet-plan" id="bullet-plan" hidden></div>
-        </div>
-        <div class="key-row">
-          <span class="key"><span class="swatch so-far"></span>So far</span>
-          <span class="key"><span class="swatch projected"></span>Rest of the month, projected</span>
-          <span class="key" id="plan-key" hidden><span class="swatch tick"></span>Plan</span>
-        </div>
-        <div class="figures">
-          <div><p class="figure-label">So far</p><p class="figure-value" id="so-far">—</p><p class="figure-sub" id="through"></p></div>
-          <div><p class="figure-label">Plan</p><p class="figure-value" id="plan">—</p><p class="figure-sub" id="plan-sub"></p></div>
-          <div><p class="figure-label">Next month, forecast</p><p class="figure-value" id="forecast-total">—</p><p class="figure-sub" id="forecast-sub"></p></div>
-        </div>
+        <p class="why" id="why"></p>
       </section>
 
-      <section class="panel" aria-labelledby="split-heading">
+      <section class="kpis" id="kpis" aria-label="The month in four numbers"></section>
+
+      <div class="two">
+        <section class="panel" aria-labelledby="vs-plan-heading">
+          <div class="panel-head">
+            <h2 id="vs-plan-heading">Spend vs. Plan by Team</h2>
+            <span class="aside" id="vs-plan-note"></span>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span><span class="sw" style="background: var(--under)"></span>Under plan</span>
+            <span><span class="sw" style="background: var(--over)"></span>Over plan</span>
+          </div>
+          <div class="diverge" id="vs-plan"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="overview-savings-heading">
+          <div class="panel-head">
+            <h2 id="overview-savings-heading">Savings Opportunities</h2>
+            <button class="link-button" type="button" data-go="savings">All on Savings →</button>
+          </div>
+          <ul class="actions" id="overview-savings"></ul>
+          <div id="overview-checks"></div>
+        </section>
+      </div>
+
+      <section class="panel" aria-labelledby="top-heading">
         <div class="panel-head">
-          <h2 id="split-heading">The month so far</h2>
-          <button class="link-button" type="button" data-go="spend">By team</button>
+          <h2 id="top-heading">Top Spenders</h2>
+          <span class="aside" id="top-note"></span>
         </div>
-        <div class="donut-wrap">
-          <div class="donut" id="donut"></div>
-          <ul class="donut-legend" id="products"></ul>
+        <div class="table-wrap"><table id="top-table"></table></div>
+        <div class="panel-foot">
+          <span id="top-foot"></span>
+          <button class="link-button" type="button" data-go="spend">Everyone on Spend →</button>
         </div>
-      </section>
-
-      <section class="panel" aria-labelledby="notes-heading">
-        <div class="panel-head"><h2 id="notes-heading">Notes on the data</h2></div>
-        <ul class="notes" id="notes"></ul>
       </section>
     </section>
 
     <section class="tabpanel" role="tabpanel" id="spend" aria-labelledby="tab-spend" hidden>
       <section class="panel" aria-labelledby="teams-heading">
         <div class="panel-head">
-          <h2 id="teams-heading">Where it went, by team</h2>
-          <p class="panel-note" id="teams-note"></p>
+          <h2 id="teams-heading">Spend by Team</h2>
+          <span class="aside" id="teams-note"></span>
         </div>
-        <div class="key-row" aria-hidden="true">
-          <span class="key"><span class="swatch seats"></span>Seats</span>
-          <span class="key"><span class="swatch extra"></span>Extra usage</span>
-          <span class="key"><span class="swatch api"></span>API</span>
-        </div>
-        <div class="bars" id="bars"></div>
-        <details>
-          <summary>Show as a table</summary>
-          <div class="table-wrap"><table id="teams-table"></table></div>
-        </details>
+        <div class="table-wrap"><table id="teams-table"></table></div>
       </section>
 
       <section class="panel" aria-labelledby="vendors-heading">
-        <div class="panel-head"><h2 id="vendors-heading">By vendor</h2></div>
-        <div class="key-row" aria-hidden="true">
-          <span class="key"><span class="swatch seats"></span>Seats</span>
-          <span class="key"><span class="swatch extra"></span>Extra usage</span>
-          <span class="key"><span class="swatch api"></span>API</span>
-        </div>
-        <div class="bars" id="vendor-bars"></div>
-        <details>
-          <summary>Show as a table</summary>
-          <div class="table-wrap"><table id="vendors-table"></table></div>
-        </details>
+        <div class="panel-head"><h2 id="vendors-heading">Spend by Vendor</h2></div>
+        <div class="table-wrap"><table id="vendors-table"></table></div>
       </section>
 
-      <section class="panel" aria-labelledby="category-heading" id="category-panel" hidden>
+      <div class="two" id="api-row">
+        <section class="panel" aria-labelledby="category-heading" id="category-panel" hidden>
+          <div class="panel-head">
+            <h2 id="category-heading">API Spend by Purpose</h2>
+            <span class="aside">From each key's cost category</span>
+          </div>
+          <div class="bars" id="category-bars"></div>
+        </section>
+        <section class="panel" aria-labelledby="other-ai-heading" id="other-ai-panel" hidden>
+          <div class="panel-head">
+            <h2 id="other-ai-heading">Other AI Tools</h2>
+            <span class="aside" id="other-ai-note"></span>
+          </div>
+          <div class="bars" id="other-ai-bars"></div>
+        </section>
+      </div>
+
+      <section class="panel" aria-labelledby="people-heading" id="people-panel" hidden>
         <div class="panel-head">
-          <h2 id="category-heading">API by what it's for</h2>
-          <p class="panel-note">From each key's "Cost category" tag in Ramp, or the settings</p>
+          <h2 id="people-heading">Spend by Person</h2>
+          <input class="search" id="people-search" type="search" placeholder="Find a person or team" aria-label="Find a person or team" autocomplete="off">
         </div>
-        <div class="bars" id="category-bars"></div>
+        <div class="table-wrap"><table id="people-table"></table></div>
+        <div><button class="link-button" type="button" id="people-more" hidden></button></div>
       </section>
 
-      <section class="panel" aria-labelledby="other-ai-heading" id="other-ai-panel" hidden>
-        <div class="panel-head">
-          <h2 id="other-ai-heading">Other AI tools</h2>
-          <p class="panel-note" id="other-ai-note"></p>
-        </div>
-        <div class="bars" id="other-ai-bars"></div>
+      <section class="panel" aria-labelledby="keys-heading" id="keys-panel" hidden>
+        <div class="panel-head"><h2 id="keys-heading">API Keys</h2><span class="aside">Spend this month, biggest first</span></div>
+        <div class="table-wrap"><table id="keys-table"></table></div>
+      </section>
+
+      <section class="panel" aria-labelledby="unassigned-heading" id="unassigned-panel" hidden>
+        <div class="panel-head"><h2 id="unassigned-heading">Not on a Team Yet</h2><span class="aside" id="unassigned-note"></span></div>
+        <div class="table-wrap"><table id="unassigned-table"></table></div>
       </section>
 
       <section class="panel" aria-labelledby="bills-heading" id="bills-panel" hidden>
-        <div class="panel-head">
-          <h2 id="bills-heading">Against the bills</h2>
-          <p class="panel-note">What the vendors charged, from bills.csv, beside what's counted here</p>
-        </div>
+        <div class="panel-head"><h2 id="bills-heading">Bill Check</h2><span class="aside">What vendors charged vs. what's counted here</span></div>
         <div class="table-wrap"><table id="bills-table"></table></div>
-        <p class="panel-note" id="bills-credits-note" hidden>Credits are bought ahead, often for less than the credit they carry, so they tie over time, not each month: the credit bought less what's used should match the balance the vendor shows.</p>
-      </section>
-
-      <section class="panel" aria-labelledby="change-heading">
-        <div class="panel-head">
-          <h2 id="change-heading">Change from last month</h2>
-          <p class="panel-note" id="change-note"></p>
-        </div>
-        <div class="key-row" id="change-key" aria-hidden="true">
-          <span class="key"><span class="swatch previous"></span><span id="change-key-previous">Last month</span></span>
-          <span class="key"><span class="swatch current"></span><span id="change-key-current">This month</span></span>
-        </div>
-        <div class="bars" id="change-bars"></div>
-        <details id="change-details">
-          <summary>Show as a table</summary>
-          <div class="table-wrap"><table id="change-table"></table></div>
-        </details>
-        <div id="models" hidden>
-          <h3>Extra usage by model, biggest moves first</h3>
-          <div class="table-wrap"><table id="models-table"></table></div>
-        </div>
+        <p class="aside" id="bills-credits-note" hidden>Prepaid credits match over time, not each month: credit bought less credit used should equal the balance the vendor shows.</p>
       </section>
     </section>
 
     <section class="tabpanel" role="tabpanel" id="usage" aria-labelledby="tab-usage" hidden>
-      <section class="panel" aria-labelledby="usage-heading">
-        <div class="panel-head">
-          <h2 id="usage-heading">Who uses Claude, and how much</h2>
-          <p class="panel-note" id="usage-note"></p>
-        </div>
-        <p class="lead">Use is counted in requests and fresh tokens: new input, cache writes and output. Cache reads, most of every prompt, are cheap and say little about the work done, so they're kept apart.</p>
-        <div class="figures" id="usage-figures"></div>
-      </section>
-      <section class="panel" aria-labelledby="usage-product-heading">
-        <div class="panel-head">
-          <h2 id="usage-product-heading">By product</h2>
-          <p class="panel-note">Share of fresh tokens, with the people using each and their extra usage</p>
-        </div>
-        <div class="bars" id="usage-product-bars"></div>
-      </section>
-      <section class="panel" aria-labelledby="usage-team-heading">
-        <div class="panel-head"><h2 id="usage-team-heading">By team</h2></div>
-        <div class="table-wrap"><table id="usage-team-table"></table></div>
-      </section>
-      <section class="panel" aria-labelledby="usage-model-heading">
-        <div class="panel-head">
-          <h2 id="usage-model-heading">By model</h2>
-          <p class="panel-note">A model's share of the work can differ a lot from its share of extra usage</p>
-        </div>
-        <div class="table-wrap"><table id="usage-model-table"></table></div>
-      </section>
-      <section class="panel" aria-labelledby="usage-people-heading" id="usage-people" hidden>
-        <div class="panel-head">
-          <h2 id="usage-people-heading">By person</h2>
-          <p class="panel-note">Shown because this company turned on the person view</p>
-        </div>
-        <div class="table-wrap"><table id="usage-people-table"></table></div>
-      </section>
-    </section>
+      <p class="empty" id="usage-empty" hidden>No usage yet: it comes from the claude.ai spend export. Ask Claude to refresh.</p>
+      <div id="usage-body" class="tabpanel">
+        <section class="kpis" id="usage-kpis" aria-label="Claude use this month"></section>
 
-    <section class="tabpanel" role="tabpanel" id="unassigned" aria-labelledby="tab-unassigned" hidden>
-      <section class="panel" aria-labelledby="reasons-heading">
-        <div class="panel-head">
-          <h2 id="reasons-heading">Spend that isn't on a team yet</h2>
-          <p class="panel-note" id="reasons-note"></p>
+        <section class="panel" aria-labelledby="usage-team-heading">
+          <div class="panel-head">
+            <h2 id="usage-team-heading">Usage by Team</h2>
+            <span class="aside" id="usage-note"></span>
+          </div>
+          <div class="table-wrap"><table id="usage-team-table"></table></div>
+        </section>
+
+        <div class="two">
+          <section class="panel" aria-labelledby="usage-product-heading">
+            <div class="panel-head"><h2 id="usage-product-heading">Usage by Product</h2><span class="aside">Share of use</span></div>
+            <div class="bars" id="usage-product-bars"></div>
+            <p class="aside" id="usage-left-out" hidden></p>
+          </section>
+          <section class="panel" aria-labelledby="usage-model-heading">
+            <div class="panel-head"><h2 id="usage-model-heading">Usage by Model</h2><span class="aside">Share of use vs. extra usage</span></div>
+            <div class="table-wrap"><table id="usage-model-table"></table></div>
+          </section>
         </div>
-        <p class="lead">This is real spend that no team's total includes yet, so the team view understates what each team costs. Each line says why and who can fix it. Once it's fixed, the next daily refresh moves those dollars onto the right team.</p>
-        <ul class="reasons" id="reasons"></ul>
-      </section>
+
+        <section class="panel" aria-labelledby="usage-people-heading" id="usage-people" hidden>
+          <div class="panel-head"><h2 id="usage-people-heading">Top Users</h2><span class="aside">Most use this month</span></div>
+          <div class="table-wrap"><table id="usage-people-table"></table></div>
+        </section>
+        <p class="aside">Use counts requests and new tokens (input, cache writes and output), not cache reads, which repeat earlier context and cost little.</p>
+      </div>
     </section>
 
     <section class="tabpanel" role="tabpanel" id="forecast" aria-labelledby="tab-forecast" hidden>
-      <section class="panel" aria-labelledby="forecast-heading">
-        <div class="panel-head"><h2 id="forecast-heading">This month and next, by team</h2></div>
-        <div class="table-wrap"><table id="forecast-table"></table></div>
-        <ul class="notes" id="forecast-notes"></ul>
+      <section class="panel" aria-labelledby="months-heading">
+        <div class="panel-head">
+          <h2 id="months-heading">Monthly Spend</h2>
+          <div class="legend" aria-hidden="true">
+            <span><span class="sw" style="background: var(--ink-2)"></span>Spent</span>
+            <span><span class="sw" style="background: var(--projected)"></span>Projected</span>
+            <span><span class="sw" style="background: repeating-linear-gradient(135deg, var(--projected) 0 3px, transparent 3px 5px); border: 1px solid var(--projected)"></span>Forecast</span>
+            <span><span class="sw" style="background: var(--over); height: 2px"></span>Plan</span>
+          </div>
+        </div>
+        <div class="months" id="months" role="img"></div>
       </section>
 
       <section class="panel" aria-labelledby="scenario-heading" id="scenario-panel">
         <div class="panel-head">
-          <h2 id="scenario-heading">Try a scenario for <span id="scenario-month"></span></h2>
-          <p class="panel-note">Only on your screen: nothing here is saved or changes the forecast</p>
+          <h2 id="scenario-heading">What If: <span id="scenario-month"></span></h2>
+          <div class="scenario-actions">
+            <span class="aside">Try changes to next month's forecast; nothing is saved</span>
+            <button type="button" class="link-button" id="scenario-reset">Reset</button>
+          </div>
         </div>
         <div class="levers">
           <label class="lever" id="lever-premium-wrap" hidden>
@@ -544,47 +473,42 @@ details[open] > summary { margin-bottom: 10px; }
             <output id="lever-price-out" for="lever-price"></output>
           </label>
         </div>
-        <div class="figures scenario-figures">
+        <div class="scenario-figures">
           <div><div class="figure-label">Forecast</div><div class="figure-value" id="scenario-forecast"></div></div>
-          <div><div class="figure-label">Scenario</div><div class="figure-value" id="scenario-total"></div></div>
+          <div><div class="figure-label">What if</div><div class="figure-value" id="scenario-total"></div></div>
           <div><div class="figure-label">Change</div><div class="figure-value" id="scenario-change"></div></div>
         </div>
         <div class="table-wrap"><table id="scenario-table"></table></div>
-        <div class="scenario-actions"><button type="button" class="link-button" id="scenario-reset">Reset the scenario</button></div>
         <ul class="notes" id="scenario-notes"></ul>
       </section>
-    </section>
 
-    <section class="tabpanel" role="tabpanel" id="people" aria-labelledby="tab-people" hidden>
-      <section class="panel" aria-labelledby="people-heading">
+      <section class="panel" aria-labelledby="next-heading">
         <div class="panel-head">
-          <h2 id="people-heading">By person</h2>
-          <p class="panel-note">Shown because this company turned on the person view.</p>
+          <h2 id="next-heading">Next Month by Team</h2>
+          <span class="aside">Forecast as it stands</span>
         </div>
-        <div class="table-wrap"><table id="people-table"></table></div>
+        <div class="table-wrap"><table id="next-table"></table></div>
+        <p class="aside" id="method"></p>
       </section>
-      <section class="panel" aria-labelledby="keys-heading">
-        <div class="panel-head"><h2 id="keys-heading">API keys</h2></div>
-        <div class="table-wrap"><table id="keys-table"></table></div>
-      </section>
+
     </section>
 
     <section class="tabpanel" role="tabpanel" id="seats" aria-labelledby="tab-seats" hidden>
       <section class="panel" aria-labelledby="seat-counts-heading">
         <div class="panel-head">
-          <h2 id="seat-counts-heading">Seats held</h2>
-          <p class="panel-note">Against the seats bought in settings</p>
+          <h2 id="seat-counts-heading">Seat Use</h2>
+          <span class="aside">Held vs. bought, and used this month</span>
         </div>
         <div class="seat-summary" id="seat-summary"><p class="empty">Counted once the roster loads.</p></div>
       </section>
       <section class="panel" aria-labelledby="roster-heading">
         <div class="panel-head">
-          <h2 id="roster-heading">Who holds which seat</h2>
-          <p class="panel-note" id="roster-note">Change a seat here and the next refresh uses it.</p>
+          <h2 id="roster-heading">Who Holds Which Seat</h2>
+          <span class="aside" id="roster-note">Change a seat here and the next refresh uses it</span>
         </div>
         <div class="seat-tools" id="seat-tools" hidden>
           <input class="search" id="seat-search" type="search" placeholder="Find a person or team" aria-label="Find a person or team" autocomplete="off">
-          <p class="panel-note" id="seat-shown"></p>
+          <p class="aside" id="seat-shown"></p>
         </div>
         <div id="roster-body">
           <div class="skeleton" aria-label="Loading the roster">
@@ -594,13 +518,29 @@ details[open] > summary { margin-bottom: 10px; }
       </section>
     </section>
 
+    <section class="tabpanel" role="tabpanel" id="savings" aria-labelledby="tab-savings" hidden>
+      <section class="kpis three" id="savings-kpis" aria-label="Savings in three numbers"></section>
+      <section class="panel" aria-labelledby="savings-heading">
+        <div class="panel-head"><h2 id="savings-heading">Savings Opportunities</h2><span class="aside">Biggest first</span></div>
+        <ul class="actions" id="savings-list"></ul>
+        <p class="aside" id="savings-note"></p>
+      </section>
+      <section class="panel" aria-labelledby="done-heading" id="done-panel" hidden>
+        <div class="panel-head"><h2 id="done-heading">Done So Far</h2><span class="aside">What each has saved since</span></div>
+        <div class="table-wrap"><table id="done-table"></table></div>
+      </section>
+    </section>
+
   </div>
 </main>
 
-<footer class="footer gutter">
+<footer class="gutter">
   <div class="column">
     <p id="made-with"></p>
-    <p>Read-only on every financial system: nothing here changes billing or keys, and nothing is sent. The Seats tab changes only this page's roster.</p>
+    <details id="about-data">
+      <summary>About this data</summary>
+      <ul id="notes"></ul>
+    </details>
   </div>
 </footer>
 
@@ -610,9 +550,9 @@ details[open] > summary { margin-bottom: 10px; }
   "use strict";
   const data = JSON.parse(document.getElementById("spend-data").textContent);
   const PRODUCTS = [
-    { field: "seats_cents", name: "Seats", cls: "seats" },
-    { field: "extra_usage_cents", name: "Extra usage", cls: "extra" },
-    { field: "api_cents", name: "API", cls: "api" },
+    { key: "seats", field: "seats_cents", name: "Seats", verb: "are" },
+    { key: "extra usage", field: "extra_usage_cents", name: "Extra usage", verb: "is" },
+    { key: "api", field: "api_cents", name: "API", verb: "is" },
   ];
   // The engine's reasons for spend it can't place on a team, in the words a finance lead uses.
   const REASONS = {
@@ -663,7 +603,9 @@ details[open] > summary { margin-bottom: 10px; }
       fix: "Run the daily refresh. Ramp's numbers are normally a day behind.",
     },
   ];
-  const TAB_IDS = ["overview", "spend", "usage", "unassigned", "forecast", "people", "seats"];
+  const TAB_IDS = ["overview", "spend", "usage", "forecast", "seats", "savings"];
+  const NOT_TIED = "API spend not tied to a current key";
+  const ROUNDING_CENTS = 100;
 
   const byId = (id) => document.getElementById(id);
   const text = (el, value) => { el.textContent = value; return el; };
@@ -673,47 +615,617 @@ details[open] > summary { margin-bottom: 10px; }
     if (value !== undefined) el.textContent = value;
     return el;
   };
-  const money = (cents) => (cents < 0 ? "-" : "") + "$" + (Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const wholeMoney = (cents) => "$" + Math.round(cents / 100).toLocaleString("en-US");
+  // Whole dollars everywhere but the bill check, where the cents are the point.
+  const money = (cents) => (cents < 0 ? "−" : "") + "$" + Math.round(Math.abs(cents) / 100).toLocaleString("en-US");
+  const exact = (cents) => (cents < 0 ? "−" : "") + "$" + (Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const signed = (cents) => Math.abs(cents) < ROUNDING_CENTS / 2 ? "$0" : (cents > 0 ? "+" : "−") + money(Math.abs(cents));
   const titleCase = (value) => value.replace(/\b\w/g, (letter) => letter.toUpperCase());
   const sentence = (value) => value.charAt(0).toUpperCase() + value.slice(1);
+  const percentOf = (part, whole) => whole > 0 ? Math.round(part / whole * 100) : 0;
   const monthName = (label) => {
     const [year, month] = label.split("-").map(Number);
-    return new Date(Date.UTC(year, month - 1, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+    return new Date(Date.UTC(year, month - 1, 1)).toLocaleString("en-US", { month: "long", timeZone: "UTC" });
   };
+  const shortMonth = (label) => monthName(label).slice(0, 3);
   const utcDay = (iso) => {
     const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
     return Date.UTC(year, month - 1, day);
   };
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const dayName = (iso) => {
-    const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
-    return new Date(Date.UTC(year, month - 1, day)).toLocaleString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-  };
+  const dayName = (iso) => new Date(utcDay(iso)).toLocaleString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   const change = (before, after) => {
     const difference = after - before;
-    if (Math.abs(difference) < 1) return "no change";
-    const sign = difference > 0 ? "+" : "-";
-    if (before === 0) return sign + money(Math.abs(difference)) + " (new)";
-    return sign + money(Math.abs(difference)) + " (" + sign + Math.round(Math.abs(difference) / before * 100) + "%)";
+    if (Math.abs(difference) < ROUNDING_CENTS / 2) return "no change";
+    if (before === 0) return signed(difference) + " (new)";
+    return signed(difference) + " (" + (difference > 0 ? "+" : "−") + Math.round(Math.abs(difference) / before * 100) + "%)";
   };
-  const unassignedRow = (cells) => cells[0] === UNASSIGNED ? "unassigned" : "";
-  const vendorName = (vendor) => VENDOR_COMPANIES[vendor] || vendor;
-  const percentOf = (part, whole) => whole > 0 ? Math.round(part / whole * 100) : 0;
-  const SVG = "http://www.w3.org/2000/svg";
-  const drawn = (tag, attributes) => {
-    const el = document.createElementNS(SVG, tag);
-    Object.entries(attributes).forEach(([name, value]) => el.setAttribute(name, String(value)));
-    return el;
+  const vendorName = (vendor) => VENDOR_COMPANIES[vendor] || titleCase(vendor);
+  const listOf = (items) => items.length < 2 ? items.join("") : items.slice(0, -1).join(", ") + " and " + items[items.length - 1];
+  const peopleCount = (count) => count + (count === 1 ? " person" : " people");
+  // "claude-opus-5-5" reads as "Opus 5.5"; anything else keeps its own name.
+  const modelName = (id) => {
+    const match = /^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?$/.exec(id);
+    return match ? titleCase(match[1]) + " " + match[2] + (match[3] ? "." + match[3] : "") : id;
   };
 
-  function billResult(bill) {
-    if (bill.kind === "credits") return "Paid " + money(bill.billed_cents) + " for " + money(bill.credit_cents) + " of credit";
-    if (bill.counted_through) return "Counted through " + dayName(bill.counted_through) + ", so it can be checked once the month ends";
-    if (bill.ties) return "✓ Ties";
-    const gap = bill.counted_cents - bill.billed_cents;
-    return "✕ Off by " + money(Math.abs(gap)) + (gap < 0 ? ", counted less" : ", counted more");
+  const about = data.about;
+  const spend = data.spend;
+  const pace = data.pace;
+  const forecast = data.forecast;
+  const usage = data.usage;
+  const savings = data.savings || { open: [], done: [], about_people: 0, saved_cents: 0, notes: [] };
+  const names = data.people_names || {};
+  const personView = about.view === "person";
+  const nameOf = (email) => names[email] || email || "no owner";
+  const through = pace.through || Object.values(spend.through || {}).sort()[0];
+  const previousLabel = (() => {
+    const [year, month] = about.month.split("-").map(Number);
+    return month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
+  })();
+  const lastMonth = (data.history || []).find((entry) => entry.month === previousLabel);
+
+  function table(el, headings, rows, options) {
+    const opts = options || {};
+    el.replaceChildren();
+    const head = el.createTHead().insertRow();
+    headings.forEach((heading, index) => head.appendChild(make("th", (opts.left || []).includes(index) ? "left" : "", heading)));
+    const body = el.createTBody();
+    rows.forEach((cells) => {
+      const row = body.insertRow();
+      if (opts.rowClass) row.className = opts.rowClass(cells) || "";
+      cells.forEach((cell, index) => {
+        const td = make("td", (opts.left || []).includes(index) ? "left" : "");
+        if (cell instanceof Node) td.appendChild(cell); else td.textContent = cell;
+        if (opts.strong === index) td.classList.add("strong");
+        row.appendChild(td);
+      });
+    });
+    if (opts.total) {
+      const row = body.insertRow();
+      row.className = "total";
+      opts.total.forEach((cell) => row.appendChild(make("td", "", cell)));
+    }
+    return body;
   }
+
+  // A number with a small bar beside it, scaled to the column's largest.
+  function withMini(cents, largest, label) {
+    const box = make("span");
+    const mini = make("span", "mini");
+    mini.style.width = Math.max(3, Math.round(cents / Math.max(largest, 1) * 72)) + "px";
+    box.append(mini, document.createTextNode(label));
+    return box;
+  }
+
+  function valueBars(container, rows, nameOf, valueOf, labelOf) {
+    container.replaceChildren();
+    const largest = Math.max(...rows.map(valueOf), 1);
+    rows.forEach((row) => {
+      const line = make("div", "bar-row");
+      line.appendChild(make("span", "bar-name", nameOf(row)));
+      const track = make("div", "bar-track");
+      const fill = make("div", "bar-fill");
+      fill.style.width = (valueOf(row) / largest * 100) + "%";
+      track.appendChild(fill);
+      line.appendChild(track);
+      line.appendChild(make("span", "bar-label", labelOf(row)));
+      container.appendChild(line);
+    });
+  }
+
+  function kpi(container, label, value, sub, tone) {
+    const cell = make("div", "kpi");
+    cell.append(make("p", "kpi-label", label), make("p", "kpi-value" + (tone ? " " + tone : ""), value), make("p", "kpi-sub", sub));
+    container.appendChild(cell);
+  }
+
+  // A savings opportunity in a few words: what to do, what it's worth, why, and who does it.
+  const seatPrice = (vendor, seatType) => {
+    const plan = ((data.seat_types || {})[vendor] || []).find((each) => each.seat_type === seatType);
+    return plan ? plan.price_cents : null;
+  };
+  const monthsSpan = (months) => months.length ? shortMonth(months[0].month) + (months.length > 1 ? "–" + shortMonth(months[months.length - 1].month) : "") : "";
+  function describeSaving(item) {
+    const who = nameOf(item.person);
+    const months = item.months || [];
+    const span = monthsSpan(months);
+    const extras = months.map((month) => money(month.extra_cents));
+    const value = item.monthly_cents === null ? "" : (item.at_most ? "up to " : "") + money(item.monthly_cents) + "/mo";
+    if (item.action === "buy credit bundles") {
+      const low = Math.min(...months.map((month) => month.extra_cents));
+      const high = Math.max(...months.map((month) => month.extra_cents));
+      return { title: "Buy prepaid credit bundles", value,
+        why: "Extra usage ran " + money(low) + (high - low >= ROUNDING_CENTS ? "–" + money(high) : "") + " a month " + span + " at full price. A $1,000 bundle costs $700.",
+        who: "claude.ai billing" };
+    }
+    if (item.action === "upgrade") {
+      const gap = (seatPrice("anthropic", item.to_seat) || 0) - (seatPrice("anthropic", item.from_seat) || 0);
+      return { title: "Move " + who + " to " + titleCase(item.to_seat), value,
+        why: "Paid " + listOf(extras) + " in extra usage " + span + ". " + titleCase(item.to_seat) + " costs " + money(gap) + " more and includes 5× the usage.",
+        who: "claude.ai admin" };
+    }
+    if (item.action === "downgrade") {
+      return { title: "Move " + who + " to " + titleCase(item.to_seat), value,
+        why: "No extra usage " + span + ", and use a " + titleCase(item.to_seat) + " seat covers.", who: "claude.ai admin" };
+    }
+    if (item.action === "reclaim") {
+      return { title: "Reclaim " + who + "'s seat", value,
+        why: "No requests " + span + ". It saves money once fewer seats are bought; on yearly billing, at renewal.", who: "claude.ai admin" };
+    }
+    const price = seatPrice("anthropic", item.from_seat);
+    return { title: "Check in with " + who, value: price === null ? "" : money(price) + "/mo seat",
+      why: listOf(months.map((month) => month.requests.toLocaleString("en-US"))) + " requests " + span + ". Reclaim the seat if it isn't needed.",
+      who: "Manager" };
+  }
+  function savingsList(container, items) {
+    container.replaceChildren();
+    items.forEach((item) => {
+      const said = describeSaving(item);
+      const li = make("li", "action");
+      li.appendChild(make("span", "action-title", said.title));
+      li.appendChild(make("span", "action-value" + (item.monthly_cents ? " save" : ""), said.value));
+      const why = make("span", "action-why", said.why + " ");
+      why.appendChild(make("span", "action-who", "· " + said.who));
+      li.appendChild(why);
+      container.appendChild(li);
+    });
+    if (!items.length) container.appendChild(make("li", "empty", "None right now. The rules check seats and extra usage every refresh."));
+  }
+
+  // Masthead
+  text(byId("eyebrow"), "AI spend · " + monthName(about.month) + " " + about.month.slice(0, 4));
+  text(byId("title"), about.company || "Your company");
+  const [shownYear, shownMonth] = about.month.split("-").map(Number);
+  const monthEnd = Date.UTC(shownYear, shownMonth, 0);
+  const shouldReach = Math.min(utcDay(about.made_on) - DAY_MS, monthEnd);
+  if (through) {
+    const fresh = byId("fresh");
+    const behind = Math.round((shouldReach - utcDay(through)) / DAY_MS);
+    const left = Math.round((monthEnd - utcDay(through)) / DAY_MS);
+    fresh.hidden = false;
+    fresh.classList.toggle("behind", behind > STALE_AFTER_DAYS);
+    fresh.replaceChildren(document.createTextNode("Data through "), make("b", "", dayName(through)),
+      document.createTextNode(behind > STALE_AFTER_DAYS ? " · " + behind + " days behind" : left > 0 ? " · " + left + (left === 1 ? " day" : " days") + " left" : " · month closed"));
+  }
+
+  // Tabs, routed on the link's #name so a tab can be bookmarked or sent
+  const tabs = TAB_IDS.map((id) => byId("tab-" + id));
+  function showTab(id, moveFocus) {
+    const target = tabs.find((tab) => tab.getAttribute("aria-controls") === id) || tabs[0];
+    tabs.forEach((tab) => {
+      const selected = tab === target;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      byId(tab.getAttribute("aria-controls")).hidden = !selected;
+    });
+    if (moveFocus) target.focus();
+  }
+  tabs.forEach((tab) => tab.addEventListener("click", () => { location.hash = tab.getAttribute("aria-controls"); }));
+  byId("tabs").addEventListener("keydown", (event) => {
+    const index = tabs.indexOf(document.activeElement);
+    if (index < 0) return;
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    let next = null;
+    if (step) next = tabs[(index + step + tabs.length) % tabs.length];
+    if (event.key === "Home") next = tabs[0];
+    if (event.key === "End") next = tabs[tabs.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    location.hash = next.getAttribute("aria-controls");
+    next.focus();
+  });
+  document.querySelectorAll("[data-go]").forEach((button) => {
+    button.addEventListener("click", () => { location.hash = button.dataset.go; window.scrollTo(0, 0); });
+  });
+  window.addEventListener("hashchange", () => showTab(location.hash.slice(1), false));
+
+  // Overview: data that has fallen behind, said once with how to fix it
+  const stale = byId("stale");
+  SOURCES.forEach((source) => {
+    if (!source.expected()) return;
+    const reached = (spend.through || {})[source.key];
+    const behind = reached ? Math.round((shouldReach - utcDay(reached)) / DAY_MS) : null;
+    if (reached && behind <= STALE_AFTER_DAYS) return;
+    const line = make("p");
+    line.appendChild(make("strong", "", reached ? source.name + " is through " + dayName(reached) + ", " + behind + " days behind. "
+      : source.name + ": nothing saved for " + monthName(about.month) + " yet. "));
+    line.appendChild(document.createTextNode(source.fix));
+    stale.appendChild(line);
+  });
+  stale.hidden = stale.children.length === 0;
+
+  // Overview: alerts, only when there are any
+  const alerts = byId("alerts");
+  data.alerts.forEach((alert) => {
+    const [kind, ...rest] = alert.split(": ");
+    const line = make("p");
+    line.appendChild(make("strong", "", (rest.length ? sentence(kind) : "Alert") + ": "));
+    line.appendChild(document.createTextNode(sentence(rest.length ? rest.join(": ") : alert) + " (draft, not sent)"));
+    alerts.appendChild(line);
+  });
+  alerts.hidden = data.alerts.length === 0;
+
+  // Overview: the verdict, and the one reason behind it
+  text(byId("on-pace"), money(pace.on_pace_for_cents));
+  const chip = byId("pace-chip");
+  const why = byId("why");
+  const plan = pace.plan ? pace.plan.total_cents : null;
+  if (plan !== null) {
+    const over = pace.on_pace_for_cents - plan;
+    const percent = percentOf(Math.abs(over), plan);
+    chip.className = "chip " + (Math.abs(over) < ROUNDING_CENTS ? "none" : over > 0 ? "over" : "under");
+    text(chip, Math.abs(over) < ROUNDING_CENTS ? "On the " + money(plan) + " plan"
+      : (over > 0 ? "▲ " : "▼ ") + percent + "% " + (over > 0 ? "over" : "under") + " the " + money(plan) + " plan");
+    const parts = (pace.by_product || []).filter((row) => row.plan_cents !== null).map((row) => {
+      const product = PRODUCTS.find((each) => each.key === row.product);
+      return { product, row, diff: row.on_pace_for_cents - row.plan_cents };
+    }).sort((a, b) => over >= 0 ? b.diff - a.diff : a.diff - b.diff);
+    if (parts.length && Math.abs(over) >= ROUNDING_CENTS) {
+      const lead = parts[0];
+      const all = over > 0 ? lead.diff >= over : lead.diff <= over;
+      why.append(document.createTextNode((all ? "All" : "Most") + " of the " + (over > 0 ? "overage" : "difference") + " is "),
+        make("b", "", lead.product.name), document.createTextNode(": "), make("b", "", money(lead.row.on_pace_for_cents)),
+        document.createTextNode(" on pace against " + money(lead.row.plan_cents) + " planned. "));
+      const others = parts.slice(1).map((part) => {
+        const name = part.product.name === "API" ? "API" : part.product.name.toLowerCase();
+        return Math.abs(part.diff) < ROUNDING_CENTS ? name + " " + part.product.verb + " on plan"
+          : name + " " + part.product.verb + " " + money(Math.abs(part.diff)) + (part.diff > 0 ? " over" : " under");
+      });
+      if (others.length) why.appendChild(document.createTextNode(sentence(listOf(others)) + ". "));
+    }
+    const movers = (pace.by_team || []).filter((row) => row.team !== UNASSIGNED && row.plan_cents !== null)
+      .map((row) => ({ team: row.team, diff: row.on_pace_for_cents - row.plan_cents }))
+      .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+    if (movers.length && Math.abs(movers[0].diff) >= ROUNDING_CENTS) {
+      why.appendChild(document.createTextNode("The biggest team move is " + movers[0].team + ", " + signed(movers[0].diff) + "."));
+    }
+  } else {
+    text(why, money(pace.so_far_cents) + " spent so far" + (through ? ", through " + dayName(through) : "") +
+      ". A plan is set once a whole month of spend is saved, and this compares against it from then on.");
+  }
+
+  // Overview: four numbers
+  const kpis = byId("kpis");
+  kpi(kpis, "Spent so far", money(pace.so_far_cents), through ? monthName(about.month).slice(0, 3) + " 1–" + dayName(through).split(" ")[1] : "");
+  if (plan !== null) {
+    const over = pace.on_pace_for_cents - plan;
+    kpi(kpis, over >= 0 ? "Over plan" : "Under plan", signed(over), "on pace vs. " + money(plan), over > ROUNDING_CENTS ? "over" : over < -ROUNDING_CENTS ? "under" : "");
+  } else {
+    kpi(kpis, "Plan", "—", "set once a month is saved whole");
+  }
+  if (lastMonth && lastMonth.whole) {
+    const moved = pace.on_pace_for_cents - lastMonth.total_cents;
+    kpi(kpis, "vs. " + monthName(lastMonth.month), signed(moved),
+      (moved >= 0 ? "+" : "−") + percentOf(Math.abs(moved), lastMonth.total_cents) + "% on " + money(lastMonth.total_cents),
+      moved > ROUNDING_CENTS ? "over" : moved < -ROUNDING_CENTS ? "under" : "");
+  } else {
+    kpi(kpis, "vs. " + monthName(previousLabel), "—", "not saved for the whole month");
+  }
+  const openTotal = savings.open.reduce((sum, item) => sum + (item.monthly_cents || 0), 0);
+  const openLabel = (savings.open.some((item) => item.at_most) ? "up to " : "") + money(openTotal) + "/mo";
+  kpi(kpis, "Savings opportunities", openTotal ? openLabel : "—",
+    savings.open.length ? savings.open.length + " on the Savings tab" : "none right now", openTotal ? "save" : "");
+
+  // Overview: spend against plan, by team
+  const vsPlan = byId("vs-plan");
+  const teamRows = (pace.by_team || []).filter((row) => row.plan_cents !== null)
+    .map((row) => ({ name: row.team === UNASSIGNED ? unassignedName() : row.team, muted: row.team === UNASSIGNED, diff: row.on_pace_for_cents - row.plan_cents }))
+    .concat((pace.planned_only || []).map((row) => ({ name: row.team, muted: false, diff: -row.plan_cents })))
+    .sort((a, b) => b.diff - a.diff);
+  if (!teamRows.length) {
+    vsPlan.appendChild(make("p", "empty", "Shown once there's a plan to compare with."));
+  } else {
+    const largest = Math.max(...teamRows.map((row) => Math.abs(row.diff)), 1);
+    teamRows.forEach((row) => {
+      const line = make("div", "drow");
+      line.appendChild(make("span", "name" + (row.muted ? " muted" : ""), row.name));
+      const track = make("div", "track");
+      if (Math.abs(row.diff) >= ROUNDING_CENTS / 2) {
+        const bar = make("div", "dbar " + (row.diff > 0 ? "over" : "under"));
+        bar.style.width = (Math.abs(row.diff) / largest * 50) + "%";
+        track.appendChild(bar);
+      }
+      track.setAttribute("role", "img");
+      track.setAttribute("aria-label", row.name + ": " + signed(row.diff) + " against plan");
+      line.appendChild(track);
+      line.appendChild(make("span", "dval " + (Math.abs(row.diff) < ROUNDING_CENTS / 2 ? "flat" : row.diff > 0 ? "over" : "under"), signed(row.diff)));
+      vsPlan.appendChild(line);
+    });
+  }
+  text(byId("vs-plan-note"), monthName(about.month) + " on pace");
+  function unassignedName() {
+    const reasons = spend.unassigned_by_reason || [];
+    return reasons.length === 1 && reasons[0].reason === NOT_TIED ? "Deleted API keys" : "Not on a team";
+  }
+
+  // Overview: the biggest savings, and checks on the data
+  savingsList(byId("overview-savings"), savings.open.slice(0, 4));
+  const checks = byId("overview-checks");
+  const fyi = (bold, rest) => {
+    const line = make("p", "fyi");
+    if (bold) line.appendChild(make("b", "", bold + " "));
+    line.appendChild(document.createTextNode(rest));
+    checks.appendChild(line);
+  };
+  const thisMonthBills = (data.bills || []).find((section) => section.month === about.month);
+  (thisMonthBills ? thisMonthBills.lines : []).forEach((line) => {
+    if (line.kind === "credits" && line.counted_cents > 0 && line.credit_cents < line.counted_cents / 2) {
+      fyi("Data check:", "only " + money(line.credit_cents) + " of " + monthName(about.month) + "'s " + money(line.counted_cents) + " " +
+        line.product + " was paid through Ramp. Find where the rest is billed so it can be checked against a bill.");
+    }
+  });
+  (spend.unassigned_by_reason || []).forEach((row) => {
+    if (row.reason === NOT_TIED) fyi("", money(row.total_cents) + " of API spend came from keys deleted this month. Nothing to do.");
+    else fyi("Needs a fix:", money(row.total_cents) + " isn't on a team yet (" + (REASONS[row.reason] ? REASONS[row.reason].title.toLowerCase() : row.reason) + "). See Spend.");
+  });
+
+  // Overview: top spenders, or top teams in the team view
+  const topTable = byId("top-table");
+  if (personView && spend.by_person) {
+    const top = spend.by_person.slice(0, 6);
+    const largest = top.length ? top[0].total_cents : 1;
+    table(topTable, ["Person", "Team", "Seats", "Extra usage", "API keys owned", "Total"],
+      top.map((row) => [nameOf(row.person), row.team || "—", money(row.seats_cents), money(row.extra_usage_cents),
+        row.api_cents ? money(row.api_cents) : "—", withMini(row.total_cents, largest, money(row.total_cents))]),
+      { left: [1], strong: 5 });
+    const totals = spend.by_person.map((row) => row.total_cents).sort((a, b) => a - b);
+    const median = totals.length ? totals[Math.floor((totals.length - 1) / 2)] : 0;
+    text(byId("top-foot"), "Top " + top.length + " of " + spend.by_person.length + " people. The median person costs " + money(median) + " this month.");
+    text(byId("top-note"), monthName(about.month) + " so far");
+  } else {
+    text(byId("top-heading"), "Top Teams");
+    const teams = spend.by_team.filter((row) => row.team !== UNASSIGNED).slice(0, 6);
+    const largest = teams.length ? teams[0].total_cents : 1;
+    table(topTable, ["Team", "Seats", "Extra usage", "API", "Total"],
+      teams.map((row) => [row.team, money(row.seats_cents), money(row.extra_usage_cents), money(row.api_cents),
+        withMini(row.total_cents, largest, money(row.total_cents))]), { strong: 4 });
+    text(byId("top-foot"), "Teams under 3 people are grouped, because this page shows teams, not people.");
+  }
+
+  // Spend: every team, biggest move against plan first
+  const previousByTeam = new Map(((data.change_from_last_month || {}).by_team || []).map((row) => [row.team, row.previous_cents]));
+  const paceRows = [...(pace.by_team || [])].sort((a, b) =>
+    (a.team === UNASSIGNED) - (b.team === UNASSIGNED) ||
+    ((b.on_pace_for_cents - (b.plan_cents || 0)) - (a.on_pace_for_cents - (a.plan_cents || 0))));
+  const largestPace = Math.max(...paceRows.map((row) => row.on_pace_for_cents), 1);
+  const hasPlan = plan !== null;
+  table(byId("teams-table"),
+    ["Team", "So far", "On pace", ...(hasPlan ? ["Plan", "vs. plan"] : []), monthName(previousLabel)],
+    paceRows.map((row) => [row.team === UNASSIGNED ? unassignedName() : row.team, money(row.so_far_cents),
+      withMini(row.on_pace_for_cents, largestPace, money(row.on_pace_for_cents)),
+      ...(hasPlan ? [row.plan_cents === null ? "—" : money(row.plan_cents), row.plan_cents === null ? "—" : signed(row.on_pace_for_cents - row.plan_cents)] : []),
+      previousByTeam.has(row.team) ? money(previousByTeam.get(row.team)) : "—"]),
+    { total: ["Total", money(pace.so_far_cents), money(pace.on_pace_for_cents), ...(hasPlan ? [money(plan), signed(pace.on_pace_for_cents - plan)] : []),
+        lastMonth ? money(lastMonth.total_cents) : "—"],
+      rowClass: (cells) => cells[0] === unassignedName() ? "muted" : "" });
+  text(byId("teams-note"), "Biggest move against plan first");
+
+  // Spend: by vendor
+  table(byId("vendors-table"), ["Vendor", "Seats", "Extra usage", "API", "Total"],
+    spend.by_vendor.map((row) => [vendorName(row.vendor), money(row.seats_cents), money(row.extra_usage_cents), money(row.api_cents), money(row.total_cents)]),
+    { strong: 4 });
+
+  // Spend: API by purpose, and other AI tools paid through Ramp
+  const categories = spend.api_by_cost_category || [];
+  if (categories.length) {
+    byId("category-panel").hidden = false;
+    const apiTotal = categories.reduce((sum, row) => sum + row.total_cents, 0);
+    valueBars(byId("category-bars"), categories, (row) => row.category === "Not tied to a current key" ? "Deleted keys" : row.category,
+      (row) => Math.max(row.total_cents, 0), (row) => money(row.total_cents) + " · " + percentOf(row.total_cents, apiTotal) + "%");
+  }
+  const otherAi = data.other_ai_vendors;
+  if (otherAi) {
+    byId("other-ai-panel").hidden = false;
+    if (otherAi.through) {
+      const otherTotal = otherAi.vendors.reduce((sum, row) => sum + row.total_cents, 0);
+      text(byId("other-ai-note"), money(otherTotal) + " through " + dayName(otherAi.through) + ", not in the totals");
+      valueBars(byId("other-ai-bars"), otherAi.vendors, (row) => row.vendor, (row) => Math.max(row.total_cents, 0), (row) => money(row.total_cents));
+    } else {
+      byId("other-ai-bars").appendChild(make("p", "empty", "Nothing saved from Ramp for " + monthName(about.month) + " yet."));
+    }
+  }
+  byId("api-row").hidden = byId("category-panel").hidden && byId("other-ai-panel").hidden;
+
+  // Spend: everyone, and every API key, in the person view
+  if (personView && spend.by_person) {
+    byId("people-panel").hidden = false;
+    const largest = spend.by_person.length ? spend.by_person[0].total_cents : 1;
+    const peopleBody = table(byId("people-table"), ["Person", "Team", "Seats", "Extra usage", "API keys owned", "Total"],
+      spend.by_person.map((row) => [nameOf(row.person), row.team || "—", money(row.seats_cents), money(row.extra_usage_cents),
+        row.api_cents ? money(row.api_cents) : "—", withMini(row.total_cents, largest, money(row.total_cents))]),
+      { left: [1], strong: 5 });
+    const SHOWN_FIRST = 15;
+    let showingAll = spend.by_person.length <= SHOWN_FIRST;
+    const more = byId("people-more");
+    function filterPeople() {
+      const query = byId("people-search").value.trim().toLowerCase();
+      [...peopleBody.rows].forEach((row, index) => {
+        const person = spend.by_person[index];
+        const match = !query || [nameOf(person.person), person.person, person.team].some((field) => String(field || "").toLowerCase().includes(query));
+        row.hidden = !match || (!query && !showingAll && index >= SHOWN_FIRST);
+      });
+      more.hidden = showingAll || Boolean(query);
+    }
+    text(more, "Show all " + spend.by_person.length + " people");
+    more.addEventListener("click", () => { showingAll = true; filterPeople(); });
+    byId("people-search").addEventListener("input", filterPeople);
+    filterPeople();
+    const keys = spend.api_keys || [];
+    if (keys.length) {
+      byId("keys-panel").hidden = false;
+      table(byId("keys-table"), ["Key", "Vendor", "Owner", "Team", "Spend"],
+        keys.map((key) => [key.api_key, vendorName(key.vendor), nameOf(key.owner), key.team, money(key.total_cents)]),
+        { left: [1, 2, 3], strong: 4 });
+    }
+  }
+
+  // Spend: what isn't on a team yet, and who fixes it
+  const reasons = spend.unassigned_by_reason || [];
+  if (reasons.length) {
+    byId("unassigned-panel").hidden = false;
+    const unassignedTotal = reasons.reduce((sum, row) => sum + row.total_cents, 0);
+    text(byId("unassigned-note"), money(unassignedTotal) + ", " + percentOf(unassignedTotal, spend.total_cents) + "% of the month");
+    table(byId("unassigned-table"), ["Why", "Fix", "Where", "Amount"],
+      reasons.map((row) => {
+        const known = REASONS[row.reason] || { title: sentence(row.reason), fix: "", where: "" };
+        return [known.title, known.fix, known.where, money(row.total_cents)];
+      }), { left: [1, 2] });
+    byId("unassigned-table").querySelectorAll("td:nth-child(2)").forEach((cell) => { cell.style.whiteSpace = "normal"; });
+  }
+
+  // Spend: the bill check, last month first, since early in a month that's the one that can tie
+  const billMonths = data.bills || [];
+  if (billMonths.length) {
+    byId("bills-panel").hidden = false;
+    const lines = billMonths.flatMap((section) => section.lines.map((line) => ({ ...line, month: section.month })));
+    byId("bills-credits-note").hidden = !lines.some((line) => line.kind === "credits");
+    table(byId("bills-table"), ["Month", "Line", "Billed", "Counted", "Result"],
+      lines.map((line) => [monthName(line.month), vendorName(line.vendor) + " " + (line.product === "api" ? "API" : line.product) + (line.kind === "credits" ? " (credits)" : ""),
+        exact(line.billed_cents), exact(line.counted_cents), billResult(line)]),
+      { left: [1], rowClass: (cells) => String(cells[4]).startsWith("✕") ? "off" : "" });
+  }
+  function billResult(line) {
+    if (line.kind === "credits") return "Paid " + exact(line.billed_cents) + " for " + exact(line.credit_cents) + " of credit";
+    if (line.counted_through) return "Counted through " + dayName(line.counted_through) + "; checked once the month ends";
+    if (line.ties) return "✓ Matches";
+    const gap = line.counted_cents - line.billed_cents;
+    return "✕ Off by " + exact(Math.abs(gap)) + (gap < 0 ? ", counted less" : ", counted more");
+  }
+
+  // Usage: who uses Claude and how much, from the claude.ai spend export
+  if (!usage) {
+    byId("usage-empty").hidden = false;
+    byId("usage-body").hidden = true;
+  } else {
+    const totalFresh = usage.by_product.reduce((sum, row) => sum + row.fresh_tokens, 0) || 1;
+    const totalRequests = usage.by_team.reduce((sum, row) => sum + row.requests, 0);
+    const totalExtra = usage.by_team.reduce((sum, row) => sum + row.extra_usage_cents, 0);
+    const usageKpis = byId("usage-kpis");
+    kpi(usageKpis, "Using Claude", usage.active_seat_holders + " of " + usage.seat_holders, percentOf(usage.active_seat_holders, usage.seat_holders) + "% of seat holders");
+    kpi(usageKpis, "Busiest 10% of people", usage.busiest_tenth_share_percent === null ? "—" : usage.busiest_tenth_share_percent + "%",
+      usage.busiest_tenth_share_percent === null ? "needs 10 or more people" : "of all use");
+    kpi(usageKpis, "Extra usage per person", money(usage.active_seat_holders ? totalExtra / usage.active_seat_holders : 0), "among people using Claude");
+    kpi(usageKpis, "Requests", totalRequests.toLocaleString("en-US"), dayName(usage.covers.start) + "–" + dayName(usage.covers.end));
+    text(byId("usage-note"), dayName(usage.covers.start) + "–" + dayName(usage.covers.end));
+
+    const usageTeams = usage.by_team;
+    table(byId("usage-team-table"), ["Team", "Using Claude", "Requests per person", "Share of use", "Extra usage", "Extra per person"],
+      usageTeams.map((row) => [row.team, row.active_seat_holders + " of " + row.seat_holders,
+        row.active_seat_holders ? Math.round(row.requests / row.active_seat_holders).toLocaleString("en-US") : "—",
+        percentOf(row.fresh_tokens, totalFresh) + "%", money(row.extra_usage_cents),
+        row.active_seat_holders ? money(row.extra_usage_cents / row.active_seat_holders) : "—"]),
+      { rowClass: (cells) => cells[0] === UNASSIGNED ? "muted" : "" });
+
+    valueBars(byId("usage-product-bars"), usage.by_product, (row) => row.product, (row) => row.fresh_tokens,
+      (row) => percentOf(row.fresh_tokens, totalFresh) + "% · " + peopleCount(row.people) + " · " + money(row.extra_usage_cents));
+    const leftOut = usage.left_out || { products: 0, models: 0 };
+    if (leftOut.products || leftOut.models) {
+      const parts = [];
+      if (leftOut.products) parts.push(leftOut.products + (leftOut.products === 1 ? " product" : " products"));
+      if (leftOut.models) parts.push(leftOut.models + (leftOut.models === 1 ? " model" : " models"));
+      const note = byId("usage-left-out");
+      note.hidden = false;
+      text(note, listOf(parts) + " used by fewer than 3 people " + (parts.length > 1 ? "aren't" : leftOut.products + leftOut.models === 1 ? "isn't" : "aren't") + " shown, since this page shows teams, not people.");
+    }
+    const extraTotal = usage.by_model.reduce((sum, row) => sum + row.extra_usage_cents, 0);
+    table(byId("usage-model-table"), ["Model", "Share of use", "Extra usage", "Share of extra"],
+      usage.by_model.map((row) => [modelName(row.model), percentOf(row.fresh_tokens, totalFresh) + "%", money(row.extra_usage_cents),
+        percentOf(row.extra_usage_cents, extraTotal) + "%"]));
+
+    if (usage.by_person) {
+      byId("usage-people").hidden = false;
+      const top = [...usage.by_person].sort((a, b) => b.fresh_tokens - a.fresh_tokens).slice(0, 10);
+      table(byId("usage-people-table"), ["Person", "Team", "Requests", "Share of use", "Extra usage"],
+        top.map((row) => [nameOf(row.person) + (row.claude_seat_holder ? "" : " (no Claude seat)"), row.team || "—",
+          row.requests.toLocaleString("en-US"), percentOf(row.fresh_tokens, totalFresh) + "%", money(row.extra_usage_cents)]),
+        { left: [1] });
+    }
+  }
+
+  // Forecast: the last months, this month so far and projected, and next month
+  const monthsEl = byId("months");
+  const columns = (data.history || []).map((entry) => ({ label: entry.month, parts: [["actual", entry.total_cents]], value: entry.total_cents,
+    sub: entry.whole ? "" : "partly saved" }));
+  columns.push({ label: about.month, parts: [["so-far", pace.so_far_cents], ["projected", Math.max(pace.on_pace_for_cents - pace.so_far_cents, 0)]],
+    value: pace.on_pace_for_cents, sub: "on pace", plan });
+  columns.push({ label: forecast.month, parts: [["forecast", forecast.total_cents]], value: forecast.total_cents, sub: "forecast" });
+  const tallest = Math.max(...columns.map((column) => Math.max(column.value, column.plan || 0)), 1) * 1.08;
+  columns.forEach((column) => {
+    const col = make("div", "month-col");
+    col.appendChild(make("span", "month-value", money(column.value)));
+    const stack = make("div", "month-stack");
+    stack.style.height = (column.value / tallest * 150) + "px";
+    column.parts.forEach(([cls, cents]) => {
+      if (cents <= 0) return;
+      const bar = make("div", "month-bar " + cls);
+      bar.style.height = (cents / Math.max(column.value, 1) * 100) + "%";
+      stack.appendChild(bar);
+    });
+    if (column.plan) {
+      const tick = make("div", "plan-tick");
+      tick.style.bottom = (column.plan / Math.max(column.value, 1) * 100) + "%";
+      tick.title = "Plan " + money(column.plan);
+      stack.appendChild(tick);
+    }
+    col.appendChild(stack);
+    const name = make("span", "month-name", monthName(column.label).slice(0, 3));
+    name.appendChild(make("small", "", column.sub || "\u00a0"));
+    col.appendChild(name);
+    monthsEl.appendChild(col);
+  });
+  monthsEl.setAttribute("aria-label", columns.map((column) => monthName(column.label) + " " + money(column.value) + (column.sub ? " " + column.sub : "")).join(", "));
+
+  const thisMonth = new Map((pace.by_team || []).map((row) => [row.team, row.on_pace_for_cents]));
+  const nextMonth = new Map(forecast.by_team.map((row) => [row.team, row.total_cents]));
+  const forecastTeams = [...new Set([...nextMonth.keys(), ...thisMonth.keys()])]
+    .sort((a, b) => (a === UNASSIGNED) - (b === UNASSIGNED) || (nextMonth.get(b) || 0) - (nextMonth.get(a) || 0));
+  table(byId("next-table"), ["Team", monthName(about.month) + ", on pace", monthName(forecast.month) + ", forecast", "Change"],
+    forecastTeams.map((team) => [team === UNASSIGNED ? unassignedName() : team, money(thisMonth.get(team) || 0), money(nextMonth.get(team) || 0),
+      change(thisMonth.get(team) || 0, nextMonth.get(team) || 0)]),
+    { total: ["Total", money(pace.on_pace_for_cents), money(forecast.total_cents), change(pace.on_pace_for_cents, forecast.total_cents)],
+      rowClass: (cells) => cells[0] === unassignedName() ? "muted" : "" });
+  const basis = ["extra usage", "api"].map((product) => {
+    const months = (forecast.averaged_over || {})[product] || [];
+    const rate = (forecast.run_rate || {})[product];
+    const name = product === "api" ? "API" : "extra usage";
+    if (!months.length) return null;
+    const span = months.map((label) => monthName(label).slice(0, 3)).join(", ");
+    return name + " from " + span + (rate ? " (" + monthName(about.month).slice(0, 3) + " through " + dayName(rate) + ", scaled up)" : "");
+  }).filter(Boolean);
+  const knownCount = Object.keys(forecast.known_changes || {}).length;
+  text(byId("method"), "Seats at today's prices; " + listOf(basis) + (knownCount ? "; plus planned changes" : "") + ".");
+  scenario(forecast, data.seat_types || {});
+
+  // Savings: everything the rules found, and what done ones saved
+  const savingsKpis = byId("savings-kpis");
+  kpi(savingsKpis, "Open opportunities", openTotal ? openLabel : "—", savings.open.length + (savings.open.length === 1 ? " item" : " items"), openTotal ? "save" : "");
+  kpi(savingsKpis, "Saved so far", savings.saved_cents ? money(savings.saved_cents) : "—", "by changes already made", savings.saved_cents ? "save" : "");
+  kpi(savingsKpis, "Done", String(savings.done.length), savings.done.length === 1 ? "change made" : "changes made");
+  savingsList(byId("savings-list"), savings.open);
+  const savingsNotes = [];
+  if (savings.about_people) savingsNotes.push(savings.about_people + " more name a person, so they're shown only where the page shows people.");
+  savings.notes.forEach((note) => {
+    const match = /^(\d{4}-\d{2}) counts through (\d{4}-\d{2}-\d{2}), scaled to a whole month$/.exec(note);
+    savingsNotes.push(match ? monthName(match[1]) + " counts through " + dayName(match[2]) + ", scaled to a full month." : sentence(note) + ".");
+  });
+  const example = savings.open.find((item) => item.person);
+  savingsNotes.push("To mark one done or declined, tell Claude, for example “mark " +
+    (example ? nameOf(example.person) + "'s " + example.action : "the credit bundles") + " done”.");
+  text(byId("savings-note"), savingsNotes.join(" "));
+  if (savings.done.length) {
+    byId("done-panel").hidden = false;
+    table(byId("done-table"), ["Change", "Saved", "Whole months", "Note"],
+      savings.done.map((row) => [sentence(row.action) + (row.person ? " · " + nameOf(row.person) : ""), money(row.saved_cents), String(row.months), row.problem || "—"]),
+      { left: [3] });
+  }
+
+  // Footer
+  text(byId("made-with"), "Made with " + about.tool + " by airCFO · read-only on Ramp and claude.ai · refreshed " + dayName(about.made_on));
+  const notesEl = byId("notes");
+  [...new Set(data.notes.concat((data.change_from_last_month || {}).notes || []))].forEach((note) => notesEl.appendChild(make("li", "", sentence(note))));
+  byId("about-data").hidden = notesEl.children.length === 0;
+
+  showTab(location.hash.slice(1), false);
 
   function scenario(forecast, seatTypes) {
     text(byId("scenario-month"), monthName(forecast.month));
@@ -804,7 +1316,7 @@ details[open] > summary { margin-bottom: 10px; }
       const focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.team : null;
       el.replaceChildren();
       const head = el.createTHead().insertRow();
-      ["Team", "New hires", "Forecast", "Scenario", "Change"].forEach((heading) => head.appendChild(make("th", "", heading)));
+      ["Team", "New hires", "Forecast", "What if", "Change"].forEach((heading) => head.appendChild(make("th", "", heading)));
       const body = el.createTBody();
       rows.forEach((row) => {
         const tr = body.insertRow();
@@ -845,491 +1357,9 @@ details[open] > summary { margin-bottom: 10px; }
       update();
     });
 
-    const notes = byId("scenario-notes");
-    notes.appendChild(make("li", "", "A new hire gets a Claude seat at its price (on Premium for the share set above) and uses as much extra usage as the average seat holder on their team does now. They fill empty seats first, which are already paid for."));
-    notes.appendChild(make("li", "", "Extra usage and API scale the forecast's numbers, leaving out the known changes it already counts; new API spend is a project's key that isn't running yet. Seat prices change every seat, as at a renewal."));
+    byId("scenario-notes").appendChild(make("li", "", "New hires get a Claude seat and their team's average extra usage, filling empty seats first. Planned changes aren't scaled. Nothing here is saved."));
     update();
   }
-
-  function table(el, headings, rows, options) {
-    const opts = options || {};
-    el.replaceChildren();
-    const head = el.createTHead().insertRow();
-    headings.forEach((heading) => head.appendChild(make("th", "", heading)));
-    const body = el.createTBody();
-    rows.forEach((cells) => {
-      const row = body.insertRow();
-      if (opts.rowClass) row.className = opts.rowClass(cells) || "";
-      cells.forEach((cell) => row.appendChild(make("td", "", cell)));
-    });
-    if (opts.total) {
-      const row = body.insertRow();
-      row.className = "total";
-      opts.total.forEach((cell) => row.appendChild(make("td", "", cell)));
-    }
-  }
-
-  function tooltipFor(container) {
-    const tooltip = make("div", "tooltip");
-    tooltip.hidden = true;
-    container.appendChild(tooltip);
-    return {
-      show(mark, title, value) {
-        tooltip.replaceChildren(make("strong", "", value), document.createTextNode(title));
-        tooltip.hidden = false;
-        const box = container.getBoundingClientRect();
-        const spot = mark.getBoundingClientRect();
-        const left = Math.min(Math.max(spot.left - box.left + spot.width / 2 - tooltip.offsetWidth / 2, 0), box.width - tooltip.offsetWidth);
-        tooltip.style.left = left + "px";
-        tooltip.style.top = (spot.top - box.top - tooltip.offsetHeight - 6) + "px";
-      },
-      hide() { tooltip.hidden = true; },
-    };
-  }
-
-  function hoverable(mark, label, value, tip) {
-    mark.tabIndex = 0;
-    mark.setAttribute("aria-label", label + ": " + value);
-    mark.addEventListener("pointerenter", () => tip.show(mark, label, value));
-    mark.addEventListener("focus", () => tip.show(mark, label, value));
-    mark.addEventListener("pointerleave", tip.hide);
-    mark.addEventListener("blur", tip.hide);
-    return mark;
-  }
-
-  // One row per name, each a bar split into seats, extra usage and API, all on one scale.
-  function stackedBars(container, rows, nameOf) {
-    const tip = tooltipFor(container);
-    const largest = Math.max(1, ...rows.map((row) => row.total_cents));
-    rows.forEach((row) => {
-      const name = nameOf(row);
-      const line = make("div", "bar-row");
-      line.appendChild(make("span", "bar-name" + (name === UNASSIGNED ? " unassigned" : ""), name));
-      const track = make("div", "bar-track");
-      track.style.width = (row.total_cents / largest * 100) + "%";
-      PRODUCTS.forEach((product) => {
-        const cents = row[product.field];
-        if (cents > 0) track.appendChild(segment(product.cls, name + " · " + product.name, cents, tip));
-      });
-      const holder = make("div");
-      holder.style.minWidth = "0";
-      holder.appendChild(track);
-      line.appendChild(holder);
-      line.appendChild(make("span", "bar-total", money(row.total_cents)));
-      container.appendChild(line);
-    });
-  }
-
-  // Last month above this month for each team, on one scale, with the move written beside them.
-  // One bar per row, scaled to the largest, with a label of the caller's choosing beside it.
-  function valueBars(container, rows, nameOf, valueOf, labelOf) {
-    const tip = tooltipFor(container);
-    const largest = Math.max(1, ...rows.map(valueOf));
-    rows.forEach((row) => {
-      const line = make("div", "bar-row");
-      line.appendChild(make("span", "bar-name", nameOf(row)));
-      const track = make("div", "bar-track");
-      const bar = make("span", "seg usage");
-      bar.style.width = (valueOf(row) / largest * 100) + "%";
-      track.appendChild(hoverable(bar, nameOf(row), labelOf(row), tip));
-      const holder = make("div");
-      holder.style.minWidth = "0";
-      holder.appendChild(track);
-      line.appendChild(holder);
-      line.appendChild(make("span", "bar-total", labelOf(row)));
-      container.appendChild(line);
-    });
-  }
-
-  function pairedBars(container, rows, previousName, currentName) {
-    const tip = tooltipFor(container);
-    const largest = Math.max(1, ...rows.flatMap((row) => [row.previous_cents, row.current_cents]));
-    rows.forEach((row) => {
-      const line = make("div", "bar-row");
-      line.appendChild(make("span", "bar-name" + (row.team === UNASSIGNED ? " unassigned" : ""), row.team));
-      const pair = make("div", "pair");
-      [["previous", row.previous_cents, previousName], ["current", row.current_cents, currentName]].forEach(([cls, cents, month]) => {
-        const bar = make("span", "pair-bar " + cls);
-        bar.style.width = (cents / largest * 100) + "%";
-        pair.appendChild(hoverable(bar, row.team + " · " + month, money(cents), tip));
-      });
-      line.appendChild(pair);
-      const moved = row.current_cents - row.previous_cents;
-      const total = make("span", "bar-total");
-      total.appendChild(make("span", moved >= 1 ? "up" : moved <= -1 ? "down" : "", change(row.previous_cents, row.current_cents)));
-      line.appendChild(total);
-      container.appendChild(line);
-    });
-  }
-
-  // A ring of the month by product. Pointing at a piece puts its amount in the middle.
-  function donut(container, legend, parts, total) {
-    const radius = 85;
-    const circumference = 2 * Math.PI * radius;
-    const shown = parts.filter((part) => part.cents > 0);
-    // A short break between pieces, drawn as surface, so neighbors never touch.
-    const gap = shown.length > 1 ? 3 : 0;
-    const ring = drawn("svg", { viewBox: "0 0 200 200", role: "img",
-      "aria-label": parts.map((part) => part.name + " " + money(part.cents)).join(", ") });
-    if (!shown.length) ring.appendChild(drawn("circle", { class: "donut-track", cx: 100, cy: 100, r: radius }));
-    const center = make("div", "donut-center");
-    const value = make("p", "donut-value");
-    const label = make("p", "donut-label");
-    center.append(value, label);
-    const rest = () => {
-      text(value, wholeMoney(total));
-      text(label, "so far this month");
-      container.classList.remove("focused");
-      ring.querySelectorAll(".active").forEach((arc) => arc.classList.remove("active"));
-    };
-    let start = 0;
-    shown.forEach((part) => {
-      const length = part.cents / total * circumference;
-      const arc = drawn("circle", {
-        class: "donut-arc " + part.cls, cx: 100, cy: 100, r: radius, tabindex: 0,
-        "stroke-dasharray": Math.max(length - gap, 0.5) + " " + circumference,
-        "stroke-dashoffset": -start, transform: "rotate(-90 100 100)",
-        "aria-label": part.name + ": " + money(part.cents) + ", " + percentOf(part.cents, total) + "%",
-      });
-      start += length;
-      const show = () => {
-        rest();
-        arc.classList.add("active");
-        container.classList.add("focused");
-        text(value, wholeMoney(part.cents));
-        text(label, part.name + " · " + percentOf(part.cents, total) + "%");
-      };
-      arc.addEventListener("pointerenter", show);
-      arc.addEventListener("focus", show);
-      arc.addEventListener("pointerleave", rest);
-      arc.addEventListener("blur", rest);
-      ring.appendChild(arc);
-    });
-    container.replaceChildren(ring, center);
-    rest();
-    parts.forEach((part) => {
-      const item = make("li");
-      item.appendChild(make("span", "swatch " + part.cls));
-      item.appendChild(make("span", "legend-name", part.name));
-      item.appendChild(make("span", "legend-value", money(part.cents)));
-      item.appendChild(make("span", "legend-share", percentOf(part.cents, total) + "% of the month so far"));
-      legend.appendChild(item);
-    });
-  }
-
-  function segment(cls, label, cents, tip) {
-    const mark = make("span", "seg " + cls);
-    mark.style.flex = cents + " 1 0";
-    return hoverable(mark, label, money(cents), tip);
-  }
-
-  const about = data.about;
-  const spend = data.spend;
-  const pace = data.pace;
-  const forecast = data.forecast;
-  const company = about.company || "Your company";
-  const through = pace.through || Object.values(spend.through || {}).sort()[0];
-
-  // Masthead
-  text(byId("eyebrow"), "AI spend · " + monthName(about.month));
-  text(byId("title"), company);
-  const metaParts = [];
-  if (through) metaParts.push("Data through " + dayName(through));
-  metaParts.push("refreshed " + dayName(about.made_on));
-  metaParts.push(about.view === "person" ? "person view" : "teams only, small teams folded together");
-  text(byId("meta"), metaParts.join(" · "));
-
-  // Tabs, routed on the link's #name so a tab can be bookmarked or sent
-  const tabs = TAB_IDS.map((id) => byId("tab-" + id));
-  function visibleTabs() { return tabs.filter((tab) => !tab.hidden); }
-  function showTab(id, moveFocus) {
-    const target = visibleTabs().find((tab) => tab.getAttribute("aria-controls") === id) || tabs[0];
-    tabs.forEach((tab) => {
-      const selected = tab === target;
-      tab.setAttribute("aria-selected", String(selected));
-      tab.tabIndex = selected ? 0 : -1;
-      byId(tab.getAttribute("aria-controls")).hidden = !selected;
-    });
-    if (moveFocus) target.focus();
-  }
-  tabs.forEach((tab) => tab.addEventListener("click", () => { location.hash = tab.getAttribute("aria-controls"); }));
-  byId("tabs").addEventListener("keydown", (event) => {
-    const shown = visibleTabs();
-    const index = shown.indexOf(document.activeElement);
-    if (index < 0) return;
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-    let next = null;
-    if (step) next = shown[(index + step + shown.length) % shown.length];
-    if (event.key === "Home") next = shown[0];
-    if (event.key === "End") next = shown[shown.length - 1];
-    if (!next) return;
-    event.preventDefault();
-    location.hash = next.getAttribute("aria-controls");
-    next.focus();
-  });
-  document.querySelectorAll("[data-go]").forEach((button) => {
-    button.addEventListener("click", () => { location.hash = button.dataset.go; });
-  });
-  window.addEventListener("hashchange", () => showTab(location.hash.slice(1), false));
-
-  // Overview: the verdict
-  text(byId("on-pace"), wholeMoney(pace.on_pace_for_cents));
-  text(byId("so-far"), wholeMoney(pace.so_far_cents));
-  text(byId("through"), through ? "through " + dayName(through) : "");
-  const chip = byId("pace-chip");
-  if (pace.plan) {
-    const plan = pace.plan.total_cents;
-    text(byId("plan"), wholeMoney(plan));
-    text(byId("plan-sub"), "the forecast made as of " + dayName(pace.plan.made_as_of));
-    const percent = plan > 0 ? Math.round((pace.on_pace_for_cents - plan) / plan * 100) : 0;
-    if (percent > 0) {
-      chip.className = "chip over";
-      text(chip, "▲ " + percent + "% over plan");
-    } else {
-      chip.className = "chip under";
-      text(chip, percent === 0 ? "On plan" : "▼ " + Math.abs(percent) + "% under plan");
-    }
-  } else {
-    text(byId("plan-sub"), "Saved once a month has full history behind it");
-  }
-  text(byId("forecast-total"), wholeMoney(forecast.total_cents));
-  text(byId("forecast-sub"), monthName(forecast.month));
-
-  const scale = Math.max(pace.on_pace_for_cents, pace.plan ? pace.plan.total_cents : 0, 1) * 1.04;
-  byId("bullet-so-far").style.width = (pace.so_far_cents / scale * 100) + "%";
-  byId("bullet-projected").style.width = (pace.on_pace_for_cents / scale * 100) + "%";
-  if (pace.plan) {
-    const tick = byId("bullet-plan");
-    tick.style.left = "calc(" + (pace.plan.total_cents / scale * 100) + "% - 1px)";
-    tick.hidden = false;
-    byId("plan-key").hidden = false;
-  }
-  byId("bullet").setAttribute("aria-label",
-    "So far " + wholeMoney(pace.so_far_cents) + ", on pace for " + wholeMoney(pace.on_pace_for_cents) +
-    (pace.plan ? ", against a plan of " + wholeMoney(pace.plan.total_cents) : ""));
-
-  // Overview: data that has fallen behind. A refresh covers through yesterday, or through the
-  // month's last day once it has closed, so that's the day every source should reach.
-  const [shownYear, shownMonth] = about.month.split("-").map(Number);
-  const shouldReach = Math.min(utcDay(about.made_on) - DAY_MS, Date.UTC(shownYear, shownMonth, 0));
-  const staleList = byId("stale-list");
-  SOURCES.forEach((source) => {
-    if (!source.expected()) return;
-    const reached = (spend.through || {})[source.key];
-    const behind = reached ? Math.round((shouldReach - utcDay(reached)) / DAY_MS) : null;
-    if (reached && behind <= STALE_AFTER_DAYS) return;
-    const item = make("li");
-    item.appendChild(make("p", "stale-what", reached
-      ? source.name + ": through " + dayName(reached) + ", " + behind + " days behind."
-      : source.name + ": nothing saved for " + monthName(about.month) + " yet."));
-    item.appendChild(make("p", "stale-fix", source.fix));
-    staleList.appendChild(item);
-  });
-  byId("stale").hidden = staleList.children.length === 0;
-
-  // Overview: alerts
-  const alerts = byId("alerts");
-  if (data.alerts.length === 0) alerts.appendChild(make("li", "empty", "No alerts this month."));
-  data.alerts.forEach((alert) => {
-    const item = make("li", "alert");
-    const [kind, ...rest] = alert.split(": ");
-    item.appendChild(make("span", "alert-kind", rest.length ? kind : "Alert"));
-    const body = make("div");
-    body.appendChild(make("p", "", rest.length ? rest.join(": ") : alert));
-    body.appendChild(make("p", "draft-tag", "Draft, not sent"));
-    item.appendChild(body);
-    alerts.appendChild(item);
-  });
-
-  // Overview: the month by product
-  const teams = spend.by_team;
-  const productTotals = PRODUCTS.map((product) => teams.reduce((sum, team) => sum + team[product.field], 0));
-  donut(byId("donut"), byId("products"),
-    PRODUCTS.map((product, index) => ({ cls: product.cls, name: product.name, cents: productTotals[index] })), spend.total_cents);
-
-  // Overview: notes
-  const notes = byId("notes");
-  const changes = data.change_from_last_month;
-  const allNotes = [...new Set(data.notes.concat(changes ? changes.notes : []))];
-  if (allNotes.length === 0) notes.appendChild(make("li", "", "Nothing missing or partial."));
-  allNotes.forEach((note) => notes.appendChild(make("li", "", sentence(note))));
-
-  // Spend: by team
-  stackedBars(byId("bars"), teams, (team) => team.team);
-  table(byId("teams-table"), ["Team", "Seats", "Extra usage", "API", "Total"],
-    teams.map((team) => [team.team, ...PRODUCTS.map((product) => money(team[product.field])), money(team.total_cents)]),
-    { total: ["Total", ...productTotals.map(money), money(spend.total_cents)], rowClass: unassignedRow });
-  text(byId("teams-note"), money(spend.total_cents) + " this month" + (through ? ", through " + dayName(through) : ""));
-
-  // Spend: by vendor
-  stackedBars(byId("vendor-bars"), spend.by_vendor, (vendor) => vendorName(vendor.vendor));
-  table(byId("vendors-table"), ["Vendor", "Seats", "Extra usage", "API", "Total"],
-    spend.by_vendor.map((vendor) => [vendorName(vendor.vendor), ...PRODUCTS.map((product) => money(vendor[product.field])), money(vendor.total_cents)]));
-
-  // Spend: API by cost category
-  const categories = spend.api_by_cost_category || [];
-  if (categories.length) {
-    byId("category-panel").hidden = false;
-    const apiTotal = categories.reduce((sum, row) => sum + row.total_cents, 0);
-    valueBars(byId("category-bars"), categories, (row) => row.category, (row) => Math.max(row.total_cents, 0),
-      (row) => money(row.total_cents) + " · " + percentOf(row.total_cents, apiTotal) + "%");
-  }
-
-  // Spend: other AI tools, paid through Ramp and kept apart from the totals
-  const otherAi = data.other_ai_vendors;
-  if (otherAi) {
-    byId("other-ai-panel").hidden = false;
-    if (otherAi.through) {
-      const otherTotal = otherAi.vendors.reduce((sum, row) => sum + row.total_cents, 0);
-      text(byId("other-ai-note"), money(otherTotal) + " paid through Ramp, through " + dayName(otherAi.through) + ". Not in the totals above");
-      valueBars(byId("other-ai-bars"), otherAi.vendors, (row) => row.vendor, (row) => Math.max(row.total_cents, 0),
-        (row) => money(row.total_cents));
-    } else {
-      text(byId("other-ai-note"), "No spend by vendor is saved from Ramp for this month yet");
-    }
-  }
-
-  // Spend: against the bills
-  // Last month first: early in a month the one just closed is the one that can tie.
-  const billMonths = data.bills || [];
-  if (billMonths.length) {
-    byId("bills-panel").hidden = false;
-    const lines = billMonths.flatMap((section) => section.lines.map((bill) => ({ ...bill, month: section.month })));
-    byId("bills-credits-note").hidden = !lines.some((bill) => bill.kind === "credits");
-    table(byId("bills-table"), ["Month", "Line", "Billed", "Counted", "Result"],
-      lines.map((bill) => [
-        monthName(bill.month),
-        vendorName(bill.vendor) + " " + (bill.product === "api" ? "API" : bill.product) + (bill.kind === "credits" ? " (credits)" : ""),
-        money(bill.billed_cents),
-        money(bill.counted_cents),
-        billResult(bill),
-      ]),
-      { rowClass: (cells) => cells[4].startsWith("✕") ? "off" : "" });
-  }
-
-  // Spend: change from last month
-  if (changes) {
-    text(byId("change-note"), monthName(about.month) + " against " + monthName(changes.previous_month));
-    text(byId("change-key-previous"), monthName(changes.previous_month));
-    text(byId("change-key-current"), monthName(about.month));
-    pairedBars(byId("change-bars"), changes.by_team, monthName(changes.previous_month), monthName(about.month));
-    table(byId("change-table"), ["Team", monthName(changes.previous_month), monthName(about.month), "Change"],
-      changes.by_team.map((row) => [row.team, money(row.previous_cents), money(row.current_cents), change(row.previous_cents, row.current_cents)]),
-      { rowClass: unassignedRow });
-    if (changes.by_model.length) {
-      byId("models").hidden = false;
-      table(byId("models-table"), ["Model", "Last month", "This month", "Change"],
-        changes.by_model.slice(0, 8).map((row) => [row.model, money(row.previous_cents), money(row.current_cents), change(row.previous_cents, row.current_cents)]));
-    }
-  } else {
-    byId("change-key").hidden = true;
-    byId("change-details").hidden = true;
-    byId("change-bars").replaceWith(make("p", "empty", "No usage is saved for last month, so there's nothing to compare."));
-  }
-
-  // Unassigned
-  const reasons = byId("reasons");
-  const unassignedCents = spend.unassigned_by_reason.reduce((sum, reason) => sum + reason.total_cents, 0);
-  if (spend.unassigned_by_reason.length === 0) {
-    reasons.appendChild(make("li", "empty", "Every dollar this month is on a team. Nothing to fix."));
-  } else {
-    text(byId("reasons-note"), money(unassignedCents) + " of " + money(spend.total_cents) + " this month (" + percentOf(unassignedCents, spend.total_cents) + "%)");
-    const badge = byId("unassigned-badge");
-    text(badge, wholeMoney(unassignedCents));
-    badge.hidden = false;
-  }
-  spend.unassigned_by_reason.forEach((reason) => {
-    const known = REASONS[reason.reason];
-    const item = make("li", "reason");
-    const head = make("div", "reason-head");
-    head.appendChild(make("span", "reason-name", known ? known.title : sentence(reason.reason)));
-    if (known) head.appendChild(make("span", "reason-where", known.where));
-    item.appendChild(head);
-    item.appendChild(make("span", "reason-amount", money(reason.total_cents)));
-    if (known) {
-      const body = make("dl", "reason-body");
-      body.append(make("dt", "", "What it is"), make("dd", "", known.what), make("dt", "", "How to fix"), make("dd", "", known.fix));
-      item.appendChild(body);
-    }
-    reasons.appendChild(item);
-  });
-
-  // Forecast: this month's projection and next month's forecast side by side, every team in either
-  const thisMonth = new Map(pace.by_team.map((row) => [row.team, row.on_pace_for_cents]));
-  const nextMonth = new Map(forecast.by_team.map((row) => [row.team, row.total_cents]));
-  const forecastTeams = [...new Set([...thisMonth.keys(), ...nextMonth.keys()])].filter((team) => team !== UNASSIGNED);
-  if (thisMonth.has(UNASSIGNED) || nextMonth.has(UNASSIGNED)) forecastTeams.push(UNASSIGNED);
-  table(byId("forecast-table"),
-    ["Team", monthName(about.month) + ", on pace for", monthName(forecast.month) + ", forecast"],
-    forecastTeams.map((team) => [team, money(thisMonth.get(team) || 0), money(nextMonth.get(team) || 0)]),
-    { total: ["Total", money(pace.on_pace_for_cents), money(forecast.total_cents)], rowClass: unassignedRow });
-  const spans = Object.entries(forecast.averaged_over || {})
-    .filter(([, months]) => months.length)
-    .map(([product, months]) => ({ "extra usage": "extra usage", api: "API" }[product] || product) +
-      " over " + months.length + (months.length === 1 ? " month" : " months"));
-  const forecastNotes = byId("forecast-notes");
-  forecastNotes.appendChild(make("li", "", monthName(about.month) + ": what's been spent so far" +
-    (pace.through ? " (through " + dayName(pace.through) + ")" : "") +
-    ", plus the last 14 days' average daily usage for each day left. Seats are a flat fee, so they aren't projected."));
-  forecastNotes.appendChild(make("li", "", monthName(forecast.month) + ": seats at their price, extra usage at each team's average over the last 3 complete months" +
-    (spans.length ? " (" + spans.join(", ") + " so far)" : "") + ", and API at last month's spend on current keys, plus any known changes in the notes."));
-
-  // Forecast: a scenario played on top of next month's forecast, on this screen only
-  scenario(forecast, data.seat_types || {});
-
-  // Usage: who uses Claude and how much, from the claude.ai spend export
-  const usage = data.usage;
-  const tokens = (count) => count >= 1e9 ? (count / 1e9).toFixed(1) + "B" : count >= 1e6 ? (count / 1e6).toFixed(1) + "M"
-    : count >= 1e3 ? Math.round(count / 1e3) + "K" : String(count);
-  const peopleCount = (count) => count + (count === 1 ? " person" : " people");
-  if (!usage) {
-    byId("usage-figures").replaceWith(make("p", "empty", "No usage to show yet: it comes from a claude.ai spend export saved this month. Ask Claude to refresh."));
-  } else {
-    text(byId("usage-note"), dayName(usage.covers.start) + " to " + dayName(usage.covers.end));
-    const totalFresh = usage.by_product.reduce((sum, row) => sum + row.fresh_tokens, 0);
-    const totalRequests = usage.by_product.reduce((sum, row) => sum + row.requests, 0);
-    [
-      ["Seat holders using Claude", usage.active_seat_holders + " of " + usage.seat_holders,
-        percentOf(usage.active_seat_holders, usage.seat_holders) + "% of Claude seats"],
-      ["Busiest tenth of people", usage.busiest_tenth_share_percent === null ? "—" : usage.busiest_tenth_share_percent + "%",
-        usage.busiest_tenth_share_percent === null ? "needs 10 or more people" : "of all fresh tokens"],
-      ["Requests", totalRequests.toLocaleString("en-US"), tokens(totalFresh) + " fresh tokens"],
-    ].forEach(([label, value, sub]) => {
-      const cell = make("div");
-      cell.append(make("p", "figure-label", label), make("p", "figure-value", value), make("p", "figure-sub", sub));
-      byId("usage-figures").appendChild(cell);
-    });
-    valueBars(byId("usage-product-bars"), usage.by_product, (row) => row.product, (row) => row.fresh_tokens,
-      (row) => percentOf(row.fresh_tokens, totalFresh) + "% · " + peopleCount(row.people) + " · " + money(row.extra_usage_cents));
-    table(byId("usage-team-table"), ["Team", "Seats in use", "Requests per seat", "Fresh tokens", "Extra usage"],
-      usage.by_team.map((row) => [row.team, row.active_seat_holders + " of " + row.seat_holders,
-        row.seat_holders ? Math.round(row.requests / row.seat_holders).toLocaleString("en-US") : "—",
-        tokens(row.fresh_tokens), money(row.extra_usage_cents)]),
-      { rowClass: unassignedRow });
-    table(byId("usage-model-table"), ["Model", "Share of fresh tokens", "Extra usage", "Share of extra usage"],
-      usage.by_model.map((row) => {
-        const extraTotal = usage.by_model.reduce((sum, each) => sum + each.extra_usage_cents, 0);
-        return [row.model, percentOf(row.fresh_tokens, totalFresh) + "%", money(row.extra_usage_cents), percentOf(row.extra_usage_cents, extraTotal) + "%"];
-      }));
-    if (usage.by_person) {
-      byId("usage-people").hidden = false;
-      table(byId("usage-people-table"), ["Person", "Team", "Requests", "Fresh tokens", "Extra usage"],
-        usage.by_person.map((row) => [row.person + (row.claude_seat_holder ? "" : " (no Claude seat)"), row.team,
-          row.requests.toLocaleString("en-US"), tokens(row.fresh_tokens), money(row.extra_usage_cents)]));
-    }
-  }
-
-  // People, only in the person view
-  if (spend.by_person) {
-    byId("tab-people").hidden = false;
-    table(byId("people-table"), ["Person", "Seats", "Extra usage", "API", "Total"],
-      spend.by_person.map((person) => [person.person, ...PRODUCTS.map((product) => money(person[product.field])), money(person.total_cents)]));
-    table(byId("keys-table"), ["Key", "Vendor", "Owner", "Team", "Spend"],
-      (spend.api_keys || []).map((key) => [key.api_key, vendorName(key.vendor), key.owner || "no owner", key.team, money(key.total_cents)]));
-  }
-
-  text(byId("made-with"), "Made with " + about.tool + ", open-source AI spend analysis built on Ramp, by airCFO.");
-  showTab(location.hash.slice(1), false);
 
   // Seats: the roster lives in this page's shared store, where Claude adds everyone from Ramp
   // and anyone who can edit the page changes a seat; the next refresh reads it back.
@@ -1428,14 +1458,27 @@ details[open] > summary { margin-bottom: 10px; }
     summary.replaceChildren();
     seatVendors.forEach((vendor) => {
       seatTypes[vendor].forEach((plan) => {
-        const held = people.filter((person) => (person[vendor] || NO_SEAT) === plan.seat_type).length;
+        // The live roster once it loads; until then, what the last refresh counted.
+        const held = people.length ? people.filter((person) => (person[vendor] || NO_SEAT) === plan.seat_type).length : plan.held;
+        const used = typeof plan.active === "number" ? Math.min(plan.active, held) : null;
         const cell = make("div", "seat-count");
-        cell.appendChild(make("p", "figure-label", VENDORS[vendor] + " " + titleCase(plan.seat_type)));
-        cell.appendChild(make("p", "figure-value", held + " of " + plan.bought));
+        cell.appendChild(make("p", "figure-label", VENDORS[vendor] + " " + titleCase(plan.seat_type) + " · " + money(plan.price_cents) + "/mo"));
+        cell.appendChild(make("p", "figure-value", used === null ? held + " of " + plan.bought + " held" : used + " of " + held + " used"));
+        const bar = make("div", "use-bar");
+        const slots = Math.max(plan.bought, held, 1);
+        [["used", used === null ? 0 : used], ["idle", used === null ? held : held - used]].forEach(([cls, count]) => {
+          if (!count) return;
+          const part = make("span", cls);
+          part.style.width = (count / slots * 100) + "%";
+          bar.appendChild(part);
+        });
+        cell.appendChild(bar);
         const gap = plan.bought - held;
-        const note = gap > 0 ? gap + (gap === 1 ? " seat" : " seats") + " bought and not held"
-          : gap < 0 ? Math.abs(gap) + " more held than bought" : "every seat bought is held";
-        cell.appendChild(make("p", "figure-sub" + (gap < 0 ? " warn" : ""), note));
+        const parts = [];
+        if (used !== null && held - used > 0) parts.push((held - used) + " held but unused this month");
+        if (used === null) parts.push("use isn't reported for this seat");
+        parts.push(gap > 0 ? gap + " bought and not held" : gap < 0 ? Math.abs(gap) + " more held than bought" : "every seat bought is held");
+        cell.appendChild(make("p", "kpi-sub" + (gap < 0 ? " warn" : ""), sentence(parts.join(" · "))));
         summary.appendChild(cell);
       });
     });
@@ -1539,6 +1582,7 @@ details[open] > summary { margin-bottom: 10px; }
     const claude = window.claude;
     store = claude && claude.use ? await claude.use("db").catch(() => null) : null;
     if (!store) {
+      renderSummary();
       rosterMessage("The roster opens when this page is viewed in Claude while signed in.");
       return;
     }

@@ -9,7 +9,7 @@ Open-source AI spend analysis, built on Ramp. Each month it answers two question
 
 ## Status
 
-v0.3.1 is the latest release (v0.3.0 was the first that installs as a Claude plugin); [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
+v0.3.2 is the latest release (v0.3.0 was the first that installs as a Claude plugin); [CHANGELOG.md](CHANGELOG.md) says what's in it, and the design is [docs/design.md](docs/design.md). Until a real month has been checked against them, the v0.3.0 scripts it replaces live in [`legacy/`](legacy/), moved here from `claude-startup-finance` with their history.
 
 ## In Claude
 
@@ -24,7 +24,7 @@ That needs Claude Code 2.1.275 or later, and installs the tagged release the mar
 ## Without Claude
 
 ```
-uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.3.1
+uv tool install git+https://github.com/aircfo/aicfo-spend-analysis@v0.3.2
 aicfo-spend init ~/acme-ai-spend --company "Acme"
 aicfo-spend settings ~/acme-ai-spend
 ```
@@ -44,7 +44,7 @@ aicfo-spend pace ~/acme-ai-spend
 aicfo-spend dashboard ~/acme-ai-spend
 ```
 
-`report` shows the month by team and vendor, how it moved from last month, API spend by cost category (from a `Cost category` tag in Ramp or `api_cost_categories` in settings), and who used Claude and how much (by team, product and model). With `other_ai_vendors` in settings and Ramp's spend by vendor saved, `report` also lists what other AI vendors were paid. `recommend` suggests seat changes and credit bundles for whoever runs the tool, keeps them in a ledger, and once `decide` marks one done, reports what it saved. With a `bills.csv` of what the vendors charged, `report` also checks the month against the bills. `forecast` projects next month; add `--as-of 2026-08-31 --score 2026-09` to replay a past forecast and see how far off it was. `pace` shows where this month stands and drafts the two alerts: a team's day spiking, and the month on pace to run well over its plan. `dashboard` writes all of it to `out/<month>/dashboard.json` for a shared page, whose Forecast tab also lets anyone try a what-if scenario on next month, rolled up to teams, with teams under 3 people folded together, unless the settings turn on the person view.
+`report` shows the month by team and vendor, how it moved from last month, API spend by cost category (from a `Cost category` tag in Ramp or `api_cost_categories` in settings), and who used Claude and how much (by team, product and model). With `other_ai_vendors` in settings and Ramp's spend by vendor saved, `report` also lists what other AI vendors were paid. `recommend` suggests seat changes and credit bundles, keeps them in a ledger, and once `decide` marks one done, reports what it saved. With a `bills.csv` of what the vendors charged, `report` also checks the month against the bills. `forecast` projects next month; add `--as-of 2026-08-31 --score 2026-09` to replay a past forecast and see how far off it was. `pace` shows where this month stands and drafts the two alerts: a team's day spiking, and the month on pace to run well over its plan. `dashboard` writes all of it to `out/<month>/dashboard.json` for a shared page in six tabs: Overview, Spend, Usage, Forecast (with a what-if for next month), Seats and Savings. It names each person by default, for transparency about who uses AI and what it costs; set `"visibility": "team"` to roll people up to teams instead, with teams under 3 people folded together.
 
 Spend downloads cover the month to date, from the 1st; the people list is one day's snapshot. `ramp-provider-totals` is Ramp's AI spend summary (cost grouped by provider) for the same days as `ramp-api-keys`, so spend no current key carries is counted too. `ramp-vendor-spend` is Ramp's spend report grouped by vendor, for other AI vendors. Ramp's answers are saved as Ramp returns them, with every page joined into one list. In Claude, the skill does these steps for you.
 
