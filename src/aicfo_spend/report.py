@@ -106,9 +106,12 @@ def summarize(spend: MonthSpend, company_name: str = "") -> str:
     by_team = totals_by(spend.rows, lambda row: row.team)
     by_vendor = totals_by(spend.rows, lambda row: row.vendor)
     by_reason: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    untied_by_vendor: dict[str, Decimal] = defaultdict(lambda: ZERO)
     for row in spend.rows:
         if row.team == UNASSIGNED:
             by_reason[row.reason] += row.amount_usd
+            if row.reason == REASON_NOT_TIED_TO_A_KEY:
+                untied_by_vendor[row.vendor] += row.amount_usd
     vendors = sorted(by_vendor, key=lambda vendor: -total(by_vendor[vendor]))
 
     title = f"AI spend for {spend.month.label}" + (f" ({company_name})" if company_name else "")
@@ -116,7 +119,13 @@ def summarize(spend: MonthSpend, company_name: str = "") -> str:
     lines += ["", *breakdown("Vendor", vendors, by_vendor, with_total=False)]
     if by_reason:
         lines += ["", "Unassigned, by reason:"]
-        lines += [f"  {reason}: {dollars(amount)}" for reason, amount in sorted(by_reason.items())]
+        for reason, amount in sorted(by_reason.items()):
+            line = f"  {reason}: {dollars(amount)}"
+            if reason == REASON_NOT_TIED_TO_A_KEY:
+                # A large lump here looks alarming until it says where it came from and why.
+                vendors_first = sorted(untied_by_vendor.items(), key=lambda item: -item[1])
+                line += f" ({', '.join(f'{vendor} {dollars(part)}' for vendor, part in vendors_first)}), usually a key deleted or rotated this month"
+            lines.append(line)
     if spend.notes:
         lines += ["", "Notes:"]
         lines += [f"  - {note}" for note in spend.notes]

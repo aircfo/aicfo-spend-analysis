@@ -26,7 +26,7 @@ Nothing is written to any of these systems. The tool never changes seats, billin
 
 Everything lands in **one folder on the operator's computer**, outside any git repository.
 
-- **`raw/`** holds every download, saved once and read-only.
+- **`raw/`** holds every download, saved once and read-only. A claude.ai export first lands in the browser's Downloads folder; saving it deletes that copy.
 - **`out/`** holds the spend table, the forecast plan, the alert drafts and the dashboard data.
 - **`aicfo-spend.json` and `people.csv`** hold seat prices and who holds a seat.
 - **`.engine/`** is created only when this skill's folder was copied on its own, without the engine beside it. It holds the pinned release of the open-source engine, checked against its fingerprint before it's run.

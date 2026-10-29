@@ -4,7 +4,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/seat_rows.py` builds the Seats tab's rows in one pass, from Ramp's people list, the default seats and the member lists Claude reads in Chrome, as ready-to-write batches of 50. With `--existing` it adds only people new to Ramp.
+- `save --remove-original` deletes the downloaded file once it's saved, so a claude.ai export doesn't sit in Downloads.
+
+### Changed
+
+- `roster_to_people.py` reads the Seats tab as ArtifactData saves it, one file per person, so no converter is needed.
+- `save` refuses a claude.ai export whose file name says it covers other days than `--start` and `--end`.
+- `init` on a folder already in use says what it holds, its saved downloads and published dashboard included, and that nothing was changed.
+- `report` gives API spend not tied to a current key by vendor, with the usual cause, a key deleted or rotated this month.
+- The dashboard's logo is published beside the page instead of inside it, a quarter less for Claude to read before each daily publish.
+- Setup step 3 has Claude in Chrome read the seat counts from claude.ai and ChatGPT's prices, and still asks for Claude's prices, which claude.ai never shows. Setup step 4.3 gives the whole `--compare` command.
+
 ### Fixed
+
+- The skill and the page name claude.ai's real pages: the export at claude.ai/analytics, with its MTD and Last month presets, and the members at claude.ai/admin-settings/members. It finds the export in Downloads by the days in its name, instead of asking the operator to change Chrome's download folder.
+- `report --compare` says that comparing with an export is the skill's `roster_to_people.py --compare`, instead of argparse's generic error.
 
 - The plugin installs and updates over https. The marketplace file named the repo as a `github` source, which Claude Code clones over SSH, so installing failed on any computer without a GitHub SSH key ("Permission denied (publickey)"). It takes effect as soon as it's on `main`, since installs read the marketplace file from there.
 

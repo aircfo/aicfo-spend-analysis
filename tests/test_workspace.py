@@ -33,10 +33,24 @@ def test_refuses_to_overwrite_an_existing_workspace(tmp_path: Path) -> None:
     create_workspace(workspace, "Acme")
     (workspace / SETTINGS_FILE_NAME).write_text('{"company_name": "Edited by hand"}', encoding="utf-8")
 
-    with pytest.raises(WorkspaceError, match="already a workspace"):
+    with pytest.raises(WorkspaceError, match="already in use, so nothing in it was changed"):
         create_workspace(workspace, "Acme")
 
     assert load_settings(workspace).company_name == "Edited by hand"
+
+
+def test_a_folder_in_use_says_what_it_already_holds(tmp_path: Path) -> None:
+    workspace = tmp_path / "acme"
+    create_workspace(workspace, "Acme")
+    (workspace / "raw" / "2026-10").mkdir()
+    (workspace / "raw" / "2026-10" / "ramp-people_2026-10-28_2026-10-28_saved-x.json").write_text("{}")
+    (workspace / "dashboard-url.txt").write_text("https://claude.ai/artifact/example\n")
+
+    with pytest.raises(WorkspaceError) as refused:
+        create_workspace(workspace, "Acme")
+
+    assert "1 saved downloads and a published dashboard at https://claude.ai/artifact/example" in str(refused.value)
+    assert "skip init" in str(refused.value)
 
 
 def test_keeps_a_people_file_that_is_already_there(tmp_path: Path) -> None:

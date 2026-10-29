@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from collections.abc import Callable, Sequence
 from datetime import date
@@ -81,10 +82,17 @@ def _parser() -> argparse.ArgumentParser:
     save.add_argument("--start", required=True, help="first day it covers, like 2026-09-01")
     save.add_argument("--end", help="last day it covers (defaults to --start)")
     save.add_argument("--file", help="the downloaded file (reads standard input if left out)")
+    save.add_argument(
+        "--remove-original",
+        action="store_true",
+        help="delete --file once it's saved, such as a copy left in Downloads",
+    )
 
     report = commands.add_parser("report", help="build a month's spend table and summarize it by team")
     report.add_argument("folder", help="the workspace folder")
     report.add_argument("month", help="the month, like 2026-09")
+    # Not a report option: accepted only to say where comparing with the export lives.
+    report.add_argument("--compare", help=argparse.SUPPRESS)
 
     forecast = commands.add_parser("forecast", help="forecast next month's spend, and optionally score it")
     forecast.add_argument("folder", help="the workspace folder")
@@ -126,19 +134,48 @@ def _run_save(args: argparse.Namespace) -> int:
         raise InputError(f"{workspace} isn't a workspace; set one up with `aicfo-spend init`")
     start = _day(args.start)
     end = _day(args.end) if args.end else start
+    download: Path | None = None
     if args.file:
         download = Path(args.file).expanduser()
         if not download.is_file():
             raise InputError(f"no file at {download}")
+        _check_dates_in_name(download, start, end)
         content = download.read_bytes()
+    elif args.remove_original:
+        raise InputError("--remove-original needs --file, the download to delete once it's saved")
     else:
         content = sys.stdin.buffer.read()
     path = save_raw(workspace, args.source, start, end, content)
     print(f"Saved {path.relative_to(workspace)}")
+    if download is not None and args.remove_original:
+        download.unlink()
+        print(f"Removed {download}")
     return 0
 
 
+# claude.ai names its spend export after the days it covers, like
+# spend-report-acme-2026-10-01-to-2026-10-28.csv; a file named for other days is the wrong one.
+DATES_IN_NAME = re.compile(r"(\d{4}-\d{2}-\d{2})-to-(\d{4}-\d{2}-\d{2})")
+
+
+def _check_dates_in_name(download: Path, start: date, end: date) -> None:
+    named = DATES_IN_NAME.search(download.name)
+    if named is None:
+        return
+    first, last = _day(named.group(1)), _day(named.group(2))
+    if (first, last) != (start, end):
+        raise InputError(
+            f"{download.name} is named for {first} to {last}, but --start and --end say {start} to {end}. "
+            "Save it with the days in its name, or check it's the file you meant."
+        )
+
+
 def _run_report(args: argparse.Namespace) -> int:
+    if args.compare:
+        raise InputError(
+            "report has no --compare. Comparing the roster with a claude.ai spend export is the skill's "
+            "roster_to_people.py: python3 <skill>/scripts/roster_to_people.py <folder> <Seats tab rows> --compare <export>"
+        )
     workspace = Path(args.folder).expanduser()
     settings = load_settings(workspace)
     month = Month.parse(args.month)

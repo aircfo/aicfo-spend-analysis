@@ -174,6 +174,18 @@ def test_api_spend_no_current_key_carries_is_unassigned_with_its_reason(tmp_path
     assert "  API spend not tied to a current key: $192.36" in summarize(spend)
 
 
+def test_spend_no_current_key_carries_says_which_vendor_and_the_usual_cause(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, SEPTEMBER, backend_cents=30000, untied_cents=19236)
+
+    summary = summarize(build_month(folder, SEPTEMBER, load_settings(folder)))
+
+    assert (
+        "  API spend not tied to a current key: $192.36 (anthropic $192.36), usually a key deleted or rotated this month"
+        in summary
+    )
+
+
 def test_keys_adding_up_to_clearly_more_than_ramps_total_earn_a_note(tmp_path: Path) -> None:
     folder = new_workspace(tmp_path)
     save_month(folder, SEPTEMBER, backend_cents=30000, untied_cents=-500)

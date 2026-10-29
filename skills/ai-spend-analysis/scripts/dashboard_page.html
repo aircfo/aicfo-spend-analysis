@@ -296,7 +296,7 @@ details[open] > summary { margin-bottom: 10px; }
       <h1 id="title">AI spend</h1>
       <p class="meta" id="meta"></p>
     </div>
-    <a class="by-aircfo" href="https://aircfo.com" target="_blank" rel="noopener">by <img src="__AIRCFO_LOGO__" alt="airCFO" width="111" height="22"></a>
+    <a class="by-aircfo" href="https://aircfo.com" target="_blank" rel="noopener">by <img src="aircfo-logo.png" alt="airCFO" width="111" height="22"></a>
   </div>
 </header>
 
@@ -539,7 +539,7 @@ details[open] > summary { margin-bottom: 10px; }
       name: "Extra usage, from the claude.ai spend export",
       // Only a company with Claude seats has an export to keep current.
       expected: () => ((data.seat_types || {}).anthropic || []).length > 0,
-      fix: "Ask Claude to refresh it with Claude in Chrome connected, or export it yourself from claude.ai (Settings, then Analytics, then Export spend report) and drop the file in the company folder's inbox.",
+      fix: "Ask Claude to refresh it with Claude in Chrome connected, or export it yourself at claude.ai/analytics with the MTD preset, then ask Claude to refresh.",
     },
     {
       key: "api",
