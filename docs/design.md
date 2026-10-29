@@ -173,8 +173,8 @@ The three alert numbers (2×, $25, 25%) are defaults, editable in settings.
 **The scenario.** Below the forecast, the Forecast tab lets anyone with the page try "what if" for next month without changing anything: it runs in the viewer's browser and isn't saved.
 
 - **New hires by team:** each gets a Claude seat at its price, on Premium for a chosen share of them, and uses as much extra usage as the average Claude seat holder on that team does now (the company's average for a team with none). They fill empty seats of their type first, which are already paid for, so only hires beyond those add seat cost.
-- **Extra usage and API on current keys,** each up or down by a percentage, for heavier use or a model change.
-- **New API spend,** dollars a month for a project's key that isn't running yet.
+- **Extra usage and API on current keys,** each up or down by a percentage, for heavier use or a model change. Known changes are added as they are rather than scaled, so the forecast carries each folded team's known changes by product.
+- **New API spend,** dollars and cents a month for a project's key that isn't running yet.
 - **Seat prices,** up or down by a percentage, as at a renewal.
 
 It shows the forecast, the scenario and the change, in total and by team. The page data carries what it needs: each team's Claude seat holders in the forecast, and each seat type's price and how many are bought and held. A change that's certain belongs in `known_changes` instead, where the forecast itself counts it.

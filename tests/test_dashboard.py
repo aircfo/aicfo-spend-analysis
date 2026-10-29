@@ -237,3 +237,17 @@ def test_the_team_view_says_a_known_change_for_its_folded_team_without_the_opera
     assert "includes a known change: +$400.00 of api for Other (small teams)" in strings(team_view["notes"])
     assert "Sales" not in json.dumps(team_view) and "Pat" not in json.dumps(team_view)
     assert "includes a known change: +$400.00 of api for Sales (Pat's outbound agent)" in strings(person_view["notes"])
+
+
+def test_the_forecast_carries_known_changes_by_folded_team_for_the_scenario(workspace: Path) -> None:
+    settings = json.loads((workspace / SETTINGS_FILE_NAME).read_text(encoding="utf-8"))
+    changes = [{"month": "2026-10", "team": "Sales", "product": "api", "amount_usd": 400},
+               {"month": "2026-10", "team": "Engineering", "product": "extra usage", "amount_usd": -50}]
+    (workspace / SETTINGS_FILE_NAME).write_text(json.dumps({**settings, "known_changes": changes}), encoding="utf-8")
+
+    dashboard = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
+
+    assert section(dashboard, "forecast")["known_changes"] == {
+        "Engineering": {"extra_usage_cents": -5000},
+        "Other (small teams)": {"api_cents": 40000},
+    }

@@ -536,7 +536,7 @@ details[open] > summary { margin-bottom: 10px; }
           </label>
           <label class="lever">
             <span class="figure-label">New API spend, $ a month</span>
-            <input type="number" id="lever-api-add" class="lever-number" min="0" step="50" value="0" inputmode="decimal">
+            <input type="text" id="lever-api-add" class="lever-number" value="0" inputmode="decimal">
           </label>
           <label class="lever">
             <span class="figure-label">Seat prices</span>
@@ -730,13 +730,22 @@ details[open] > summary { margin-bottom: 10px; }
     const teams = forecast.by_team.filter((row) => row.team !== UNASSIGNED);
     const unassigned = forecast.by_team.find((row) => row.team === UNASSIGNED);
     const totalHolders = teams.reduce((sum, row) => sum + (holders[row.team] || 0), 0);
-    const totalExtra = teams.reduce((sum, row) => sum + row.extra_usage_cents, 0);
+    // Known changes are added as they are; the levers scale only what history forecast.
+    const known = forecast.known_changes || {};
+    const knownOf = (team, field) => (known[team] && known[team][field]) || 0;
+    const totalExtra = teams.reduce((sum, row) => sum + row.extra_usage_cents - knownOf(row.team, "extra_usage_cents"), 0);
     const companyPerSeat = totalHolders ? totalExtra / totalHolders : 0;
     const hires = new Map(teams.map((row) => [row.team, 0]));
 
     const levers = ["premium", "extra", "api", "price"].map((name) => byId("lever-" + name));
     const apiAdd = byId("lever-api-add");
     const signed = (value) => (value > 0 ? "+" : "") + value + "%";
+
+    // Dollars typed with up to two decimals, as whole cents; anything else counts as nothing.
+    function centsOf(value) {
+      const match = /^\s*\$?(\d{1,7})(?:\.(\d{1,2}))?\s*$/.exec(String(value));
+      return match ? Number(match[1]) * 100 + Number((match[2] || "0").padEnd(2, "0")) : 0;
+    }
 
     function wholeNumber(value, most) {
       const number = Math.floor(Number(value));
@@ -748,7 +757,7 @@ details[open] > summary { margin-bottom: 10px; }
       const extraFactor = 1 + Number(byId("lever-extra").value) / 100;
       const apiFactor = 1 + Number(byId("lever-api").value) / 100;
       const priceFactor = 1 + Number(byId("lever-price").value) / 100;
-      const addedApi = wholeNumber(apiAdd.value, 1e7) * 100;
+      const addedApi = centsOf(apiAdd.value);
       text(byId("lever-premium-out"), Math.round(premiumShare * 100) + "%");
       text(byId("lever-extra-out"), signed(Number(byId("lever-extra").value)));
       text(byId("lever-api-out"), signed(Number(byId("lever-api").value)));
@@ -766,13 +775,20 @@ details[open] > summary { margin-bottom: 10px; }
 
       const rows = teams.map((row) => {
         const count = hires.get(row.team);
-        const perSeat = holders[row.team] ? row.extra_usage_cents / holders[row.team] : companyPerSeat;
+        const perSeat = holders[row.team] ? (row.extra_usage_cents - knownOf(row.team, "extra_usage_cents")) / holders[row.team] : companyPerSeat;
+        const knownExtra = knownOf(row.team, "extra_usage_cents");
+        const knownApi = knownOf(row.team, "api_cents");
         const played = (row.seats_cents + count * hirePrice) * priceFactor
-          + (row.extra_usage_cents + count * perSeat) * extraFactor + row.api_cents * apiFactor;
+          + (row.extra_usage_cents - knownExtra + count * perSeat) * extraFactor + knownExtra
+          + (row.api_cents - knownApi) * apiFactor + knownApi;
         return { team: row.team, hires: count, forecast: row.total_cents, scenario: Math.round(played) };
       });
       if (unassigned) {
-        const played = (unassigned.seats_cents - filled) * priceFactor + unassigned.extra_usage_cents * extraFactor + unassigned.api_cents * apiFactor;
+        const knownExtra = knownOf(UNASSIGNED, "extra_usage_cents");
+        const knownApi = knownOf(UNASSIGNED, "api_cents");
+        const played = (unassigned.seats_cents - filled) * priceFactor
+          + (unassigned.extra_usage_cents - knownExtra) * extraFactor + knownExtra
+          + (unassigned.api_cents - knownApi) * apiFactor + knownApi;
         rows.push({ team: UNASSIGNED, hires: null, forecast: unassigned.total_cents, scenario: Math.round(played) });
       }
       if (addedApi) rows.push({ team: "New API spend", hires: null, forecast: 0, scenario: addedApi });
@@ -831,7 +847,7 @@ details[open] > summary { margin-bottom: 10px; }
 
     const notes = byId("scenario-notes");
     notes.appendChild(make("li", "", "A new hire gets a Claude seat at its price (on Premium for the share set above) and uses as much extra usage as the average seat holder on their team does now. They fill empty seats first, which are already paid for."));
-    notes.appendChild(make("li", "", "Extra usage and API scale the forecast's numbers; new API spend is a project's key that isn't running yet. Seat prices change every seat, as at a renewal."));
+    notes.appendChild(make("li", "", "Extra usage and API scale the forecast's numbers, leaving out the known changes it already counts; new API spend is a project's key that isn't running yet. Seat prices change every seat, as at a renewal."));
     update();
   }
 

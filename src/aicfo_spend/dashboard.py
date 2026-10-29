@@ -293,6 +293,19 @@ def _forecast_section(forecast: Forecast, team_name: Callable[[str], str], seat_
         "by_team": _table("team", by_team, team_order(by_team)),
         "averaged_over": {product: [month.label for month in forecast.history[product]] for product in USAGE_PRODUCTS},
         "seat_holders": dict(sorted(holders.items())),
+        "known_changes": _known_change_cents(forecast, team_name),
+    }
+
+
+def _known_change_cents(forecast: Forecast, team_name: Callable[[str], str]) -> dict[str, Json]:
+    """Each team's known changes by product, which the page's scenario adds as they are instead of
+    scaling them with the extra usage and API levers."""
+    amounts: dict[str, dict[str, Decimal]] = defaultdict(lambda: defaultdict(lambda: ZERO))
+    for team, change in forecast.known_changes:
+        amounts[team_name(team)][change.product] += change.amount_usd
+    return {
+        team: {f"{product.replace(' ', '_')}_cents": cents(amount) for product, amount in sorted(products.items())}
+        for team, products in sorted(amounts.items())
     }
 
 
