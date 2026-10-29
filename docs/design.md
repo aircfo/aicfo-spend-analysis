@@ -117,13 +117,13 @@ Spend says what AI cost; usage says who relies on it. The claude.ai spend export
 
 ## Against the bills
 
-The numbers are only as good as their match with what the vendors charged, so each closed month is checked against its bills. `bills.csv` in the company's folder has one row per charge: the month it pays for, vendor, product, dollars, how many months it covers and its kind. Claude fills it on the 1st to the 3rd from Ramp's card charges and bills, reading each receipt for what it paid for, and asks about anything paid elsewhere.
+The numbers are only as good as their match with what the vendors charged, so each closed month is checked against its bills. `bills.csv` in the company's folder has one row per charge: the month it pays for, vendor (as the tool names it: `anthropic`, `openai` or a vendor in settings' seats), product, dollars, how many months it covers, its kind, for credits the credit it bought, and its id in Ramp. A charge id entered twice is refused, so a refresh run twice can't count a charge twice. Claude fills it on the 1st to the 3rd from Ramp's card charges and bills, reading each receipt for what it paid for, and asks about anything paid elsewhere.
 
 - **Seats** tie when the bill is within $1 or 0.5% of seats bought times their price, whichever margin is more. A year paid up front counts a twelfth in each month it covers. A seat line that doesn't tie usually means settings' seats bought or prices are out of date.
 - **Usage billed by invoice** for the month ties the same way, once the month is counted to its last day.
-- **Prepaid credits**, which is how Claude Team sells extra usage (in bundles, up to 30% off) and how the API consoles usually charge, are bought ahead, so a month's purchases don't match its use. They show bought beside used with no verdict, and tie over time against the balance the vendor shows.
+- **Prepaid credits**, which is how Claude Team sells extra usage (in bundles, up to 30% off) and how the API consoles usually charge, are bought ahead, so a month's purchases don't match its use. A bundle often sells credit for less than it carries ($250 for $200), so the line shows what was paid, the credit it bought and what was used, with no verdict; the credit bought less what's used ties over time against the balance the vendor shows.
 
-`report` prints the check once `bills.csv` exists, and the Spend tab's "Against the bills" panel shows it. Bills name no one, so every view shows them.
+`report` prints the check once `bills.csv` exists, and the Spend tab's "Against the bills" panel shows it for last month and this one, since early in a month the one just closed is the one that can tie. Bills name no one, so every view shows them.
 
 ## Forecast and alerts
 
