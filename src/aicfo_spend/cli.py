@@ -14,7 +14,7 @@ from aicfo_spend.dashboard import build_dashboard, write_dashboard
 from aicfo_spend.errors import InputError, UserError
 from aicfo_spend.forecast import describe_forecast, describe_score, forecast_after
 from aicfo_spend.months import Month
-from aicfo_spend.pace import describe_pace, pace_of
+from aicfo_spend.pace import describe_forecast_check, describe_pace, pace_of
 from aicfo_spend.raw_store import SOURCES, save_raw
 from aicfo_spend.report import build_month, describe_change, summarize
 from aicfo_spend.settings import SETTINGS_FILE_NAME, Settings, load_settings
@@ -190,6 +190,14 @@ def _run_report(args: argparse.Namespace) -> int:
         print("\n" + describe_change(spend, previous, show_people=settings.visibility == "person"))
     except UserError as error:
         print(f"\nChange from last month isn't available: {error}")
+    if month.last_day < date.today():
+        # Like the change from last month, trouble with last month's files only skips the check.
+        try:
+            check = describe_forecast_check(workspace, settings, spend)
+        except UserError as error:
+            check = f"How the forecast did isn't available: {error}"
+        if check:
+            print("\n" + check)
     usage = build_usage(workspace, month)
     print("\n" + summarize_usage(usage))
     usage_output = output.with_name(USAGE_FILE_NAME)

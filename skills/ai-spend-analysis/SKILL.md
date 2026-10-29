@@ -263,7 +263,13 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    Republishing never touches the Seats tab's rows. The page is private until the operator
    shares it from its Share menu. Never share it yourself. Its spend shows exactly what the
    `visibility` setting allows; its Seats tab shows the roster to everyone who can open it.
-5. **Show the results.** Give the page's link. If any source is more than 2 days behind
+5. **Known changes.** If the operator mentions something coming that will move spend, such as a
+   new project's API key or a tool being retired, add it to `aicfo-spend.json` as an item of
+   `known_changes`: `{"month": "YYYY-MM", "team": "<team>", "product": "api" or "extra usage",
+   "amount_usd": <dollars a month, negative for a cut>, "note": "<what it is>"}`, and check it with
+   `settings`. The forecast adds it and says so. The shared page shows the amount and team but
+   not the note, which stays in the operator's own outputs.
+6. **Show the results.** Give the page's link. If any source is more than 2 days behind
    yesterday, lead with that and how to bring it up to date, as the page's Overview does.
    Then the pace line, then the alerts, then the notes, and finish with the team table from `report`. Present the alerts
    as drafts: **never send anything**. If a scheduled task is running, write the same

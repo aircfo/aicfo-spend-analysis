@@ -6,12 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
+- `known_changes` in settings: what history can't show (a new project's API key, a retired tool) by month, team and product, added to the forecast and named in its notes.
+- `report` on a month that has ended says how its forecast did against doing nothing, calling it last month's total; a forecast that loses is the sign to change the method.
 - Usage beside spend. The claude.ai spend export's usage columns (requests, and tokens by kind, for every person, product and model, within seats too) are read into `out/<month>/usage.csv`, summarized by `report`, and shown on a new Usage tab: how many seat holders used Claude, how concentrated use is, and use by team, product and model beside extra usage. Use is counted in fresh tokens, leaving out cache reads, which are most of every prompt. The team view folds products and models fewer than 3 people used, and each Other holds at least 3 people; the person view lists everyone.
 - `scripts/seat_rows.py` builds the Seats tab's rows in one pass, from Ramp's people list, the default seats and the member lists Claude reads in Chrome, as ready-to-write batches of 50. With `--existing` it adds only people new to Ramp.
 - `save --remove-original` deletes the downloaded file once it's saved, so a claude.ai export doesn't sit in Downloads.
 
 ### Changed
 
+- Next month's API forecast is last complete month's spend on current keys, not the 3-month average. On airCFO's twelve months of Ramp history it missed by 27% on average against 43%: API spend moves in steps an average lags. Spend no current key carries is left out, since a deleted key doesn't spend again.
 - `roster_to_people.py` reads the Seats tab as ArtifactData saves it, one file per person, so no converter is needed.
 - `save` refuses a claude.ai export whose file name says it covers other days than `--start` and `--end`.
 - `init` on a folder already in use says what it holds, its saved downloads and published dashboard included, and that nothing was changed.

@@ -1,19 +1,25 @@
 """Where spending is heading: next month's forecast, and a backtest that scores it.
 
-Next month = seats x price + each team's average monthly usage over the last three
-complete months, or over as many of them as have data. Each usage product is averaged
-over the months that have a whole month of it, so a source that started recently
-isn't diluted by months it wasn't saved for.
+Next month = seats x price + extra usage + API + the operator's known changes.
+
+- Extra usage is each team's average over the last three complete months, or over as many
+  as have a whole month of it, so a source that started recently isn't diluted.
+- API is the last complete month's spend on current keys. On airCFO's twelve months of
+  Ramp history, last month's API spend missed the next by 27% on average, against 43% for
+  the three-month average: API spend moves in steps (a key starts, a project ends), and an
+  average lags every step. Spend no current key carries is left out, because a deleted key
+  doesn't spend again.
+- Known changes, from settings, add what history can't show, like a new project's key.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
-from aicfo_spend.assign import seat_rows
+from aicfo_spend.assign import REASON_NOT_TIED_TO_A_KEY, seat_rows
 from aicfo_spend.months import Month
 from aicfo_spend.report import (
     PRODUCT_HEADINGS,
@@ -29,11 +35,13 @@ from aicfo_spend.report import (
     total,
     totals_by,
 )
-from aicfo_spend.settings import Settings
+from aicfo_spend.settings import KnownChange, Settings
 from aicfo_spend.sources.people import read_people_file
 from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCTS
 
 HISTORY_MONTHS = 3
+# The API forecast is the newest complete month alone; see the module's note.
+API_HISTORY_MONTHS = 1
 USAGE_PRODUCTS = (PRODUCT_EXTRA_USAGE, PRODUCT_API)
 CENT = Decimal("0.01")
 
@@ -46,6 +54,17 @@ class Forecast:
     # The complete months each usage product was averaged over, oldest first.
     history: dict[str, list[Month]]
     notes: list[str]
+    # The known changes added, each with the team it was added to, kept apart from the notes so a
+    # shared view can say them without the operator's own words or an unfolded team.
+    known_changes: list[tuple[str, KnownChange]] = field(default_factory=list)
+
+
+def known_change_note(team: str, change: KnownChange, with_note: bool = True) -> str:
+    sign = "+" if change.amount_usd >= 0 else "-"
+    return (
+        f"includes a known change: {sign}{dollars(abs(change.amount_usd))} of {change.product} for {team}"
+        + (f" ({change.note})" if change.note and with_note else "")
+    )
 
 
 def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast:
@@ -66,27 +85,32 @@ def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast
     history: dict[str, list[Month]] = {}
     for product in USAGE_PRODUCTS:
         months = sorted(month for month in candidates if _has_whole_month(spends[month], product))
+        if product == PRODUCT_API:
+            months = months[-API_HISTORY_MONTHS:]
         history[product] = months
         if not months:
             notes.append(f"no complete month of {product} is saved before {as_of}, so it's forecast at $0")
             continue
-        if product == PRODUCT_API:
-            unknown = [month.label for month in months if spends[month].untied_unknown]
-            if unknown:
-                notes.append(
-                    f"{', '.join(unknown)} had no Ramp provider totals saved, so the API average leaves out "
-                    "spend not tied to a current key in those months"
-                )
         for month in months:
-            product_rows = (row for row in spends[month].rows if row.product == product)
+            product_rows = (
+                row for row in spends[month].rows
+                if row.product == product and row.reason != REASON_NOT_TIED_TO_A_KEY
+            )
             for team, amounts in totals_by(product_rows, lambda row: row.team).items():
                 name = spellings.setdefault(team.casefold(), team)
                 team_amounts = by_team.setdefault(name, {product_name: ZERO for product_name in PRODUCTS})
                 team_amounts[product] += amounts[product] / len(months)
+    applied: list[tuple[str, KnownChange]] = []
+    for change in settings.known_changes:
+        if change.month != target:
+            continue
+        name = spellings.setdefault(change.team.casefold(), change.team)
+        by_team.setdefault(name, {product_name: ZERO for product_name in PRODUCTS})[change.product] += change.amount_usd
+        applied.append((name, change))
     # Rounded to cents per team, so the rows people see add up to the total they see.
     rounded = {team: {product: amount.quantize(CENT, ROUND_HALF_UP) for product, amount in amounts.items()}
                for team, amounts in by_team.items()}
-    return Forecast(target, as_of, rounded, history, notes)
+    return Forecast(target, as_of, rounded, history, notes, applied)
 
 
 def describe_forecast(forecast: Forecast) -> str:
@@ -97,9 +121,13 @@ def describe_forecast(forecast: Forecast) -> str:
         months = forecast.history[product]
         if months:
             span = months[0].label if len(months) == 1 else f"{months[0].label} to {months[-1].label}"
-            lines.append(f"{PRODUCT_HEADINGS[product]}: each team's average over {span} ({_months(len(months))}).")
-    if forecast.notes:
-        lines += ["", "Notes:", *(f"  - {note}" for note in forecast.notes)]
+            if product == PRODUCT_API:
+                lines.append(f"{PRODUCT_HEADINGS[product]}: each team's spend on current keys in {span}.")
+            else:
+                lines.append(f"{PRODUCT_HEADINGS[product]}: each team's average over {span} ({_months(len(months))}).")
+    notes = [*forecast.notes, *(known_change_note(team, change) for team, change in forecast.known_changes)]
+    if notes:
+        lines += ["", "Notes:", *(f"  - {note}" for note in notes)]
     return "\n".join(lines)
 
 
@@ -129,7 +157,7 @@ def describe_score(forecast: Forecast, actual: MonthSpend) -> str:
     ]
     for product in USAGE_PRODUCTS:
         used = len(forecast.history[product])
-        if used < HISTORY_MONTHS:
+        if used < (API_HISTORY_MONTHS if product == PRODUCT_API else HISTORY_MONTHS):
             notes.append(f"{product} was averaged over {_months(used)} of history, not {HISTORY_MONTHS}; the score is a thin read")
         covered = actual.coverage.get(product)
         if covered is None:

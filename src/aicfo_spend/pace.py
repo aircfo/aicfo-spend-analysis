@@ -24,7 +24,7 @@ from aicfo_spend.errors import InputError
 from aicfo_spend.forecast import USAGE_PRODUCTS, forecast_after
 from aicfo_spend.months import Month
 from aicfo_spend.raw_store import saved_files
-from aicfo_spend.report import ZERO, aligned, dollars, month_directory, total, untied_so_far
+from aicfo_spend.report import ZERO, MonthSpend, aligned, build_month, dollars, month_directory, total, untied_so_far
 from aicfo_spend.settings import AlertThresholds, Settings
 from aicfo_spend.sources.people import read_people_file
 from aicfo_spend.spend_table import UNASSIGNED
@@ -299,3 +299,54 @@ def _read_plan(path: Path) -> Plan:
 
 def _cents(amounts: dict[str, Decimal]) -> dict[str, Decimal]:
     return {team: amount.quantize(CENT, ROUND_HALF_UP) for team, amount in amounts.items()}
+
+
+def describe_forecast_check(workspace: Path, settings: Settings, actual: MonthSpend) -> str | None:
+    """For a month that has ended: how far its forecast was from what happened, beside how far
+    doing nothing (calling it last month's total) would have been. None without a last month to
+    compare with, since then neither has a footing.
+
+    The forecast is the plan saved at the month's start when there is one, else a replay of it
+    with today's downloads, which says so because downloads may have been revised since.
+    """
+    previous = build_month(workspace, actual.month.previous_month(), settings)
+    if not previous.coverage:
+        return None
+    # A month saved only in part reads as a big miss that says nothing about the method.
+    partial = [
+        f"{product} for {spend.month.label} is saved only through {end}"
+        for spend in (actual, previous)
+        for product, (_, end) in sorted(spend.coverage.items())
+        if end < spend.month.last_day
+    ]
+    if partial:
+        return (
+            f"How the forecast did for {actual.month.label}: not scored, because {'; '.join(partial)}. "
+            "Save those months whole to score it."
+        )
+    path = workspace / "out" / actual.month.label / PLAN_FILE_NAME
+    if path.exists():
+        plan = _read_plan(path)
+        forecast_total, source = plan.total, f"the plan saved on {plan.saved_on}"
+    else:
+        replay = forecast_after(workspace, settings, previous.month.last_day)
+        forecast_total = sum((total(amounts) for amounts in replay.by_team.values()), ZERO)
+        source = "replayed with today's downloads, as no plan was saved"
+    actual_total = sum((row.amount_usd for row in actual.rows), ZERO)
+    naive_total = sum((row.amount_usd for row in previous.rows), ZERO)
+    if not actual_total:
+        return None
+    forecast_miss = abs(forecast_total - actual_total) / actual_total
+    naive_miss = abs(naive_total - actual_total) / actual_total
+    if abs(forecast_total - naive_total) < 1:
+        verdict = "The forecast was the same as doing nothing, as it is while only one month of history is saved."
+    elif forecast_miss < naive_miss:
+        verdict = "The forecast did better than doing nothing."
+    else:
+        verdict = "Doing nothing did better, so the forecast method needs a look."
+    return "\n".join([
+        f"How the forecast did for {actual.month.label}:",
+        f"  forecast {dollars(forecast_total)} ({source}); actual {dollars(actual_total)}, off by {forecast_miss:.0%}",
+        f"  doing nothing, calling it {previous.month.label}'s {dollars(naive_total)}, would have been off by {naive_miss:.0%}",
+        f"  {verdict}",
+    ])

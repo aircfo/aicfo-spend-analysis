@@ -10,8 +10,9 @@ from aicfo_spend.cli import main
 from aicfo_spend.daily import daily_usage
 from aicfo_spend.errors import InputError
 from aicfo_spend.months import Month
-from aicfo_spend.pace import pace_of
+from aicfo_spend.pace import describe_forecast_check, pace_of
 from aicfo_spend.raw_store import RAMP_API_KEYS, RAMP_PROVIDER_TOTALS, save_raw
+from aicfo_spend.report import build_month
 from aicfo_spend.settings import load_settings
 from aicfo_spend.spend_table import PRODUCT_API, UNASSIGNED
 from tests.factories import ramp_key, ramp_keys_answer, ramp_totals_answer
@@ -237,3 +238,59 @@ def test_saved_on_is_today_not_the_month(tmp_path: Path) -> None:
     pace = pace_of(folder, load_settings(folder), OCTOBER, date(2026, 10, 4))
 
     assert pace.plan is not None and pace.plan.saved_on == date(2026, 10, 4)
+
+
+def test_a_closed_month_says_how_the_forecast_did_against_doing_nothing(tmp_path: Path) -> None:
+    """August's API was $150 and September's $300: the replayed forecast (seats and August's API)
+    and doing nothing (August's total) both used August, so they match."""
+    folder = new_workspace(tmp_path)
+    save_month(folder, Month(2026, 8), backend_cents=15000)
+    save_month(folder, SEPTEMBER, backend_cents=30000)
+    settings = load_settings(folder)
+
+    check = describe_forecast_check(folder, settings, build_month(folder, SEPTEMBER, settings))
+
+    assert check is not None
+    lines = check.splitlines()
+    assert lines[1].startswith("  forecast $225.00 (replayed with today's downloads, as no plan was saved); actual $375.00, off by 40%")
+    assert lines[2] == "  doing nothing, calling it 2026-08's $225.00, would have been off by 40%"
+    assert "same as doing nothing" in lines[3]
+
+
+def test_the_check_uses_the_plan_saved_at_the_months_start(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, Month(2026, 8), backend_cents=15000)
+    save_month(folder, SEPTEMBER, backend_cents=30000)
+    plan = folder / "out/2026-09/plan.json"
+    plan.parent.mkdir(parents=True)
+    plan.write_text(json.dumps({"month": "2026-09", "made_as_of": "2026-08-31", "saved_on": "2026-09-01",
+                                "total_usd": "350.00", "by_team": {}}), encoding="utf-8")
+    settings = load_settings(folder)
+
+    check = describe_forecast_check(folder, settings, build_month(folder, SEPTEMBER, settings))
+
+    assert check is not None
+    assert "forecast $350.00 (the plan saved on 2026-09-01); actual $375.00, off by 7%" in check
+    assert "The forecast did better than doing nothing." in check
+
+
+def test_no_check_without_a_last_month_to_compare_with(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, SEPTEMBER, backend_cents=30000)
+    settings = load_settings(folder)
+
+    assert describe_forecast_check(folder, settings, build_month(folder, SEPTEMBER, settings)) is None
+
+
+def test_a_month_saved_only_in_part_isnt_scored(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, Month(2026, 8), backend_cents=15000)
+    keys = ramp_keys_answer(ramp_key("backend", 5000, "sam.cho@example.com"))
+    save_raw(folder, RAMP_API_KEYS, SEPTEMBER.first_day, date(2026, 9, 10), keys, saved_at=SAVED_AT)
+    save_raw(folder, RAMP_PROVIDER_TOTALS, SEPTEMBER.first_day, date(2026, 9, 10), ramp_totals_answer(ANTHROPIC="50"), saved_at=SAVED_AT)
+    settings = load_settings(folder)
+
+    check = describe_forecast_check(folder, settings, build_month(folder, SEPTEMBER, settings))
+
+    assert check == ("How the forecast did for 2026-09: not scored, because api for 2026-09 is saved only through "
+                     "2026-09-10. Save those months whole to score it.")
