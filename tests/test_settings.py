@@ -43,6 +43,12 @@ def test_keeps_default_alert_numbers_the_file_leaves_out() -> None:
     assert alerts.over_pace_percent == AlertThresholds().over_pace_percent
 
 
+def test_matches_cost_categories_to_key_names_whatever_their_case() -> None:
+    settings = parse_settings({"api_cost_categories": {" Checkout-Bot ": " Cost of revenue "}})
+
+    assert settings.api_cost_categories == {"checkout-bot": "Cost of revenue"}
+
+
 @pytest.mark.parametrize(
     ("raw", "message"),
     [
@@ -78,6 +84,8 @@ def test_keeps_default_alert_numbers_the_file_leaves_out() -> None:
             {"known_changes": [{"month": "2026-11", "team": "Eng", "product": "api", "amount_usd": "300"}]},
             "known_changes item 1.amount_usd must be a dollar amount",
         ),
+        ({"api_cost_categories": ["R&D"]}, "api_cost_categories must be a JSON object"),
+        ({"api_cost_categories": {"checkout-bot": 1}}, "api_cost_categories.checkout-bot must be text in quotes"),
     ],
 )
 def test_rejects_settings_with_a_message_that_says_what_to_fix(raw: object, message: str) -> None:

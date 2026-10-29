@@ -28,6 +28,7 @@ from aicfo_spend.report import (
     ZERO,
     Amounts,
     MonthSpend,
+    api_by_cost_category,
     build_month,
     change_notes,
     team_order,
@@ -169,6 +170,10 @@ def _spend_section(spend: MonthSpend, rows: list[SpendRow], show_people: bool) -
         "by_vendor": _table("vendor", by_vendor, sorted(by_vendor, key=lambda vendor: -total(by_vendor[vendor]))),
         "unassigned_by_reason": [
             {"reason": reason, "total_cents": cents(amount)} for reason, amount in sorted(unassigned.items())
+        ],
+        # What API spend was for. A category names no one, so the team view shows it too.
+        "api_by_cost_category": [
+            {"category": category, "total_cents": cents(amount)} for category, amount in api_by_cost_category(rows)
         ],
     }
     if show_people:

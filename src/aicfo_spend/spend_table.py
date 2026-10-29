@@ -27,6 +27,7 @@ COLUMNS = (
     "model",
     "amount_usd",
     "source_file",
+    "cost_category",
 )
 
 
@@ -45,6 +46,8 @@ class SpendRow:
     reason: str = ""
     api_key: str = ""
     model: str = ""
+    # For API rows: what the key's spend is for, from its Ramp tag or the settings.
+    cost_category: str = ""
 
 
 def write_spend_csv(rows: list[SpendRow], path: Path) -> None:
@@ -67,5 +70,6 @@ def write_spend_csv(rows: list[SpendRow], path: Path) -> None:
                     # Exact, not rounded to cents, so the file adds up to the report's totals.
                     f"{row.amount_usd:f}",
                     row.source_file,
+                    row.cost_category,
                 ]
             )

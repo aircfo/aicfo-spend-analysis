@@ -186,7 +186,15 @@ Talk to the operator one step at a time; they mostly confirm.
      neither Chrome nor a Claude session.
    **The export only reaches back 90 days, so a month that isn't saved within 90 days is
    lost.** Save last month whole and this month so far (step 2 of the refresh).
-7. **First refresh**, then **schedule it**. Run the Daily refresh. Its first run also saves
+7. **What each API key is for.** The report splits API spend by cost category, such as R&D,
+   go-to-market or cost of revenue, which is how a finance team books it. A key with a
+   `Cost category` tag in Ramp uses that tag. For the rest, call `ramp_api_key_spend` for
+   last month through yesterday, propose a category for each key from its name, owner and
+   `Department` tag, and show the operator the list with each key's spend. Write only what
+   they confirm to `api_cost_categories` in settings, key name to category:
+   `{"checkout-bot": "Cost of revenue", "pr-reviewer": "R&D"}`. A key in neither place shows
+   as Uncategorized; offer this step again when the report says so.
+8. **First refresh**, then **schedule it**. Run the Daily refresh. Its first run also saves
    last month whole: Ramp's per-key spend and vendor totals for last month's 1st to its last
    day, so the forecast and the change from last month have something to stand on. The
    first run also creates the page; tell the operator it's private until they share it.
@@ -209,7 +217,7 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
      yesterday. Use page size 100 and no status filter, because a locked key can still have
      spent this month. Write only the keys whose `estimated_cost.value` is above 0, and only
      the fields the engine reads: `name`, `provider`, `owner` (just its `email`), `tags`
-     (just the `Department` one) and `estimated_cost`. Write it as `{"data": [ … ]}` to
+     (just the `Department` and `Cost category` ones) and `estimated_cost`. Write it as `{"data": [ … ]}` to
      `$FOLDER/inbox/ramp-api-keys.json`, then run
      `save ramp-api-keys --start <first> --end <yesterday> --file "$FOLDER/inbox/ramp-api-keys.json"`.
    - **Ramp's total for each vendor:** call `ramp_get_ai_token_spend_aggregates` with

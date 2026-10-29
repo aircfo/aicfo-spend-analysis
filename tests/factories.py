@@ -14,14 +14,18 @@ def ramp_key(
     department: str | None = None,
     provider: str = "ANTHROPIC",
     currency: str = "USD",
+    cost_category: str | None = None,
 ) -> dict[str, object]:
     """cents=None stands for a key Ramp has no cost estimate for."""
+    tags = [{"key": "Department", "value": department}] if department else []
+    if cost_category:
+        tags.append({"key": "Cost category", "value": cost_category})
     return {
         "name": name,
         "external_id": f"apikey_{name}",
         "provider": provider,
         "status": "active",
-        "tags": [{"key": "Department", "value": department}] if department else [],
+        "tags": tags,
         "owner": {"email": owner_email, "first_name": "Test", "last_name": "Owner"} if owner_email else None,
         "estimated_cost": None if cents is None else {"currency": currency, "value": cents},
     }

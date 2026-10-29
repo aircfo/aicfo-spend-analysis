@@ -102,6 +102,8 @@ Two lookups place almost every dollar, and whatever they can't place shows as Un
 
 **Nothing is split.** A shared key belongs to one team, so no row is divided and nothing needs rounding.
 
+**API spend by cost category.** Beside its team, each API key has a cost category: what the spend is for, such as R&D, go-to-market or cost of revenue, which is how a finance team books it. It comes from the key's `Cost category` tag in Ramp, or else from `api_cost_categories` in settings (key name to category, matched whatever the case), or else it's Uncategorized. API spend not tied to a current key has no key to read it from and shows on its own line. The report and the Spend tab give the split; it changes how API spend is classified, never how much it is.
+
 The same table gives both views, by team and by person. In the person view, API spend shows under each key's name with its owner beside it, because one key often serves a whole app.
 
 ## Who uses it
@@ -218,6 +220,7 @@ The test and release workflows need a code owner's approval.
 | People list | Ramp's user list, plus seat type and anyone not in Ramp kept by hand |
 | An API key's team | Its Ramp department tag, else its owner's team |
 | Shared API keys | Each belongs to one team; nothing is split |
+| An API key's cost category | Its Ramp `Cost category` tag, else settings' `api_cost_categories`, else Uncategorized; Claude proposes categories at setup and the operator confirms them (decided 2026-10-29) |
 | Paid seats nobody uses | Unassigned, as the signal to reclaim them; seats bought come from settings |
 | Who sees what | Team and person views; shared outputs show teams, and teams under 3 people fold into "Other" |
 | Checking spend against bills | Not in v1; a person reviews the dashboard, and September must match v0.3.0's numbers |

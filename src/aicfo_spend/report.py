@@ -34,6 +34,9 @@ PRODUCT_HEADINGS = {"seats": "Seats", "extra usage": "Extra usage", "api": "API"
 
 
 Amounts = dict[str, dict[str, Decimal]]  # name -> product -> dollars
+UNCATEGORIZED = "Uncategorized"
+# Spend no current key carries has no key to say what it was for.
+NOT_TIED_TO_A_KEY = "Not tied to a current key"
 
 
 @dataclass(frozen=True)
@@ -58,7 +61,7 @@ def build_month(workspace: Path, month: Month, settings: Settings) -> MonthSpend
     notes.extend(seat_notes)
     coverage: dict[str, tuple[date, date]] = {}
     extra_usage, export = _extra_usage_rows(workspace, month, directory, notes)
-    api, keys = _api_rows(workspace, month, directory, notes)
+    api, keys = _api_rows(workspace, month, directory, notes, settings)
     for product, product_rows, used in ((PRODUCT_EXTRA_USAGE, extra_usage, export), (PRODUCT_API, api, keys)):
         rows.extend(product_rows)
         if used is not None:
@@ -126,10 +129,27 @@ def summarize(spend: MonthSpend, company_name: str = "") -> str:
                 vendors_first = sorted(untied_by_vendor.items(), key=lambda item: -item[1])
                 line += f" ({', '.join(f'{vendor} {dollars(part)}' for vendor, part in vendors_first)}), usually a key deleted or rotated this month"
             lines.append(line)
+    by_category = api_by_cost_category(spend.rows)
+    if by_category:
+        lines += ["", "API by cost category:"]
+        lines += [f"  {category}: {dollars(amount)}" for category, amount in by_category]
+        if any(category == UNCATEGORIZED for category, _ in by_category):
+            lines.append("  (Give a key a category with a \"Cost category\" tag in Ramp, or in settings' api_cost_categories.)")
     if spend.notes:
         lines += ["", "Notes:"]
         lines += [f"  - {note}" for note in spend.notes]
     return "\n".join(lines)
+
+
+def api_by_cost_category(rows: Iterable[SpendRow]) -> list[tuple[str, Decimal]]:
+    """API spend by what it's for, biggest first, with the uncategorized and untied remainders last."""
+    totals: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    for row in rows:
+        if row.product == PRODUCT_API:
+            totals[row.cost_category] += row.amount_usd
+    last = (UNCATEGORIZED, NOT_TIED_TO_A_KEY)
+    named = sorted((item for item in totals.items() if item[0] not in last), key=lambda item: -item[1])
+    return named + [(category, totals[category]) for category in last if category in totals]
 
 
 def _extra_usage_rows(
@@ -168,7 +188,7 @@ def _extra_usage_rows(
 
 
 def _api_rows(
-    workspace: Path, month: Month, directory: Directory, notes: list[str]
+    workspace: Path, month: Month, directory: Directory, notes: list[str], settings: Settings
 ) -> tuple[list[SpendRow], SavedFile | None]:
     files = saved_files(workspace, RAMP_API_KEYS, month)
     saved = fullest_in_month(files, month)
@@ -199,6 +219,8 @@ def _api_rows(
                 team=placement.team,
                 reason=placement.reason,
                 api_key=key.key_name,
+                cost_category=key.cost_category_tag
+                or settings.api_cost_categories.get(key.key_name.strip().lower(), UNCATEGORIZED),
             )
         )
     untied, untied_notes = _untied_rows(workspace, month, saved, keys)
@@ -231,6 +253,7 @@ def _untied_rows(
             source_file=totals.path.relative_to(workspace).as_posix(),
             team=UNASSIGNED,
             reason=REASON_NOT_TIED_TO_A_KEY,
+            cost_category=NOT_TIED_TO_A_KEY,
         )
         for vendor, amount in untied.items()
     ]
