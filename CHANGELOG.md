@@ -2,6 +2,12 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [semantic versioning](https://semver.org/). Each release's wheel is attached to its GitHub Release. The `ai-spend-analysis` skill ships in the same release; a copy of its folder on its own pins that wheel by SHA-256.
 
+## [Unreleased]
+
+### Fixed
+
+- The plugin installs and updates over https. The marketplace file named the repo as a `github` source, which Claude Code clones over SSH, so installing failed on any computer without a GitHub SSH key ("Permission denied (publickey)"). It takes effect as soon as it's on `main`, since installs read the marketplace file from there.
+
 ## [0.3.1] — 2026-10-28
 
 The dashboard refreshed from the owner's review, and the fixes from the first end-to-end run on real data.
