@@ -273,6 +273,12 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    what it was for; never guess a line. Then run `report` for that month again, which says which
    lines tie, within $1 or 0.5%, and which don't, and run `dashboard <month>` again for the month
    being refreshed, so the page shows the check. Lead the summary with any line that doesn't tie.
+   **Then the seat recommendations.** Ask the operator what came of each open one in the
+   last run's list, and record it with `decide <id> done` or `declined` (with `--on` for the
+   day and `--note`). Then run `recommend`. Give its list to the operator in this conversation
+   only: it names people and their use, so it never goes on the page, in a draft for others,
+   or in `summary.txt`, which says only how many are open. Say that an upgrade's saving is
+   at most that much, and that a reclaim saves money only once seats bought goes down.
 4. **Update the page.** Run `python3 "$SKILL/scripts/build_dashboard_page.py" "$FOLDER" <month>`.
    It writes `$FOLDER/out/<month>/dashboard.html`, one page holding the engine's numbers, so
    nothing is retyped, and `aircfo-logo.png` beside it. Publish the page with the Artifact
@@ -329,6 +335,7 @@ re-adds the right organization's Admin key in Ramp.
 - **Visibility is the operator's call**, as Setup step 5 says. Anyone who can open a shared
   output can download its rows, the Seats tab's included.
 - **Drafts only.** Alerts and summaries are written for a person to send.
+- **Seat recommendations are for the operator.** Never put `recommendations.csv` or its names on the page or in anything shared.
 - **Company data stays in `$FOLDER` and the published page.** Never copy it into a repo or anywhere else.
 - **Run only the engine the launcher picks.** Never edit files in `raw/` or `.engine/`.
 
