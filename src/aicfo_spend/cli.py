@@ -281,7 +281,7 @@ def _run_recommend(args: argparse.Namespace) -> int:
     ledger, added = recommendations.add_new(recommendations.read_ledger(workspace), found)
     if added:
         recommendations.write_ledger(workspace, ledger)
-    results = recommendations.outcomes(workspace, ledger, today)
+    results = recommendations.outcomes(workspace, settings, ledger, today)
     print(recommendations.describe(added, ledger, results, notes))
     return 0
 
