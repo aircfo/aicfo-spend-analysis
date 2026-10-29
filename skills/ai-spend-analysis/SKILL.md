@@ -267,7 +267,8 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    new project's API key or a tool being retired, add it to `aicfo-spend.json` as an item of
    `known_changes`: `{"month": "YYYY-MM", "team": "<team>", "product": "api" or "extra usage",
    "amount_usd": <dollars a month, negative for a cut>, "note": "<what it is>"}`, and check it with
-   `settings`. The forecast adds it and says so.
+   `settings`. The forecast adds it and says so. The shared page shows the amount and team but
+   not the note, which stays in the operator's own outputs.
 6. **Show the results.** Give the page's link. If any source is more than 2 days behind
    yesterday, lead with that and how to bring it up to date, as the page's Overview does.
    Then the pace line, then the alerts, then the notes, and finish with the team table from `report`. Present the alerts

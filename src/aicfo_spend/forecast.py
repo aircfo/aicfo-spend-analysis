@@ -14,7 +14,7 @@ Next month = seats x price + extra usage + API + the operator's known changes.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
@@ -35,7 +35,7 @@ from aicfo_spend.report import (
     total,
     totals_by,
 )
-from aicfo_spend.settings import Settings
+from aicfo_spend.settings import KnownChange, Settings
 from aicfo_spend.sources.people import read_people_file
 from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCTS
 
@@ -54,6 +54,17 @@ class Forecast:
     # The complete months each usage product was averaged over, oldest first.
     history: dict[str, list[Month]]
     notes: list[str]
+    # The known changes added, each with the team it was added to, kept apart from the notes so a
+    # shared view can say them without the operator's own words or an unfolded team.
+    known_changes: list[tuple[str, KnownChange]] = field(default_factory=list)
+
+
+def known_change_note(team: str, change: KnownChange, with_note: bool = True) -> str:
+    sign = "+" if change.amount_usd >= 0 else "-"
+    return (
+        f"includes a known change: {sign}{dollars(abs(change.amount_usd))} of {change.product} for {team}"
+        + (f" ({change.note})" if change.note and with_note else "")
+    )
 
 
 def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast:
@@ -89,20 +100,17 @@ def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast
                 name = spellings.setdefault(team.casefold(), team)
                 team_amounts = by_team.setdefault(name, {product_name: ZERO for product_name in PRODUCTS})
                 team_amounts[product] += amounts[product] / len(months)
+    applied: list[tuple[str, KnownChange]] = []
     for change in settings.known_changes:
         if change.month != target:
             continue
         name = spellings.setdefault(change.team.casefold(), change.team)
         by_team.setdefault(name, {product_name: ZERO for product_name in PRODUCTS})[change.product] += change.amount_usd
-        sign = "+" if change.amount_usd >= 0 else "-"
-        notes.append(
-            f"includes a known change: {sign}{dollars(abs(change.amount_usd))} of {change.product} for {name}"
-            + (f" ({change.note})" if change.note else "")
-        )
+        applied.append((name, change))
     # Rounded to cents per team, so the rows people see add up to the total they see.
     rounded = {team: {product: amount.quantize(CENT, ROUND_HALF_UP) for product, amount in amounts.items()}
                for team, amounts in by_team.items()}
-    return Forecast(target, as_of, rounded, history, notes)
+    return Forecast(target, as_of, rounded, history, notes, applied)
 
 
 def describe_forecast(forecast: Forecast) -> str:
@@ -117,8 +125,9 @@ def describe_forecast(forecast: Forecast) -> str:
                 lines.append(f"{PRODUCT_HEADINGS[product]}: each team's spend on current keys in {span}.")
             else:
                 lines.append(f"{PRODUCT_HEADINGS[product]}: each team's average over {span} ({_months(len(months))}).")
-    if forecast.notes:
-        lines += ["", "Notes:", *(f"  - {note}" for note in forecast.notes)]
+    notes = [*forecast.notes, *(known_change_note(team, change) for team, change in forecast.known_changes)]
+    if notes:
+        lines += ["", "Notes:", *(f"  - {note}" for note in notes)]
     return "\n".join(lines)
 
 

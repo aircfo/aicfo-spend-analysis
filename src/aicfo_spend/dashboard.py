@@ -21,7 +21,7 @@ from pathlib import Path
 
 from aicfo_spend import __version__
 from aicfo_spend.errors import InputError
-from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after
+from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after, known_change_note
 from aicfo_spend.months import Month
 from aicfo_spend.pace import Pace, pace_of
 from aicfo_spend.report import (
@@ -81,7 +81,13 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
     else:
         notes.append(f"no usage is saved for {previous.month.label}, so there's no change from last month to show")
     # The same gap can surface in the month, its pace and the forecast; say it once.
-    notes = list(dict.fromkeys([*notes, *pace.notes, *forecast.notes]))
+    # A known change's note is the operator's own words and its team may be one that folds, so
+    # the team view says only the folded team and the amount.
+    change_notes = [
+        known_change_note(team, change) if show_people else known_change_note(team_name(team), change, with_note=False)
+        for team, change in forecast.known_changes
+    ]
+    notes = list(dict.fromkeys([*notes, *pace.notes, *forecast.notes, *change_notes]))
 
     return {
         "about": {
