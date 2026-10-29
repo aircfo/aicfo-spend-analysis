@@ -130,6 +130,16 @@ main { padding-block: 24px 48px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
 .panel-note { color: var(--muted); font-size: 13px; }
+.levers { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px 24px; margin-bottom: 20px; }
+.lever { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; }
+.lever .figure-label { grid-column: 1 / -1; }
+.lever input[type="range"] { width: 100%; accent-color: var(--accent); }
+.lever output { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 4.5ch; text-align: right; }
+.lever-number, .hires-input { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-variant-numeric: tabular-nums; }
+.lever-number { grid-column: 1 / -1; width: 100%; }
+.hires-input { width: 72px; text-align: right; }
+.scenario-figures { margin-bottom: 16px; }
+.scenario-actions { margin-top: 10px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
 .empty { color: var(--ink-2); }
 .link-button { appearance: none; background: none; border: none; padding: 0; font: inherit; font-size: 14px; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
@@ -502,6 +512,47 @@ details[open] > summary { margin-bottom: 10px; }
         <div class="table-wrap"><table id="forecast-table"></table></div>
         <ul class="notes" id="forecast-notes"></ul>
       </section>
+
+      <section class="panel" aria-labelledby="scenario-heading" id="scenario-panel">
+        <div class="panel-head">
+          <h2 id="scenario-heading">Try a scenario for <span id="scenario-month"></span></h2>
+          <p class="panel-note">Only on your screen: nothing here is saved or changes the forecast</p>
+        </div>
+        <div class="levers">
+          <label class="lever" id="lever-premium-wrap" hidden>
+            <span class="figure-label">New hires on Premium</span>
+            <input type="range" id="lever-premium" min="0" max="100" step="5" value="0">
+            <output id="lever-premium-out" for="lever-premium"></output>
+          </label>
+          <label class="lever">
+            <span class="figure-label">Extra usage</span>
+            <input type="range" id="lever-extra" min="-50" max="100" step="5" value="0">
+            <output id="lever-extra-out" for="lever-extra"></output>
+          </label>
+          <label class="lever">
+            <span class="figure-label">API on current keys</span>
+            <input type="range" id="lever-api" min="-50" max="200" step="5" value="0">
+            <output id="lever-api-out" for="lever-api"></output>
+          </label>
+          <label class="lever">
+            <span class="figure-label">New API spend, $ a month</span>
+            <input type="number" id="lever-api-add" class="lever-number" min="0" step="50" value="0" inputmode="decimal">
+          </label>
+          <label class="lever">
+            <span class="figure-label">Seat prices</span>
+            <input type="range" id="lever-price" min="-30" max="30" step="5" value="0">
+            <output id="lever-price-out" for="lever-price"></output>
+          </label>
+        </div>
+        <div class="figures scenario-figures">
+          <div><div class="figure-label">Forecast</div><div class="figure-value" id="scenario-forecast"></div></div>
+          <div><div class="figure-label">Scenario</div><div class="figure-value" id="scenario-total"></div></div>
+          <div><div class="figure-label">Change</div><div class="figure-value" id="scenario-change"></div></div>
+        </div>
+        <div class="table-wrap"><table id="scenario-table"></table></div>
+        <div class="scenario-actions"><button type="button" class="link-button" id="scenario-reset">Reset the scenario</button></div>
+        <ul class="notes" id="scenario-notes"></ul>
+      </section>
     </section>
 
     <section class="tabpanel" role="tabpanel" id="people" aria-labelledby="tab-people" hidden>
@@ -662,6 +713,126 @@ details[open] > summary { margin-bottom: 10px; }
     if (bill.ties) return "✓ Ties";
     const gap = bill.counted_cents - bill.billed_cents;
     return "✕ Off by " + money(Math.abs(gap)) + (gap < 0 ? ", counted less" : ", counted more");
+  }
+
+  function scenario(forecast, seatTypes) {
+    text(byId("scenario-month"), monthName(forecast.month));
+    const claudeSeats = seatTypes.anthropic || [];
+    const seatOf = (type) => claudeSeats.find((seat) => seat.seat_type === type);
+    const standard = seatOf("standard") || claudeSeats[0];
+    const premium = seatOf("premium");
+    if (!standard) {
+      byId("scenario-panel").hidden = true;
+      return;
+    }
+    byId("lever-premium-wrap").hidden = !premium || premium === standard;
+    const holders = forecast.seat_holders || {};
+    const teams = forecast.by_team.filter((row) => row.team !== UNASSIGNED);
+    const unassigned = forecast.by_team.find((row) => row.team === UNASSIGNED);
+    const totalHolders = teams.reduce((sum, row) => sum + (holders[row.team] || 0), 0);
+    const totalExtra = teams.reduce((sum, row) => sum + row.extra_usage_cents, 0);
+    const companyPerSeat = totalHolders ? totalExtra / totalHolders : 0;
+    const hires = new Map(teams.map((row) => [row.team, 0]));
+
+    const levers = ["premium", "extra", "api", "price"].map((name) => byId("lever-" + name));
+    const apiAdd = byId("lever-api-add");
+    const signed = (value) => (value > 0 ? "+" : "") + value + "%";
+
+    function wholeNumber(value, most) {
+      const number = Math.floor(Number(value));
+      return Number.isFinite(number) ? Math.min(Math.max(number, 0), most) : 0;
+    }
+
+    function update() {
+      const premiumShare = byId("lever-premium-wrap").hidden ? 0 : Number(byId("lever-premium").value) / 100;
+      const extraFactor = 1 + Number(byId("lever-extra").value) / 100;
+      const apiFactor = 1 + Number(byId("lever-api").value) / 100;
+      const priceFactor = 1 + Number(byId("lever-price").value) / 100;
+      const addedApi = wholeNumber(apiAdd.value, 1e7) * 100;
+      text(byId("lever-premium-out"), Math.round(premiumShare * 100) + "%");
+      text(byId("lever-extra-out"), signed(Number(byId("lever-extra").value)));
+      text(byId("lever-api-out"), signed(Number(byId("lever-api").value)));
+      text(byId("lever-price-out"), signed(Number(byId("lever-price").value)));
+
+      // A new hire fills an empty seat of their type before the company buys another.
+      const newHires = [...hires.values()].reduce((sum, count) => sum + count, 0);
+      const free = (seat) => seat ? Math.max(seat.bought - seat.held, 0) : 0;
+      const filled = premium && premium !== standard
+        ? Math.min(newHires * (1 - premiumShare), free(standard)) * standard.price_cents + Math.min(newHires * premiumShare, free(premium)) * premium.price_cents
+        : Math.min(newHires, free(standard)) * standard.price_cents;
+      const hirePrice = premium && premium !== standard
+        ? (1 - premiumShare) * standard.price_cents + premiumShare * premium.price_cents
+        : standard.price_cents;
+
+      const rows = teams.map((row) => {
+        const count = hires.get(row.team);
+        const perSeat = holders[row.team] ? row.extra_usage_cents / holders[row.team] : companyPerSeat;
+        const played = (row.seats_cents + count * hirePrice) * priceFactor
+          + (row.extra_usage_cents + count * perSeat) * extraFactor + row.api_cents * apiFactor;
+        return { team: row.team, hires: count, forecast: row.total_cents, scenario: Math.round(played) };
+      });
+      if (unassigned) {
+        const played = (unassigned.seats_cents - filled) * priceFactor + unassigned.extra_usage_cents * extraFactor + unassigned.api_cents * apiFactor;
+        rows.push({ team: UNASSIGNED, hires: null, forecast: unassigned.total_cents, scenario: Math.round(played) });
+      }
+      if (addedApi) rows.push({ team: "New API spend", hires: null, forecast: 0, scenario: addedApi });
+      const scenarioTotal = rows.reduce((sum, row) => sum + row.scenario, 0);
+      text(byId("scenario-forecast"), money(forecast.total_cents));
+      text(byId("scenario-total"), money(scenarioTotal));
+      text(byId("scenario-change"), change(forecast.total_cents, scenarioTotal));
+      drawRows(rows, scenarioTotal);
+    }
+
+    function drawRows(rows, scenarioTotal) {
+      const el = byId("scenario-table");
+      const focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.team : null;
+      el.replaceChildren();
+      const head = el.createTHead().insertRow();
+      ["Team", "New hires", "Forecast", "Scenario", "Change"].forEach((heading) => head.appendChild(make("th", "", heading)));
+      const body = el.createTBody();
+      rows.forEach((row) => {
+        const tr = body.insertRow();
+        if (row.team === UNASSIGNED) tr.className = "unassigned";
+        tr.appendChild(make("td", "", row.team));
+        const cell = make("td", "");
+        if (row.hires !== null) {
+          const input = make("input", "hires-input");
+          Object.assign(input, { type: "number", min: "0", max: "500", step: "1", value: String(row.hires), inputMode: "numeric" });
+          input.dataset.team = row.team;
+          input.setAttribute("aria-label", "New hires in " + row.team);
+          input.addEventListener("input", () => {
+            hires.set(row.team, wholeNumber(input.value, 500));
+            update();
+          });
+          cell.appendChild(input);
+        }
+        tr.appendChild(cell);
+        [money(row.forecast), money(row.scenario), change(row.forecast, row.scenario)].forEach((value) => tr.appendChild(make("td", "", value)));
+      });
+      const total = body.insertRow();
+      total.className = "total";
+      ["Total", "", money(forecast.total_cents), money(scenarioTotal), change(forecast.total_cents, scenarioTotal)]
+        .forEach((value) => total.appendChild(make("td", "", value)));
+      // Redrawing replaces the inputs, so put the cursor back where the viewer was typing.
+      if (focused) {
+        const again = el.querySelector('input[data-team="' + CSS.escape(focused) + '"]');
+        if (again) { again.focus(); const end = again.value.length; try { again.setSelectionRange(end, end); } catch (error) { /* number inputs have no selection */ } }
+      }
+    }
+
+    levers.forEach((lever) => lever.addEventListener("input", update));
+    apiAdd.addEventListener("input", update);
+    byId("scenario-reset").addEventListener("click", () => {
+      levers.forEach((lever) => { lever.value = "0"; });
+      apiAdd.value = "0";
+      hires.forEach((_, team) => hires.set(team, 0));
+      update();
+    });
+
+    const notes = byId("scenario-notes");
+    notes.appendChild(make("li", "", "A new hire gets a Claude seat at its price (on Premium for the share set above) and uses as much extra usage as the average seat holder on their team does now. They fill empty seats first, which are already paid for."));
+    notes.appendChild(make("li", "", "Extra usage and API scale the forecast's numbers; new API spend is a project's key that isn't running yet. Seat prices change every seat, as at a renewal."));
+    update();
   }
 
   function table(el, headings, rows, options) {
@@ -1083,6 +1254,9 @@ details[open] > summary { margin-bottom: 10px; }
     ", plus the last 14 days' average daily usage for each day left. Seats are a flat fee, so they aren't projected."));
   forecastNotes.appendChild(make("li", "", monthName(forecast.month) + ": seats at their price, extra usage at each team's average over the last 3 complete months" +
     (spans.length ? " (" + spans.join(", ") + " so far)" : "") + ", and API at last month's spend on current keys, plus any known changes in the notes."));
+
+  // Forecast: a scenario played on top of next month's forecast, on this screen only
+  scenario(forecast, data.seat_types || {});
 
   // Usage: who uses Claude and how much, from the claude.ai spend export
   const usage = data.usage;

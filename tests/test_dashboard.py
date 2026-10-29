@@ -109,10 +109,18 @@ def test_the_team_view_shows_no_person_and_no_key_name(workspace: Path) -> None:
     assert "by_person" not in section(dashboard, "spend")
 
 
-def test_the_seat_types_settings_price_are_listed_for_the_seats_roster(workspace: Path) -> None:
+def test_the_seat_types_settings_price_are_listed_with_how_many_are_held(workspace: Path) -> None:
     dashboard = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
 
-    assert dashboard["seat_types"] == {"anthropic": [{"seat_type": "standard", "bought": len(TEAMS) + 1}]}
+    assert dashboard["seat_types"] == {
+        "anthropic": [{"seat_type": "standard", "bought": len(TEAMS) + 1, "held": len(TEAMS), "price_cents": 2500}]
+    }
+
+
+def test_the_forecast_counts_each_teams_claude_seat_holders_for_the_scenario(workspace: Path) -> None:
+    dashboard = build_dashboard(workspace, load_settings(workspace), SEPTEMBER, EARLY_OCTOBER)
+
+    assert section(dashboard, "forecast")["seat_holders"] == {"Engineering": 3, "Other (small teams)": 3}
 
 
 def test_emails_in_a_note_are_replaced() -> None:
