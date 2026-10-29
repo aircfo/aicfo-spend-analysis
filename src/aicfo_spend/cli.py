@@ -19,6 +19,7 @@ from aicfo_spend.raw_store import SOURCES, save_raw
 from aicfo_spend.report import build_month, describe_change, summarize
 from aicfo_spend.settings import SETTINGS_FILE_NAME, Settings, load_settings
 from aicfo_spend.spend_table import write_spend_csv
+from aicfo_spend.usage import USAGE_FILE_NAME, build_usage, summarize_usage, write_usage_csv
 from aicfo_spend.workspace import create_workspace
 
 
@@ -189,7 +190,13 @@ def _run_report(args: argparse.Namespace) -> int:
         print("\n" + describe_change(spend, previous, show_people=settings.visibility == "person"))
     except UserError as error:
         print(f"\nChange from last month isn't available: {error}")
-    print(f"\nWrote {output.relative_to(workspace)} ({len(spend.rows)} rows)")
+    usage = build_usage(workspace, month)
+    print("\n" + summarize_usage(usage))
+    usage_output = output.with_name(USAGE_FILE_NAME)
+    if usage.covers is not None:
+        write_usage_csv(usage, usage_output)
+    print(f"\nWrote {output.relative_to(workspace)} ({len(spend.rows)} rows)"
+          + (f" and {usage_output.relative_to(workspace)} ({len(usage.rows)} rows)" if usage.covers else ""))
     return 0
 
 

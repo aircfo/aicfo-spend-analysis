@@ -37,9 +37,12 @@ from aicfo_spend.report import (
 )
 from aicfo_spend.settings import Settings
 from aicfo_spend.spend_table import PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
+from aicfo_spend.usage import MonthUsage, Totals, active_seat_holders, build_usage, top_share, totals_by as usage_totals_by
 
 DASHBOARD_FILE_NAME = "dashboard.json"
 OTHER_SMALL_TEAMS = "Other (small teams)"
+# A product only a person or two used would point at them, so the team view folds it too.
+OTHER_PRODUCTS = "Other products"
 MIN_PEOPLE_PER_TEAM = 3
 EMAIL = re.compile(r"[^\s@,;:()]+@[^\s@,;:()]+\.[A-Za-z]+")
 
@@ -87,6 +90,7 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
         "alerts": pace.alerts,
         "notes": notes if show_people else [without_emails(note) for note in notes],
         "seat_types": _seat_types(settings),
+        "usage": _usage_section(build_usage(workspace, month), team_name, show_people),
     }
 
 
@@ -231,6 +235,58 @@ def _forecast_section(forecast: Forecast, team_name: Callable[[str], str]) -> Js
         "by_team": _table("team", by_team, team_order(by_team)),
         "averaged_over": {product: [month.label for month in forecast.history[product]] for product in USAGE_PRODUCTS},
     }
+
+
+def _usage_section(usage: MonthUsage, team_name: Callable[[str], str], show_people: bool) -> Json | None:
+    """Who used Claude and how much: by team, product and model, and by person in the person view."""
+    if usage.covers is None:
+        return None
+    active = active_seat_holders(usage)
+    holders_by_team: dict[str, list[str]] = defaultdict(list)
+    for person, team in usage.seat_holders.items():
+        holders_by_team[team_name(team)].append(person)
+    by_team = usage_totals_by(usage.rows, lambda row: team_name(row.team))
+    teams = sorted({*by_team, *holders_by_team}, key=lambda team: (team == UNASSIGNED, -by_team.get(team, Totals()).fresh_tokens))
+    by_product = usage_totals_by(usage.rows, lambda row: row.product)
+    if not show_people:
+        small = {product for product, totals in by_product.items() if len(totals.people) < MIN_PEOPLE_PER_TEAM}
+        by_product = usage_totals_by(usage.rows, lambda row: OTHER_PRODUCTS if row.product in small else row.product)
+    share = top_share(usage)
+    section: Json = {
+        "covers": {"start": usage.covers[0].isoformat(), "end": usage.covers[1].isoformat()},
+        "seat_holders": len(usage.seat_holders),
+        "active_seat_holders": len(active),
+        "busiest_tenth_share_percent": None if share is None else int((share * 100).quantize(Decimal(1), ROUND_HALF_UP)),
+        "by_team": [
+            {"team": team, "seat_holders": len(holders_by_team.get(team, [])),
+             "active_seat_holders": sum(person in active for person in holders_by_team.get(team, [])),
+             **_usage_cells(by_team.get(team, Totals()))}
+            for team in teams
+        ],
+        "by_product": [
+            {"product": product, "people": len(totals.people), **_usage_cells(totals)}
+            for product, totals in sorted(by_product.items(), key=lambda item: (item[0] == OTHER_PRODUCTS, -item[1].fresh_tokens))
+        ],
+        "by_model": [
+            {"model": model, **_usage_cells(totals)}
+            for model, totals in sorted(usage_totals_by(usage.rows, lambda row: row.model).items(), key=lambda item: -item[1].fresh_tokens)
+        ],
+    }
+    if show_people:
+        by_person = usage_totals_by(usage.rows, lambda row: row.person)
+        # Seat holders who never used Claude are listed too, from the roster.
+        team_of = {row.person: row.team for row in usage.rows} | usage.seat_holders
+        section["by_person"] = [
+            {"person": person, "team": team_name(team_of[person]), "claude_seat_holder": person in usage.seat_holders,
+             **_usage_cells(by_person.get(person, Totals()))}
+            for person in sorted(team_of, key=lambda person: -by_person.get(person, Totals()).fresh_tokens)
+        ]
+    return section
+
+
+def _usage_cells(totals: Totals) -> Json:
+    return {"requests": totals.requests, "fresh_tokens": totals.fresh_tokens,
+            "cache_read_tokens": totals.cache_read_tokens, "extra_usage_cents": cents(totals.extra_usd)}
 
 
 def _seat_types(settings: Settings) -> Json:

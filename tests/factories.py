@@ -64,3 +64,22 @@ def spend_export(*rows: tuple[str, str, str]) -> bytes:
     for email, model, net in rows:
         writer.writerow([email, "", "Chat", model, net, net])
     return buffer.getvalue().encode()
+
+
+USAGE_EXPORT_COLUMNS = [
+    "user_email", "account_uuid", "product", "model", "total_requests", "total_prompt_tokens", "total_completion_tokens",
+    "total_net_spend_usd", "total_gross_spend_usd", "user_id", "total_uncached_input_tokens", "total_cache_read_tokens",
+    "total_cache_write_5m_tokens", "total_cache_write_1h_tokens", "total_web_search_count",
+]
+
+
+def usage_export(*rows: tuple[str, str, int, int, int, int, str]) -> bytes:
+    """Rows of (email, product, requests, uncached input, cache reads, output tokens, net spend in dollars),
+    shaped like the export with usage columns. Prompt tokens are uncached input plus cache reads, as in the real one."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(USAGE_EXPORT_COLUMNS)
+    for email, product, requests, uncached, cache_read, output, net in rows:
+        writer.writerow([email, "", product, "claude-sonnet", requests, uncached + cache_read, output, net, net, "",
+                         uncached, cache_read, 0, 0, 0])
+    return buffer.getvalue().encode()
