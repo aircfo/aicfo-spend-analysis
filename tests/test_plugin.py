@@ -33,9 +33,11 @@ def test_an_install_gets_the_release_of_that_version_not_the_default_branch() ->
     plugin = listed_plugin()
 
     assert plugin["name"] == manifest("plugin.json")["name"]
+    # The full https address, not a "github" source: Claude Code clones those over SSH, which
+    # fails on any computer without a GitHub SSH key.
     assert plugin["source"] == {
-        "source": "github",
-        "repo": "aircfo/aicfo-spend-analysis",
+        "source": "url",
+        "url": "https://github.com/aircfo/aicfo-spend-analysis.git",
         "ref": f"v{aicfo_spend.__version__}",
     }
 
