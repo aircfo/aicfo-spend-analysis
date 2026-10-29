@@ -19,17 +19,20 @@ from pathlib import Path
 
 from aicfo_spend.errors import InputError
 from aicfo_spend.months import Month
-from aicfo_spend.sources.ramp import parse_key_spend, parse_people, parse_provider_totals
+from aicfo_spend.sources.ramp import parse_key_spend, parse_people, parse_provider_totals, parse_vendor_spend
 from aicfo_spend.vendors.anthropic.spend_export import parse_spend_export
 
 RAMP_API_KEYS = "ramp-api-keys"
 RAMP_PROVIDER_TOTALS = "ramp-provider-totals"
 RAMP_PEOPLE = "ramp-people"
+RAMP_VENDOR_SPEND = "ramp-vendor-spend"
 CLAUDE_SPEND_EXPORT = "claude-spend-export"
 
-EXTENSIONS = {RAMP_API_KEYS: "json", RAMP_PROVIDER_TOTALS: "json", RAMP_PEOPLE: "json", CLAUDE_SPEND_EXPORT: "csv"}
+EXTENSIONS = {
+    RAMP_API_KEYS: "json", RAMP_PROVIDER_TOTALS: "json", RAMP_PEOPLE: "json", RAMP_VENDOR_SPEND: "json", CLAUDE_SPEND_EXPORT: "csv",
+}
 SOURCES = tuple(EXTENSIONS)
-MONTH_TO_DATE_SOURCES = (RAMP_API_KEYS, RAMP_PROVIDER_TOTALS, CLAUDE_SPEND_EXPORT)
+MONTH_TO_DATE_SOURCES = (RAMP_API_KEYS, RAMP_PROVIDER_TOTALS, RAMP_VENDOR_SPEND, CLAUDE_SPEND_EXPORT)
 
 SPEND_EXPORT_REQUIRED_COLUMNS = ("user_email", "model", "total_net_spend_usd")
 
@@ -144,6 +147,8 @@ def _check_content(source: str, content: bytes) -> None:
             parse_people(document, label)
         elif source == RAMP_PROVIDER_TOTALS:
             parse_provider_totals(document, label)
+        elif source == RAMP_VENDOR_SPEND:
+            parse_vendor_spend(document, label)
         else:
             parse_key_spend(document, label)
         return

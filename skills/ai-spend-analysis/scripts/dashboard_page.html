@@ -411,6 +411,14 @@ details[open] > summary { margin-bottom: 10px; }
         <div class="bars" id="category-bars"></div>
       </section>
 
+      <section class="panel" aria-labelledby="other-ai-heading" id="other-ai-panel" hidden>
+        <div class="panel-head">
+          <h2 id="other-ai-heading">Other AI tools</h2>
+          <p class="panel-note" id="other-ai-note"></p>
+        </div>
+        <div class="bars" id="other-ai-bars"></div>
+      </section>
+
       <section class="panel" aria-labelledby="bills-heading" id="bills-panel" hidden>
         <div class="panel-head">
           <h2 id="bills-heading">Against the bills</h2>
@@ -978,6 +986,20 @@ details[open] > summary { margin-bottom: 10px; }
     const apiTotal = categories.reduce((sum, row) => sum + row.total_cents, 0);
     valueBars(byId("category-bars"), categories, (row) => row.category, (row) => Math.max(row.total_cents, 0),
       (row) => money(row.total_cents) + " · " + percentOf(row.total_cents, apiTotal) + "%");
+  }
+
+  // Spend: other AI tools, paid through Ramp and kept apart from the totals
+  const otherAi = data.other_ai_vendors;
+  if (otherAi) {
+    byId("other-ai-panel").hidden = false;
+    if (otherAi.through) {
+      const otherTotal = otherAi.vendors.reduce((sum, row) => sum + row.total_cents, 0);
+      text(byId("other-ai-note"), money(otherTotal) + " paid through Ramp, through " + dayName(otherAi.through) + ". Not in the totals above");
+      valueBars(byId("other-ai-bars"), otherAi.vendors, (row) => row.vendor, (row) => Math.max(row.total_cents, 0),
+        (row) => money(row.total_cents));
+    } else {
+      text(byId("other-ai-note"), "No spend by vendor is saved from Ramp for this month yet");
+    }
   }
 
   // Spend: against the bills

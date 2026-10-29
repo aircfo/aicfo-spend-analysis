@@ -87,3 +87,15 @@ def usage_export(*rows: tuple[str, str, int, int, int, int, str]) -> bytes:
         writer.writerow([email, "", product, "claude-sonnet", requests, uncached + cache_read, output, net, net, "",
                          uncached, cache_read, 0, 0, 0])
     return buffer.getvalue().encode()
+
+
+def ramp_vendor_spend_answer(*payees: tuple[str | None, str]) -> bytes:
+    """Ramp's spend report grouped by payee, as its reporting tool answers: (payee, dollars) rows."""
+    rows = []
+    for payee, amount in payees:
+        payee_cell = {"cell_type": "PAYEE", "name": payee, "uuid": "00000000-0000-0000-0000-000000000000"} if payee else None
+        rows.append({"cells": [
+            {"cell_data": payee_cell, "column_key": "PAYEE"},
+            {"cell_data": {"cell_type": "AMOUNT", "amount": float(amount), "currency": "USD"}, "column_key": "AMOUNT"},
+        ], "metadata": None})
+    return json.dumps({"response": {"dataset": "spend", "table": {"data": rows, "page": {"next": None}}}}).encode()

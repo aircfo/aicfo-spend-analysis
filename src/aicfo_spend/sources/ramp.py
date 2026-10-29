@@ -121,6 +121,48 @@ def parse_provider_totals(document: object, label: str) -> dict[str, Decimal]:
     return totals
 
 
+def parse_vendor_spend(document: object, label: str) -> dict[str, Decimal]:
+    """What Ramp paid each vendor over the file's dates, keyed by the vendor's name in lower case.
+
+    It takes Ramp's spend report grouped by payee either as Ramp answers it, a "table" whose
+    rows hold a payee cell and an amount cell, or cut down to {"data": [{"payee", "amount"}]}.
+    """
+    response = document.get("response") if isinstance(document, dict) else None
+    table = (response if isinstance(response, dict) else document)
+    table = table.get("table") if isinstance(table, dict) else None
+    spend: dict[str, Decimal] = {}
+    if isinstance(table, dict):
+        for entry in _list(table, "data", label):
+            cells = _object(entry, label).get("cells")
+            payee, amount = "", None
+            for cell in cells if isinstance(cells, list) else []:
+                data = _object(cell, label).get("cell_data")
+                if isinstance(data, dict) and data.get("cell_type") == "PAYEE":
+                    payee = _text(data.get("name"))
+                elif isinstance(data, dict) and data.get("cell_type") == "AMOUNT":
+                    amount = data.get("amount")
+            _add_vendor(spend, payee, amount, label)
+        return spend
+    for entry in _list(document, "data", label):
+        row = _object(entry, label)
+        _add_vendor(spend, _text(row.get("payee")), row.get("amount"), label)
+    return spend
+
+
+def _add_vendor(spend: dict[str, Decimal], payee: str, amount: object, label: str) -> None:
+    # Ramp leaves the payee empty on a few rows, such as fees; they can't be any one vendor.
+    if not payee.strip():
+        return
+    if isinstance(amount, bool) or not isinstance(amount, (int, Decimal)) or not Decimal(amount).is_finite():
+        raise InputError(f"{label} has an amount for {payee} that isn't a number of dollars")
+    key = payee.strip().lower()
+    spend[key] = spend.get(key, Decimal(0)) + Decimal(amount)
+
+
+def read_vendor_spend(path: Path) -> dict[str, Decimal]:
+    return parse_vendor_spend(load_json(path), path.name)
+
+
 def _key_amount(cost: object, where: str) -> Decimal:
     # A key Ramp has no estimate for spent nothing as far as the tool can tell.
     if cost is None:

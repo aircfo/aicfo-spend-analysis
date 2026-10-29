@@ -15,6 +15,7 @@ from aicfo_spend.dashboard import build_dashboard, write_dashboard
 from aicfo_spend.errors import InputError, UserError
 from aicfo_spend.forecast import describe_forecast, describe_score, forecast_after
 from aicfo_spend.months import Month
+from aicfo_spend.other_vendors import other_ai_spend, summarize_other_ai_spend
 from aicfo_spend.pace import describe_forecast_check, describe_pace, pace_of
 from aicfo_spend.raw_store import SOURCES, save_raw
 from aicfo_spend import recommendations
@@ -215,6 +216,9 @@ def _run_report(args: argparse.Namespace) -> int:
             print("\n" + check)
     if (workspace / BILLS_FILE_NAME).exists():
         print("\n" + summarize_bills(month, check_bills(spend, read_bills(workspace))))
+    other = other_ai_spend(workspace, month, settings)
+    if other is not None:
+        print("\n" + summarize_other_ai_spend(month, other))
     usage = build_usage(workspace, month)
     print("\n" + summarize_usage(usage))
     usage_output = output.with_name(USAGE_FILE_NAME)
