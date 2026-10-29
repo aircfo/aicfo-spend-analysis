@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Added
 
-- Usage beside spend. The claude.ai spend export's usage columns (requests, and tokens by kind, for every person, product and model, within seats too) are read into `out/<month>/usage.csv`, summarized by `report`, and shown on a new Usage tab: how many seat holders used Claude, how concentrated use is, and use by team, product and model beside extra usage. Use is counted in fresh tokens, leaving out cache reads, which are most of every prompt. The team view folds products fewer than 3 people used; the person view lists everyone.
+- Usage beside spend. The claude.ai spend export's usage columns (requests, and tokens by kind, for every person, product and model, within seats too) are read into `out/<month>/usage.csv`, summarized by `report`, and shown on a new Usage tab: how many seat holders used Claude, how concentrated use is, and use by team, product and model beside extra usage. Use is counted in fresh tokens, leaving out cache reads, which are most of every prompt. The team view folds products and models fewer than 3 people used, and each Other holds at least 3 people; the person view lists everyone.
 - `scripts/seat_rows.py` builds the Seats tab's rows in one pass, from Ramp's people list, the default seats and the member lists Claude reads in Chrome, as ready-to-write batches of 50. With `--existing` it adds only people new to Ramp.
 - `save --remove-original` deletes the downloaded file once it's saved, so a claude.ai export doesn't sit in Downloads.
 
