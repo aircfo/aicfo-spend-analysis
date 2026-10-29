@@ -10,13 +10,14 @@ from datetime import date
 from pathlib import Path
 
 from aicfo_spend import __version__
+from aicfo_spend.bills import BILLS_FILE_NAME, check_bills, read_bills, summarize_bills
 from aicfo_spend.dashboard import build_dashboard, write_dashboard
 from aicfo_spend.errors import InputError, UserError
 from aicfo_spend.forecast import describe_forecast, describe_score, forecast_after
 from aicfo_spend.months import Month
-from aicfo_spend.bills import BILLS_FILE_NAME, check_bills, read_bills, summarize_bills
 from aicfo_spend.pace import describe_forecast_check, describe_pace, pace_of
 from aicfo_spend.raw_store import SOURCES, save_raw
+from aicfo_spend import recommendations
 from aicfo_spend.report import build_month, describe_change, summarize
 from aicfo_spend.settings import SETTINGS_FILE_NAME, Settings, load_settings
 from aicfo_spend.spend_table import write_spend_csv
@@ -34,6 +35,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "forecast": _run_forecast,
         "pace": _run_pace,
         "dashboard": _run_dashboard,
+        "recommend": _run_recommend,
+        "decide": _run_decide,
     }
     try:
         return commands[args.command](args)
@@ -108,6 +111,17 @@ def _parser() -> argparse.ArgumentParser:
     dashboard = commands.add_parser("dashboard", help="write a month's numbers for a shared dashboard, rolled up to teams")
     dashboard.add_argument("folder", help="the workspace folder")
     dashboard.add_argument("month", nargs="?", help="the month, like 2026-10 (defaults to this month)")
+
+    recommend = commands.add_parser("recommend", help="suggest seat changes for the operator and track what done ones saved")
+    recommend.add_argument("folder", help="the workspace folder")
+    recommend.add_argument("month", nargs="?", help="the last whole month to read, like 2026-09 (defaults to last month)")
+
+    decide = commands.add_parser("decide", help="mark a seat recommendation done or declined")
+    decide.add_argument("folder", help="the workspace folder")
+    decide.add_argument("id", help="the recommendation, like R3")
+    decide.add_argument("status", choices=(recommendations.DONE, recommendations.DECLINED))
+    decide.add_argument("--on", help="the day it was done or declined (defaults to today)")
+    decide.add_argument("--note", default="", help="what was done, in a few words")
     return parser
 
 
@@ -256,3 +270,26 @@ def _day(text: str) -> date:
         return date.fromisoformat(text)
     except ValueError:
         raise InputError(f"{text!r} isn't a date; write it like 2026-09-14") from None
+
+
+def _run_recommend(args: argparse.Namespace) -> int:
+    workspace = Path(args.folder).expanduser()
+    settings = load_settings(workspace)
+    today = date.today()
+    last = Month.parse(args.month) if args.month else Month.of(today).previous_month()
+    found, notes = recommendations.find_recommendations(workspace, settings, last, today)
+    ledger, added = recommendations.add_new(recommendations.read_ledger(workspace), found)
+    if added:
+        recommendations.write_ledger(workspace, ledger)
+    results = recommendations.outcomes(workspace, ledger, today)
+    print(recommendations.describe(added, ledger, results, notes))
+    return 0
+
+
+def _run_decide(args: argparse.Namespace) -> int:
+    workspace = Path(args.folder).expanduser()
+    on = _day(args.on) if args.on else date.today()
+    ledger = recommendations.decide(recommendations.read_ledger(workspace), args.id, args.status, on, args.note)
+    recommendations.write_ledger(workspace, ledger)
+    print(f"Marked {args.id.upper()} {args.status} on {on}")
+    return 0
