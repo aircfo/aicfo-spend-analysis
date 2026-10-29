@@ -14,6 +14,7 @@ from aicfo_spend.dashboard import build_dashboard, write_dashboard
 from aicfo_spend.errors import InputError, UserError
 from aicfo_spend.forecast import describe_forecast, describe_score, forecast_after
 from aicfo_spend.months import Month
+from aicfo_spend.bills import BILLS_FILE_NAME, check_bills, read_bills, summarize_bills
 from aicfo_spend.pace import describe_forecast_check, describe_pace, pace_of
 from aicfo_spend.raw_store import SOURCES, save_raw
 from aicfo_spend.report import build_month, describe_change, summarize
@@ -198,6 +199,8 @@ def _run_report(args: argparse.Namespace) -> int:
             check = f"How the forecast did isn't available: {error}"
         if check:
             print("\n" + check)
+    if (workspace / BILLS_FILE_NAME).exists():
+        print("\n" + summarize_bills(month, check_bills(spend, read_bills(workspace))))
     usage = build_usage(workspace, month)
     print("\n" + summarize_usage(usage))
     usage_output = output.with_name(USAGE_FILE_NAME)

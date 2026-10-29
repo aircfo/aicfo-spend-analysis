@@ -20,6 +20,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from aicfo_spend import __version__
+from aicfo_spend.bills import check_bills, read_bills
 from aicfo_spend.errors import InputError
 from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after
 from aicfo_spend.months import Month
@@ -92,6 +93,14 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
         "notes": notes if show_people else [without_emails(note) for note in notes],
         "seat_types": _seat_types(settings),
         "usage": _usage_section(build_usage(workspace, month), team_name, show_people),
+        # Company-wide lines that name no one, so every view shows them.
+        "bills": [
+            {"vendor": check.vendor, "product": check.product, "kind": check.kind,
+             "billed_cents": cents(check.billed), "counted_cents": cents(check.counted),
+             "counted_through": check.counted_through.isoformat() if check.counted_through else None,
+             "ties": check.ties}
+            for check in check_bills(spend, read_bills(workspace))
+        ],
     }
 
 
