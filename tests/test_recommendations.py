@@ -1,3 +1,4 @@
+import json
 from dataclasses import replace
 from datetime import date
 from decimal import Decimal
@@ -63,6 +64,12 @@ def company(tmp_path: Path) -> Path:
 def save_usage(folder: Path, month: Month, rows: list[tuple[str, int, int, str]], through: date | None = None) -> None:
     export = usage_export(*((email, "Chat", requests, fresh, 0, 0, extra) for email, requests, fresh, extra in rows))
     save_raw(folder, CLAUDE_SPEND_EXPORT, month.first_day, through or month.last_day, export, saved_at=SAVED_AT)
+
+
+def with_standard_seats_bought(folder: Path, bought: int) -> None:
+    settings = json.loads((folder / SETTINGS_FILE_NAME).read_text(encoding="utf-8"))
+    settings["seats"]["anthropic"]["standard"]["bought"] = bought
+    (folder / SETTINGS_FILE_NAME).write_text(json.dumps(settings), encoding="utf-8")
 
 
 def three_months(folder: Path) -> None:
@@ -182,13 +189,30 @@ def test_a_reclaimed_seat_saves_its_price_each_whole_month_until_it_is_given_bac
     reclaim = next(item for item in added if item.action == RECLAIM)
     ledger = decide(ledger, reclaim.id, DONE, date(2026, 10, 6), "")
     (folder / PEOPLE_FILE_NAME).write_text(PEOPLE_CSV_HEADER + ROSTER.replace("idle@example.com,,,anthropic,standard\n", ""), encoding="utf-8")
+    with_standard_seats_bought(folder, 3)
 
     # Done in October, so November and December are the whole months since.
-    in_january = outcomes(folder, ledger, date(2027, 1, 10))
+    in_january = outcomes(folder, load_settings(folder), ledger, date(2027, 1, 10))
 
     assert [(result.saved_usd, result.months, result.problem) for result in in_january] == [(Decimal(50), 2, "")]
     (folder / PEOPLE_FILE_NAME).write_text(PEOPLE_CSV_HEADER + ROSTER, encoding="utf-8")
-    assert outcomes(folder, ledger, date(2027, 1, 10))[0].problem == "the roster shows the seat given back"
+    assert outcomes(folder, load_settings(folder), ledger, date(2027, 1, 10))[0].problem == "the roster shows the seat given back"
+
+
+def test_a_reclaimed_seat_saves_nothing_while_the_seats_bought_are_unchanged(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    three_months(folder)
+    found, _ = find_recommendations(folder, load_settings(folder), SEPTEMBER, TODAY)
+    ledger, added = add_new([], found)
+    reclaim = next(item for item in added if item.action == RECLAIM)
+    ledger = decide(ledger, reclaim.id, DONE, date(2026, 10, 6), "")
+    (folder / PEOPLE_FILE_NAME).write_text(PEOPLE_CSV_HEADER + ROSTER.replace("idle@example.com,,,anthropic,standard\n", ""), encoding="utf-8")
+
+    result = outcomes(folder, load_settings(folder), ledger, date(2027, 1, 10))
+
+    assert [(item.saved_usd, item.problem) for item in result] == [
+        (Decimal(0), "not saving yet: settings still show 4 standard seats bought, 4 when it was made")
+    ]
 
 
 def test_an_upgrade_saves_how_far_extra_usage_fell_less_the_price_gap(tmp_path: Path) -> None:
@@ -200,7 +224,7 @@ def test_an_upgrade_saves_how_far_extra_usage_fell_less_the_price_gap(tmp_path: 
     ledger = decide(ledger, upgrade.id, DONE, date(2026, 9, 30), "")
     save_usage(folder, OCTOBER, [("heavy@example.com", 4000, 90000, "10")])
 
-    result = outcomes(folder, ledger, date(2026, 11, 2))
+    result = outcomes(folder, load_settings(folder), ledger, date(2026, 11, 2))
 
     # $140 a month before, $10 in October, less Premium's $100 more: $30 saved.
     assert [(item.saved_usd, item.months) for item in result] == [(Decimal(30), 1)]
@@ -226,3 +250,71 @@ def test_a_seat_used_again_this_month_isnt_reclaimed(tmp_path: Path) -> None:
     save_usage(folder, OCTOBER, [("idle@example.com", 12, 300, "0")], through=date(2026, 10, 4))
 
     assert "idle@example.com" not in found_in(folder)
+
+
+def test_an_upgrade_whose_average_saving_is_negative_isnt_recommended(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    save_usage(folder, JULY, [*NORMAL_MONTH, ("heavy@example.com", 100, 2000, "0")])
+    save_usage(folder, AUGUST, [*NORMAL_MONTH, ("heavy@example.com", 4000, 90000, "110")])
+    save_usage(folder, SEPTEMBER, [*NORMAL_MONTH, ("heavy@example.com", 4000, 90000, "110")])
+
+    # Over the gap in two months, but $73.33 a month on average is less than Premium's $100 more.
+    assert "heavy@example.com" not in found_in(folder)
+
+
+def test_a_declined_recommendation_returns_ninety_days_after_it_was_declined(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    three_months(folder)
+    found, _ = find_recommendations(folder, load_settings(folder), SEPTEMBER, TODAY)
+    ledger, added = add_new([], found)
+    declined = decide(ledger, added[0].id, DECLINED, date(2026, 12, 1), "")
+
+    early = [replace(item, made_on=date(2027, 1, 10)) for item in found]
+    late = [replace(item, made_on=date(2027, 3, 2)) for item in found]
+
+    assert add_new(declined, early)[1] == []
+    assert [item.person for item in add_new(declined, late)[1]] == [added[0].person]
+
+
+def test_an_upgrade_is_measured_over_every_whole_month_since_it_was_done(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    three_months(folder)
+    found, _ = find_recommendations(folder, load_settings(folder), SEPTEMBER, TODAY)
+    ledger, added = add_new([], found)
+    upgrade = next(item for item in added if item.action == UPGRADE)
+    ledger = decide(ledger, upgrade.id, DONE, date(2026, 9, 30), "")
+    for month in (OCTOBER, Month(2026, 11), Month(2026, 12), Month(2027, 1), Month(2027, 2)):
+        save_usage(folder, month, [("heavy@example.com", 4000, 90000, "10")])
+
+    result = outcomes(folder, load_settings(folder), ledger, date(2027, 3, 2))
+
+    # $30 a month for October to February.
+    assert [(item.saved_usd, item.months) for item in result] == [(Decimal(150), 5)]
+
+
+def test_use_in_a_month_saved_only_in_part_keeps_a_seat_from_being_reclaimed(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    three_months(folder)
+    save_usage(folder, OCTOBER, [("idle@example.com", 1000, 9000, "0")], through=date(2026, 10, 20))
+
+    found, _ = find_recommendations(folder, load_settings(folder), OCTOBER, date(2026, 11, 3))
+
+    assert RECLAIM not in [item.action for item in found if item.person == "idle@example.com"]
+
+
+def test_someone_whose_seat_the_ledger_changed_isnt_judged_on_months_spent_on_the_old_seat(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    three_months(folder)
+    found, _ = find_recommendations(folder, load_settings(folder), SEPTEMBER, TODAY)
+    ledger, added = add_new([], found)
+    upgrade = next(item for item in added if item.action == UPGRADE)
+    write_ledger(folder, decide(ledger, upgrade.id, DONE, date(2026, 8, 15), ""))
+    (folder / PEOPLE_FILE_NAME).write_text(
+        PEOPLE_CSV_HEADER + ROSTER.replace("heavy@example.com,,,anthropic,standard", "heavy@example.com,,,anthropic,premium"),
+        encoding="utf-8",
+    )
+
+    again, _ = find_recommendations(folder, load_settings(folder), SEPTEMBER, TODAY)
+
+    # On Premium now, with extra usage from months on Standard: no downgrade, no new upgrade.
+    assert [item.action for item in again if item.person == "heavy@example.com"] == []

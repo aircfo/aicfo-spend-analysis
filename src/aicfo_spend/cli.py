@@ -215,7 +215,7 @@ def _run_report(args: argparse.Namespace) -> int:
         if check:
             print("\n" + check)
     if (workspace / BILLS_FILE_NAME).exists():
-        print("\n" + summarize_bills(month, check_bills(spend, read_bills(workspace))))
+        print("\n" + summarize_bills(month, check_bills(spend, read_bills(workspace, settings))))
     other = other_ai_spend(workspace, month, settings)
     if other is not None:
         print("\n" + summarize_other_ai_spend(month, other))
@@ -285,7 +285,7 @@ def _run_recommend(args: argparse.Namespace) -> int:
     ledger, added = recommendations.add_new(recommendations.read_ledger(workspace), found)
     if added:
         recommendations.write_ledger(workspace, ledger)
-    results = recommendations.outcomes(workspace, ledger, today)
+    results = recommendations.outcomes(workspace, settings, ledger, today)
     print(recommendations.describe(added, ledger, results, notes))
     return 0
 

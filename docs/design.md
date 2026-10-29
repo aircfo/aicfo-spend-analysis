@@ -112,7 +112,7 @@ Spend says what AI cost; usage says who relies on it. The claude.ai spend export
 
 - **Fresh tokens measure use.** Prompt tokens are uncached input plus cache reads and writes, and cache reads were 96% of airCFO's in September 2026: cheap, and little sign of work. So use is requests and fresh tokens (uncached input, cache writes and output), with cache reads kept apart.
 - **What's shown:** how many Claude seat holders used Claude; the share of fresh tokens the busiest tenth of people used, once there are 10 people; and use by team, product and model beside extra usage, since a model's share of the work and its share of the cost can differ a lot.
-- **Privacy:** the team view folds teams as spend does, and folds a product fewer than 3 people used into "Other products", since it would point at them. The person view adds each person, seat holders who never used Claude included.
+- **Privacy:** the team view folds teams as spend does, and folds a product or model fewer than 3 people used into "Other products" or "Other models", since it would point at them. Like "Other (small teams)", each Other holds at least 3 people: while it holds fewer, the least used named one joins it. The person view adds each person, seat holders who never used Claude included.
 - **API usage** by model and token type is in Ramp's AI token usage, credited to each key's owner; it isn't read yet.
 
 ## Other AI vendors
@@ -123,25 +123,25 @@ The daily refresh saves the month's spend by vendor (`ramp-vendor-spend`, Ramp's
 
 ## Against the bills
 
-The numbers are only as good as their match with what the vendors charged, so each closed month is checked against its bills. `bills.csv` in the company's folder has one row per charge: the month it pays for, vendor, product, dollars, how many months it covers and its kind. Claude fills it on the 1st to the 3rd from Ramp's card charges and bills, reading each receipt for what it paid for, and asks about anything paid elsewhere.
+The numbers are only as good as their match with what the vendors charged, so each closed month is checked against its bills. `bills.csv` in the company's folder has one row per charge: the month it pays for, vendor (as the tool names it: `anthropic`, `openai` or a vendor in settings' seats), product, dollars, how many months it covers, its kind, for credits the credit it bought, and its id in Ramp. A charge id entered twice is refused, so a refresh run twice can't count a charge twice. Claude fills it on the 1st to the 3rd from Ramp's card charges and bills, reading each receipt for what it paid for, and asks about anything paid elsewhere.
 
 - **Seats** tie when the bill is within $1 or 0.5% of seats bought times their price, whichever margin is more. A year paid up front counts a twelfth in each month it covers. A seat line that doesn't tie usually means settings' seats bought or prices are out of date.
 - **Usage billed by invoice** for the month ties the same way, once the month is counted to its last day.
-- **Prepaid credits**, which is how Claude Team sells extra usage (in bundles, up to 30% off) and how the API consoles usually charge, are bought ahead, so a month's purchases don't match its use. They show bought beside used with no verdict, and tie over time against the balance the vendor shows.
+- **Prepaid credits**, which is how Claude Team sells extra usage (in bundles, up to 30% off) and how the API consoles usually charge, are bought ahead, so a month's purchases don't match its use. A bundle often sells credit for less than it carries ($250 for $200), so the line shows what was paid, the credit it bought and what was used, with no verdict; the credit bought less what's used ties over time against the balance the vendor shows.
 
-`report` prints the check once `bills.csv` exists, and the Spend tab's "Against the bills" panel shows it. Bills name no one, so every view shows them.
+`report` prints the check once `bills.csv` exists, and the Spend tab's "Against the bills" panel shows it for last month and this one, since early in a month the one just closed is the one that can tie. Bills name no one, so every view shows them.
 
 ## Seat recommendations
 
 The money a seat review finds is small next to the bill, so the tool keeps it honest: each recommendation is written down when it's made, and once it's done the tool reports what it actually saved. `aicfo-spend recommend <folder> [month]` reads the last three whole months of the claude.ai spend export (at least two are needed). Each rule must hold in at least two of them, so one odd month doesn't move a seat:
 
-- **Upgrade Standard to Premium:** extra usage above the price gap. Premium includes 5 times Standard's usage, which Anthropic doesn't state in tokens, so the saving (average extra usage less the gap) is at most this much.
+- **Upgrade Standard to Premium:** extra usage above the price gap, and an average above it too, so the saving (average extra usage less the gap) is positive. Premium includes 5 times Standard's usage, which Anthropic doesn't state in tokens, so the saving is at most this much.
 - **Downgrade Premium to Standard:** no extra usage at all, and no more fresh tokens than some Standard holder used that month without paying extra. It saves the gap.
-- **Reclaim:** no requests in either of the last two whole months, nor in the month since, as far as it's saved. It saves the seat's price once seats bought goes down; on yearly billing, at renewal.
+- **Reclaim:** no requests in either of the last two whole months read, nor in any month since, as far as each is saved. It saves the seat's price once seats bought goes down; on yearly billing, at renewal.
 - **Check in:** under 50 requests a month. A conversation, with no dollar figure.
 - **Credit bundles:** Claude Team sells extra usage in prepaid bundles ($50 for $45, $250 for $200, $1,000 for $700, up to $3,000 of credit a month). The bundles are sized to the smallest month's extra usage, so the credits get used. On airCFO's August and September this is about $310 a month, more than every seat change together.
 
-The ledger is `recommendations.csv` in the company's folder: one row per recommendation with its id (R1, R2, …), when it was made, the months it read, who, what, the expected saving a month, why, and its status. `recommend` adds only what's new: a person and action already open or done isn't added again, and a declined one comes back after 90 days. `aicfo-spend decide <folder> <id> done|declined` records the decision. For a done one, the saving counts whole months after the month it was done: a reclaim or downgrade saves its price each month the roster still shows the change (and says so when a reclaimed seat is given back); an upgrade saves how far the person's extra usage fell below its average before, less the gap; bundles are counted as estimated, and the credit receipts in `bills.csv` show them. ChatGPT seats aren't judged yet, since the engine has no ChatGPT usage.
+The ledger is `recommendations.csv` in the company's folder: one row per recommendation with its id (R1, R2, …), when it was made, the months it read, who, what, the expected saving a month, why, and its status. `recommend` adds only what's new: a person and action already open or done isn't added again, and a declined one comes back 90 days after it was declined. Someone whose seat a done upgrade or downgrade changed during the months read is left out of the upgrade and downgrade rules, and out of what a Standard seat is taken to cover, since part of their months were on the old seat; a seat changed outside the ledger isn't seen. `aicfo-spend decide <folder> <id> done|declined` records the decision. For a done one, the saving counts whole months after the month it was done: a reclaim or downgrade saves its price each month the roster still shows the change, and only once settings show fewer of its seats bought than when it was made, since an emptied seat is still paid for (it says which is missing); an upgrade saves how far the person's extra usage fell below its average before, less the gap, in every whole month since; bundles are counted as estimated, and the credit receipts in `bills.csv` show them. ChatGPT seats aren't judged yet, since the engine has no ChatGPT usage.
 
 The ledger names people and their use, so it's for the operator only: it stays in the folder and never goes on the shared page, whatever the visibility setting.
 
@@ -153,7 +153,7 @@ The forecast is arithmetic anyone can redo by hand, and it stands in for a budge
 - **Next month:** seats × price + extra usage + API + known changes.
   - **Extra usage:** each team's average over the last 3 complete months, over the months that have a whole month of it, so a source saved only recently isn't diluted by months it wasn't saved for.
   - **API:** last complete month's spend on current keys. On airCFO's twelve months of Ramp history (Nov 2025 to Oct 2026), last month's API spend missed the next by 27% on average, the 3-month average by 43%: API spend moves in steps as keys start and projects end, and an average lags each one. Spend no current key carries is left out, since a deleted key doesn't spend again.
-  - **Known changes:** what history can't show, like a new project's key or a tool being retired, listed in settings as `known_changes` (month, team, product, dollars, note) and named in the forecast's notes.
+  - **Known changes:** what history can't show, like a new project's key or a tool being retired, listed in settings as `known_changes` (month, team, product, dollars, note) and named in the forecast's notes. The team view names the change's folded team and leaves out the note, which is the operator's own words and may name someone.
   - `aicfo-spend forecast <folder>` prints it.
 - **Change from last month:** by team and model, and by person where the person view is on. `aicfo-spend report` prints it under the month's totals, with a note when last month is missing a download.
 
@@ -168,7 +168,7 @@ The three alert numbers (2×, $25, 25%) are defaults, editable in settings.
 
 **The backtest** (done criterion 2) replays the forecast as if it were Aug 31 and reports how far off September was. Per-person history before Aug 31 is one month, so that limit is shown beside the score rather than tuned away.
 
-**The forecast check.** Once a month has ended, `report` says how far its forecast was from what happened (the plan saved at its start, else a replay that says so), beside how far doing nothing, calling it last month's total, would have been. A forecast that loses to doing nothing is the sign to change the method, as the 3-month API average did.
+**The forecast check.** Once a month has ended, `report` says how far its forecast was from what happened (the plan saved at its start, else a replay that says so), beside how far doing nothing, calling it last month's total, would have been. A forecast that loses to doing nothing is the sign to change the method, as the 3-month API average did. It isn't scored while either month is saved only in part, since a partial month reads as a big miss that says nothing about the method.
 
 ## Adding a vendor
 

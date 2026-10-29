@@ -38,7 +38,7 @@ from aicfo_spend.usage import MonthUsage, build_usage
 LEDGER_FILE_NAME = "recommendations.csv"
 LEDGER_COLUMNS = (
     "id", "made_on", "basis", "vendor", "person", "action", "from_seat", "to_seat",
-    "monthly_usd", "baseline_usd", "why", "status", "decided_on", "note",
+    "monthly_usd", "baseline_usd", "why", "status", "decided_on", "note", "seats_bought_then",
 )
 VENDOR = "anthropic"
 STANDARD = "standard"
@@ -86,6 +86,9 @@ class Recommendation:
     status: str = OPEN
     decided_on: date | None = None
     note: str = ""
+    # For a reclaim or downgrade: the seats of its from_seat type bought when it was made. It
+    # saves money only once settings show fewer bought, since an emptied seat is still paid for.
+    seats_bought_then: int | None = None
 
 
 @dataclass(frozen=True)
@@ -143,12 +146,29 @@ def find_recommendations(workspace: Path, settings: Settings, last: Month, today
 
     def recommend(person: str, action: str, from_seat: str, to_seat: str, monthly: Decimal | None,
                   why: str, baseline: Decimal | None = None) -> None:
+        bought = plans[from_seat].bought if action in (RECLAIM, DOWNGRADE) and from_seat in plans else None
         found.append(Recommendation("", today, basis, VENDOR, person, action, from_seat, to_seat,
                                     monthly.quantize(CENT) if monthly is not None else None,
-                                    baseline.quantize(CENT) if baseline is not None else None, why))
+                                    baseline.quantize(CENT) if baseline is not None else None, why,
+                                    seats_bought_then=bought))
 
     def use(person: str) -> list[PersonMonth]:
         return [by_person.get(person, PersonMonth()) for _, by_person in months]
+
+    # Every month after the last whole one read, saved in part if at all: someone who used
+    # Claude since keeps their seat.
+    used_since: set[str] = set()
+    month = months[-1][0].next_month()
+    while month <= Month.of(today):
+        used_since |= {person for person, use_ in _by_person(build_usage(workspace, month)).items() if use_.requests}
+        month = month.next_month()
+    # Someone whose seat the ledger changed in these months was on another seat for part of them,
+    # so their months say little about the seat they hold now, or about what a Standard seat covers.
+    changed: set[str] = {
+        item.person for item in read_ledger(workspace)
+        if item.status == DONE and item.action in (UPGRADE, DOWNGRADE) and item.decided_on
+        and item.decided_on >= months[0][0].first_day
+    }
 
     gap: Decimal | None = None
     if STANDARD in plans and PREMIUM in plans:
@@ -158,18 +178,15 @@ def find_recommendations(workspace: Path, settings: Settings, last: Month, today
     # Per month, the most fresh tokens a Standard holder used without paying extra: Premium use at
     # or under that fits in a Standard seat.
     standard_ceiling = [
-        max((use_.fresh_tokens for person, use_ in by_person.items() if seats.get(person) == STANDARD and not use_.extra_usd), default=None)
+        max((use_.fresh_tokens for person, use_ in by_person.items()
+             if seats.get(person) == STANDARD and person not in changed and not use_.extra_usd), default=None)
         for _, by_person in months
     ]
-
-    # The month after `last`, saved so far if at all: someone who started using Claude this month
-    # keeps their seat.
-    so_far = _by_person(build_usage(workspace, last.next_month()))
 
     for person, seat in sorted(seats.items()):
         history = use(person)
         recent = history[-MONTHS_NEEDED:]
-        if all(month.requests == 0 for month in recent) and not so_far.get(person, PersonMonth()).requests:
+        if all(month.requests == 0 for month in recent) and person not in used_since:
             price = plans[seat].price_usd if seat in plans else None
             recommend(person, RECLAIM, seat, "", price,
                       f"no requests in {', '.join(m.label for m, _ in months[-MONTHS_NEEDED:])}. It saves only once "
@@ -178,10 +195,11 @@ def find_recommendations(workspace: Path, settings: Settings, last: Month, today
         if sum(month.requests < CHECK_IN_REQUESTS for month in history) >= MONTHS_NEEDED:
             requests = ", ".join(str(month.requests) for month in history)
             recommend(person, CHECK_IN, seat, "", None, f"under {CHECK_IN_REQUESTS} requests a month ({requests} in {labels})")
-        if gap is None:
+        if gap is None or person in changed:
             continue
-        if seat == STANDARD and sum(month.extra_usd > gap for month in history) >= MONTHS_NEEDED:
-            baseline = sum((month.extra_usd for month in history), ZERO) / len(history)
+        baseline = sum((month.extra_usd for month in history), ZERO) / len(history)
+        # The rule holds in two months, but the saving is the average, which one quiet month can sink.
+        if seat == STANDARD and sum(month.extra_usd > gap for month in history) >= MONTHS_NEEDED and baseline > gap:
             extras = ", ".join(dollars(month.extra_usd) for month in history)
             recommend(person, UPGRADE, STANDARD, PREMIUM, baseline - gap,
                       f"extra usage of {extras} in {labels}, against Premium's {dollars(gap)} more a month. "
@@ -251,10 +269,13 @@ def _recommendation(record: dict[str, str | None], where: str) -> Recommendation
     made_on = day("made_on")
     if made_on is None:
         raise InputError(f"{where} has no made_on date")
+    if cell("seats_bought_then") and not cell("seats_bought_then").isdigit():
+        raise InputError(f"{where}: seats_bought_then must be a whole number of seats, not {cell('seats_bought_then')!r}")
     return Recommendation(
         cell("id"), made_on, cell("basis"), cell("vendor"), cell("person").lower(), cell("action"),
         cell("from_seat"), cell("to_seat"), amount("monthly_usd"), amount("baseline_usd"), cell("why"),
         cell("status"), day("decided_on"), cell("note"),
+        int(cell("seats_bought_then")) if cell("seats_bought_then") else None,
     )
 
 
@@ -270,17 +291,18 @@ def write_ledger(workspace: Path, ledger: list[Recommendation]) -> None:
                 item.to_seat, "" if item.monthly_usd is None else f"{item.monthly_usd:f}",
                 "" if item.baseline_usd is None else f"{item.baseline_usd:f}", item.why, item.status,
                 item.decided_on.isoformat() if item.decided_on else "", item.note,
+                "" if item.seats_bought_then is None else item.seats_bought_then,
             ])
     os.replace(partial, path)
 
 
 def add_new(ledger: list[Recommendation], found: list[Recommendation]) -> tuple[list[Recommendation], list[Recommendation]]:
     """The ledger with what's newly recommended added, and those additions. A person and action
-    already open or done isn't added again, nor one declined in the last 90 days."""
+    already open or done isn't added again, nor one declined less than 90 days ago."""
     def already(item: Recommendation) -> bool:
         return any(
             old.person == item.person and old.action == item.action and old.vendor == item.vendor
-            and (old.status != DECLINED or item.made_on - old.made_on < ASK_AGAIN_AFTER)
+            and (old.status != DECLINED or item.made_on - (old.decided_on or old.made_on) < ASK_AGAIN_AFTER)
             for old in ledger
         )
 
@@ -304,8 +326,11 @@ def decide(ledger: list[Recommendation], identifier: str, status: str, on: date,
     ]
 
 
-def outcomes(workspace: Path, ledger: list[Recommendation], today: date) -> list[Outcome]:
-    """What each done recommendation has saved in the whole months since it was done."""
+def outcomes(workspace: Path, settings: Settings, ledger: list[Recommendation], today: date) -> list[Outcome]:
+    """What each done recommendation has saved in the whole months since it was done. A reclaim or
+    downgrade saves only once settings show fewer of its seats bought than when it was made: an
+    emptied seat is still paid for. The roster and settings say only how things stand today, so
+    a seat given back, or bought again, stops the saving for every month, not just the later ones."""
     seats = {row.email: row.seat_type for row in read_people_file(workspace) if row.vendor == VENDOR}
     last_whole = Month.of(today).previous_month()
     results: list[Outcome] = []
@@ -318,18 +343,26 @@ def outcomes(workspace: Path, ledger: list[Recommendation], today: date) -> list
             months.append(since)
             since = since.next_month()
         monthly = item.monthly_usd or ZERO
-        if item.action == RECLAIM:
-            given_back = item.person in seats
-            results.append(Outcome(item, ZERO if given_back else monthly * len(months), len(months),
-                                   "the roster shows the seat given back" if given_back else ""))
-        elif item.action == DOWNGRADE:
-            held = seats.get(item.person) == item.to_seat
-            results.append(Outcome(item, monthly * len(months) if held else ZERO, len(months),
-                                   "" if held else f"the roster doesn't show a {item.to_seat} seat"))
+        if item.action in (RECLAIM, DOWNGRADE):
+            plan = settings.seats.get(item.vendor, {}).get(item.from_seat)
+            bought_now = plan.bought if plan else 0
+            if item.action == RECLAIM and item.person in seats:
+                problem = "the roster shows the seat given back"
+            elif item.action == DOWNGRADE and seats.get(item.person) != item.to_seat:
+                problem = f"the roster doesn't show a {item.to_seat} seat"
+            elif item.seats_bought_then is not None and bought_now >= item.seats_bought_then:
+                problem = (f"not saving yet: settings still show {bought_now} {item.from_seat} seats bought, "
+                           f"{item.seats_bought_then} when it was made")
+            else:
+                problem = ""
+            results.append(Outcome(item, ZERO if problem else monthly * len(months), len(months), problem))
         elif item.action == UPGRADE:
             gap = (item.baseline_usd or ZERO) - monthly
-            measured = [by_person.get(item.person, PersonMonth()) for month, by_person in whole_months(workspace, last_whole)
-                        if month in months]
+            measured = []
+            for month in months:
+                usage = build_usage(workspace, month)
+                if usage.covers == (month.first_day, month.last_day):
+                    measured.append(_by_person(usage).get(item.person, PersonMonth()))
             saved = sum(((item.baseline_usd or ZERO) - use_.extra_usd - gap for use_ in measured), ZERO)
             results.append(Outcome(item, saved, len(measured)))
         else:
