@@ -312,6 +312,18 @@ def describe_forecast_check(workspace: Path, settings: Settings, actual: MonthSp
     previous = build_month(workspace, actual.month.previous_month(), settings)
     if not previous.coverage:
         return None
+    # A month saved only in part reads as a big miss that says nothing about the method.
+    partial = [
+        f"{product} for {spend.month.label} is saved only through {end}"
+        for spend in (actual, previous)
+        for product, (_, end) in sorted(spend.coverage.items())
+        if end < spend.month.last_day
+    ]
+    if partial:
+        return (
+            f"How the forecast did for {actual.month.label}: not scored, because {'; '.join(partial)}. "
+            "Save those months whole to score it."
+        )
     path = workspace / "out" / actual.month.label / PLAN_FILE_NAME
     if path.exists():
         plan = _read_plan(path)

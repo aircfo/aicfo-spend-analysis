@@ -193,7 +193,8 @@ Talk to the operator one step at a time; they mostly confirm.
    `Department` tag, and show the operator the list with each key's spend. Write only what
    they confirm to `api_cost_categories` in settings, key name to category:
    `{"checkout-bot": "Cost of revenue", "pr-reviewer": "R&D"}`. A key in neither place shows
-   as Uncategorized; offer this step again when the report says so.
+   as Uncategorized; offer this step again when the report says so. Categories show on the
+   shared page in every view, so use finance labels, never a person's name.
 8. **First refresh**, then **schedule it**. Run the Daily refresh. Its first run also saves
    last month whole: Ramp's per-key spend and vendor totals for last month's 1st to its last
    day, so the forecast and the change from last month have something to stand on. The
@@ -286,7 +287,8 @@ Below, `<first>` is that month's 1st, `<yesterday>` is yesterday and `<today>` i
    new project's API key or a tool being retired, add it to `aicfo-spend.json` as an item of
    `known_changes`: `{"month": "YYYY-MM", "team": "<team>", "product": "api" or "extra usage",
    "amount_usd": <dollars a month, negative for a cut>, "note": "<what it is>"}`, and check it with
-   `settings`. The forecast adds it and says so.
+   `settings`. The forecast adds it and says so. The shared page shows the amount and team but
+   not the note, which stays in the operator's own outputs.
 6. **Show the results.** Give the page's link. If any source is more than 2 days behind
    yesterday, lead with that and how to bring it up to date, as the page's Overview does.
    Then the pace line, then the alerts, then the notes, and finish with the team table from `report`. Present the alerts

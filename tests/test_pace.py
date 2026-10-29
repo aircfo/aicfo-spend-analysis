@@ -280,3 +280,17 @@ def test_no_check_without_a_last_month_to_compare_with(tmp_path: Path) -> None:
     settings = load_settings(folder)
 
     assert describe_forecast_check(folder, settings, build_month(folder, SEPTEMBER, settings)) is None
+
+
+def test_a_month_saved_only_in_part_isnt_scored(tmp_path: Path) -> None:
+    folder = new_workspace(tmp_path)
+    save_month(folder, Month(2026, 8), backend_cents=15000)
+    keys = ramp_keys_answer(ramp_key("backend", 5000, "sam.cho@example.com"))
+    save_raw(folder, RAMP_API_KEYS, SEPTEMBER.first_day, date(2026, 9, 10), keys, saved_at=SAVED_AT)
+    save_raw(folder, RAMP_PROVIDER_TOTALS, SEPTEMBER.first_day, date(2026, 9, 10), ramp_totals_answer(ANTHROPIC="50"), saved_at=SAVED_AT)
+    settings = load_settings(folder)
+
+    check = describe_forecast_check(folder, settings, build_month(folder, SEPTEMBER, settings))
+
+    assert check == ("How the forecast did for 2026-09: not scored, because api for 2026-09 is saved only through "
+                     "2026-09-10. Save those months whole to score it.")

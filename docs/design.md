@@ -112,7 +112,7 @@ Spend says what AI cost; usage says who relies on it. The claude.ai spend export
 
 - **Fresh tokens measure use.** Prompt tokens are uncached input plus cache reads and writes, and cache reads were 96% of airCFO's in September 2026: cheap, and little sign of work. So use is requests and fresh tokens (uncached input, cache writes and output), with cache reads kept apart.
 - **What's shown:** how many Claude seat holders used Claude; the share of fresh tokens the busiest tenth of people used, once there are 10 people; and use by team, product and model beside extra usage, since a model's share of the work and its share of the cost can differ a lot.
-- **Privacy:** the team view folds teams as spend does, and folds a product fewer than 3 people used into "Other products", since it would point at them. The person view adds each person, seat holders who never used Claude included.
+- **Privacy:** the team view folds teams as spend does, and folds a product or model fewer than 3 people used into "Other products" or "Other models", since it would point at them. Like "Other (small teams)", each Other holds at least 3 people: while it holds fewer, the least used named one joins it. The person view adds each person, seat holders who never used Claude included.
 - **API usage** by model and token type is in Ramp's AI token usage, credited to each key's owner; it isn't read yet.
 
 ## Against the bills
@@ -133,7 +133,7 @@ The forecast is arithmetic anyone can redo by hand, and it stands in for a budge
 - **Next month:** seats × price + extra usage + API + known changes.
   - **Extra usage:** each team's average over the last 3 complete months, over the months that have a whole month of it, so a source saved only recently isn't diluted by months it wasn't saved for.
   - **API:** last complete month's spend on current keys. On airCFO's twelve months of Ramp history (Nov 2025 to Oct 2026), last month's API spend missed the next by 27% on average, the 3-month average by 43%: API spend moves in steps as keys start and projects end, and an average lags each one. Spend no current key carries is left out, since a deleted key doesn't spend again.
-  - **Known changes:** what history can't show, like a new project's key or a tool being retired, listed in settings as `known_changes` (month, team, product, dollars, note) and named in the forecast's notes.
+  - **Known changes:** what history can't show, like a new project's key or a tool being retired, listed in settings as `known_changes` (month, team, product, dollars, note) and named in the forecast's notes. The team view names the change's folded team and leaves out the note, which is the operator's own words and may name someone.
   - `aicfo-spend forecast <folder>` prints it.
 - **Change from last month:** by team and model, and by person where the person view is on. `aicfo-spend report` prints it under the month's totals, with a note when last month is missing a download.
 
@@ -148,7 +148,7 @@ The three alert numbers (2×, $25, 25%) are defaults, editable in settings.
 
 **The backtest** (done criterion 2) replays the forecast as if it were Aug 31 and reports how far off September was. Per-person history before Aug 31 is one month, so that limit is shown beside the score rather than tuned away.
 
-**The forecast check.** Once a month has ended, `report` says how far its forecast was from what happened (the plan saved at its start, else a replay that says so), beside how far doing nothing, calling it last month's total, would have been. A forecast that loses to doing nothing is the sign to change the method, as the 3-month API average did.
+**The forecast check.** Once a month has ended, `report` says how far its forecast was from what happened (the plan saved at its start, else a replay that says so), beside how far doing nothing, calling it last month's total, would have been. A forecast that loses to doing nothing is the sign to change the method, as the 3-month API average did. It isn't scored while either month is saved only in part, since a partial month reads as a big miss that says nothing about the method.
 
 ## Adding a vendor
 

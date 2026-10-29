@@ -22,7 +22,7 @@ from pathlib import Path
 from aicfo_spend import __version__
 from aicfo_spend.bills import check_bills, read_bills
 from aicfo_spend.errors import InputError
-from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after
+from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after, known_change_note
 from aicfo_spend.months import Month
 from aicfo_spend.pace import Pace, pace_of
 from aicfo_spend.report import (
@@ -39,12 +39,21 @@ from aicfo_spend.report import (
 )
 from aicfo_spend.settings import Settings
 from aicfo_spend.spend_table import PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
-from aicfo_spend.usage import MonthUsage, Totals, active_seat_holders, build_usage, top_share, totals_by as usage_totals_by
+from aicfo_spend.usage import (
+    MonthUsage,
+    Totals,
+    UsageRow,
+    active_seat_holders,
+    build_usage,
+    top_share,
+)
+from aicfo_spend.usage import totals_by as usage_totals_by
 
 DASHBOARD_FILE_NAME = "dashboard.json"
 OTHER_SMALL_TEAMS = "Other (small teams)"
 # A product only a person or two used would point at them, so the team view folds it too.
 OTHER_PRODUCTS = "Other products"
+OTHER_MODELS = "Other models"
 MIN_PEOPLE_PER_TEAM = 3
 EMAIL = re.compile(r"[^\s@,;:()]+@[^\s@,;:()]+\.[A-Za-z]+")
 
@@ -74,7 +83,13 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
     else:
         notes.append(f"no usage is saved for {previous.month.label}, so there's no change from last month to show")
     # The same gap can surface in the month, its pace and the forecast; say it once.
-    notes = list(dict.fromkeys([*notes, *pace.notes, *forecast.notes]))
+    # A known change's note is the operator's own words and its team may be one that folds, so
+    # the team view says only the folded team and the amount.
+    change_notes = [
+        known_change_note(team, change) if show_people else known_change_note(team_name(team), change, with_note=False)
+        for team, change in forecast.known_changes
+    ]
+    notes = list(dict.fromkeys([*notes, *pace.notes, *forecast.notes, *change_notes]))
 
     return {
         "about": {
@@ -251,6 +266,23 @@ def _forecast_section(forecast: Forecast, team_name: Callable[[str], str]) -> Js
     }
 
 
+def _fold_few_people(rows: list[UsageRow], name_of: Callable[[UsageRow], str], other: str) -> Callable[[str], str]:
+    """Names safe to share in the team view: a product or model fewer than 3 people used folds into
+    `other`, and while `other` holds 1 or 2 people the least used name joins it, as small teams do."""
+    people: dict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        if row.requests:
+            people[name_of(row)].add(row.person)
+    named = {name for name, persons in people.items() if len(persons) >= MIN_PEOPLE_PER_TEAM}
+
+    def in_other() -> set[str]:
+        return set().union(*(persons for name, persons in people.items() if name not in named))
+
+    while named and 0 < len(in_other()) < MIN_PEOPLE_PER_TEAM:
+        named.remove(min(named, key=lambda name: (len(people[name]), name)))
+    return lambda name: name if name in named else other
+
+
 def _usage_section(usage: MonthUsage, team_name: Callable[[str], str], show_people: bool) -> Json | None:
     """Who used Claude and how much: by team, product and model, and by person in the person view."""
     if usage.covers is None:
@@ -261,10 +293,13 @@ def _usage_section(usage: MonthUsage, team_name: Callable[[str], str], show_peop
         holders_by_team[team_name(team)].append(person)
     by_team = usage_totals_by(usage.rows, lambda row: team_name(row.team))
     teams = sorted({*by_team, *holders_by_team}, key=lambda team: (team == UNASSIGNED, -by_team.get(team, Totals()).fresh_tokens))
-    by_product = usage_totals_by(usage.rows, lambda row: row.product)
+    product_name: Callable[[str], str] = str
+    model_name: Callable[[str], str] = str
     if not show_people:
-        small = {product for product, totals in by_product.items() if len(totals.people) < MIN_PEOPLE_PER_TEAM}
-        by_product = usage_totals_by(usage.rows, lambda row: OTHER_PRODUCTS if row.product in small else row.product)
+        product_name = _fold_few_people(usage.rows, lambda row: row.product, OTHER_PRODUCTS)
+        model_name = _fold_few_people(usage.rows, lambda row: row.model, OTHER_MODELS)
+    by_product = usage_totals_by(usage.rows, lambda row: product_name(row.product))
+    by_model = usage_totals_by(usage.rows, lambda row: model_name(row.model))
     share = top_share(usage)
     section: Json = {
         "covers": {"start": usage.covers[0].isoformat(), "end": usage.covers[1].isoformat()},
@@ -283,7 +318,7 @@ def _usage_section(usage: MonthUsage, team_name: Callable[[str], str], show_peop
         ],
         "by_model": [
             {"model": model, **_usage_cells(totals)}
-            for model, totals in sorted(usage_totals_by(usage.rows, lambda row: row.model).items(), key=lambda item: -item[1].fresh_tokens)
+            for model, totals in sorted(by_model.items(), key=lambda item: (item[0] == OTHER_MODELS, -item[1].fresh_tokens))
         ],
     }
     if show_people:
