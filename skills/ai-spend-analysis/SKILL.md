@@ -193,7 +193,8 @@ Talk to the operator one step at a time; they mostly confirm.
    `Department` tag, and show the operator the list with each key's spend. Write only what
    they confirm to `api_cost_categories` in settings, key name to category:
    `{"checkout-bot": "Cost of revenue", "pr-reviewer": "R&D"}`. A key in neither place shows
-   as Uncategorized; offer this step again when the report says so.
+   as Uncategorized; offer this step again when the report says so. Categories show on the
+   shared page in every view, so use finance labels, never a person's name.
 8. **First refresh**, then **schedule it**. Run the Daily refresh. Its first run also saves
    last month whole: Ramp's per-key spend and vendor totals for last month's 1st to its last
    day, so the forecast and the change from last month have something to stand on. The
