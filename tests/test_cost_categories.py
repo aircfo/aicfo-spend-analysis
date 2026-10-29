@@ -63,6 +63,8 @@ def test_the_report_gives_api_by_category_with_the_remainders_last(tmp_path: Pat
 
 def test_the_team_view_shows_categories_without_naming_keys(tmp_path: Path) -> None:
     folder = new_workspace(tmp_path)
+    settings = json.loads((folder / SETTINGS_FILE_NAME).read_text(encoding="utf-8"))
+    (folder / SETTINGS_FILE_NAME).write_text(json.dumps({**settings, "visibility": "team"}), encoding="utf-8")
     save_keys(folder, ramp_key("pat-personal-key", 10000, "sam.cho@example.com", cost_category="R&D"), ramp_total="100")
 
     spend = build_dashboard(folder, load_settings(folder), SEPTEMBER, date(2026, 10, 2))["spend"]

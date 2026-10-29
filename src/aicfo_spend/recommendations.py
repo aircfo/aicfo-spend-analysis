@@ -58,6 +58,9 @@ STATUSES = (OPEN, DONE, DECLINED)
 
 MONTHS_READ = 3
 MONTHS_NEEDED = 2
+# The month after the last whole one counts once this many days of it are saved, scaled to a
+# whole month, so a recommendation reflects how someone uses Claude now.
+MONTH_SO_FAR_FROM_DAY = 14
 CHECK_IN_REQUESTS = 50
 # A declined recommendation comes back only after this long, in case things have changed.
 ASK_AGAIN_AFTER = timedelta(days=90)
@@ -119,6 +122,24 @@ def whole_months(workspace: Path, last: Month) -> list[tuple[Month, dict[str, Pe
     return list(reversed(found))
 
 
+def months_read(workspace: Path, last: Month) -> tuple[list[tuple[Month, dict[str, PersonMonth]]], date | None]:
+    """The whole months up to `last`, then the month after it so far, scaled to a whole month, once
+    at least two weeks of it are saved: the last three of those, oldest first, and the day the
+    month so far reaches (None when it isn't used)."""
+    months = whole_months(workspace, last)
+    current = last.next_month()
+    usage = build_usage(workspace, current)
+    through: date | None = None
+    if usage.covers and usage.covers[0] == current.first_day and usage.covers[1].day >= MONTH_SO_FAR_FROM_DAY:
+        through = usage.covers[1]
+        scale = Decimal(current.last_day.day) / Decimal(through.day)
+        months.append((current, {
+            person: PersonMonth(int(use_.requests * scale), int(use_.fresh_tokens * scale), (use_.extra_usd * scale).quantize(CENT))
+            for person, use_ in _by_person(usage).items()
+        }))
+    return months[-MONTHS_READ:], through
+
+
 def _by_person(usage: MonthUsage) -> dict[str, PersonMonth]:
     totals: dict[str, PersonMonth] = defaultdict(PersonMonth)
     for row in usage.rows:
@@ -131,13 +152,16 @@ def _by_person(usage: MonthUsage) -> dict[str, PersonMonth]:
 
 def find_recommendations(workspace: Path, settings: Settings, last: Month, today: date) -> tuple[list[Recommendation], list[str]]:
     """What the rules recommend from the months up to `last`, with notes on anything they couldn't judge."""
-    months = whole_months(workspace, last)
+    months, so_far_through = months_read(workspace, last)
     if len(months) < MONTHS_NEEDED:
         return [], [
-            f"seat recommendations need at least {MONTHS_NEEDED} whole months of the claude.ai spend export "
-            f"in the {MONTHS_READ} months to {last.label}; {len(months)} {'is' if len(months) == 1 else 'are'} saved"
+            f"seat recommendations need at least {MONTHS_NEEDED} months of the claude.ai spend export "
+            f"(whole months to {last.label}, or {last.next_month().label} from the {MONTH_SO_FAR_FROM_DAY}th on); "
+            f"{len(months)} {'is' if len(months) == 1 else 'are'} saved"
         ]
     notes: list[str] = []
+    if so_far_through is not None:
+        notes.append(f"{months[-1][0].label} counts through {so_far_through}, scaled to a whole month")
     basis = f"{months[0][0].label} to {months[-1][0].label}" if len(months) > 1 else months[0][0].label
     labels = ", ".join(month.label for month, _ in months)
     seats = {row.email: row.seat_type for row in read_people_file(workspace) if row.vendor == VENDOR}
@@ -199,7 +223,9 @@ def find_recommendations(workspace: Path, settings: Settings, last: Month, today
             continue
         baseline = sum((month.extra_usd for month in history), ZERO) / len(history)
         # The rule holds in two months, but the saving is the average, which one quiet month can sink.
-        if seat == STANDARD and sum(month.extra_usd > gap for month in history) >= MONTHS_NEEDED and baseline > gap:
+        # The latest month must agree too: someone whose extra usage has stopped doesn't need Premium.
+        if (seat == STANDARD and sum(month.extra_usd > gap for month in history) >= MONTHS_NEEDED
+                and history[-1].extra_usd > gap and baseline > gap):
             extras = ", ".join(dollars(month.extra_usd) for month in history)
             recommend(person, UPGRADE, STANDARD, PREMIUM, baseline - gap,
                       f"extra usage of {extras} in {labels}, against Premium's {dollars(gap)} more a month. "

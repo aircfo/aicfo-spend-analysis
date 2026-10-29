@@ -11,8 +11,8 @@ from aicfo_spend.months import Month
 from aicfo_spend.report import MonthSpend, build_month, total
 from aicfo_spend.settings import SETTINGS_FILE_NAME, load_settings
 from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCT_SEATS, UNASSIGNED
-from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, RAMP_PEOPLE, save_raw
-from tests.factories import ramp_people_answer, ramp_user, spend_export
+from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, RAMP_API_KEYS, RAMP_PEOPLE, RAMP_PROVIDER_TOTALS, save_raw
+from tests.factories import ramp_key, ramp_keys_answer, ramp_people_answer, ramp_totals_answer, ramp_user, spend_export
 from tests.workspaces import SAVED_AT, SEPTEMBER, fill_september, new_workspace, save_month
 
 JUNE, JULY, AUGUST = Month(2026, 6), Month(2026, 7), Month(2026, 8)
@@ -165,3 +165,33 @@ def test_a_known_change_can_be_a_cut(workspace: Path) -> None:
     forecast = forecast_after(workspace, load_settings(workspace), AUG_31)
 
     assert forecast.by_team["Engineering"][PRODUCT_API] == Decimal("50.00")
+
+
+def save_october_through(folder: Path, day: int, backend_cents: int) -> None:
+    """October's API on the backend key from the 1st through `day`, with Ramp's total beside it."""
+    october = Month(2026, 10)
+    keys = ramp_keys_answer(ramp_key("backend", backend_cents, "sam.cho@example.com"))
+    save_raw(folder, RAMP_API_KEYS, october.first_day, date(2026, 10, day), keys, saved_at=SAVED_AT)
+    save_raw(folder, RAMP_PROVIDER_TOTALS, october.first_day, date(2026, 10, day),
+             ramp_totals_answer(ANTHROPIC=f"{backend_cents / 100}"), saved_at=SAVED_AT)
+
+
+def test_three_weeks_into_a_month_its_spend_so_far_scaled_up_sets_next_months_api(workspace: Path) -> None:
+    # $620 through Oct 20 would be too early; $868 through Oct 28 scales to $961 over 31 days.
+    save_october_through(workspace, 28, 86800)
+
+    forecast = forecast_after(workspace, load_settings(workspace), date(2026, 10, 29))
+
+    assert forecast.history[PRODUCT_API] == [Month(2026, 10)]
+    assert forecast.run_rate == {PRODUCT_API: date(2026, 10, 28)}
+    assert forecast.by_team["Engineering"][PRODUCT_API] == Decimal("961.00")
+    assert "2026-10 (2026-10 through 2026-10-28, scaled to a whole month)" in describe_forecast(forecast)
+
+
+def test_before_three_weeks_last_complete_month_still_sets_the_api_forecast(workspace: Path) -> None:
+    save_october_through(workspace, 20, 62000)
+
+    forecast = forecast_after(workspace, load_settings(workspace), date(2026, 10, 21))
+
+    assert forecast.history[PRODUCT_API] == [SEPTEMBER]
+    assert forecast.run_rate == {}

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from aicfo_spend.cli import main
+from aicfo_spend.dashboard import build_dashboard
 from aicfo_spend.errors import InputError
 from aicfo_spend.months import Month
 from aicfo_spend.raw_store import CLAUDE_SPEND_EXPORT, save_raw
@@ -74,8 +75,8 @@ def with_standard_seats_bought(folder: Path, bought: int) -> None:
 
 def three_months(folder: Path) -> None:
     save_usage(folder, JULY, [*NORMAL_MONTH, ("heavy@example.com", 4000, 90000, "150"), ("idle@example.com", 40, 800, "0")])
-    save_usage(folder, AUGUST, [*NORMAL_MONTH, ("heavy@example.com", 4500, 95000, "180")])
-    save_usage(folder, SEPTEMBER, [*NORMAL_MONTH, ("heavy@example.com", 3000, 70000, "90")])
+    save_usage(folder, AUGUST, [*NORMAL_MONTH, ("heavy@example.com", 3000, 70000, "90")])
+    save_usage(folder, SEPTEMBER, [*NORMAL_MONTH, ("heavy@example.com", 4500, 95000, "180")])
 
 
 def found_in(folder: Path) -> dict[str, str]:
@@ -136,7 +137,8 @@ def test_needs_two_whole_months_and_a_month_saved_in_part_doesnt_count(tmp_path:
     found, notes = find_recommendations(folder, load_settings(folder), SEPTEMBER, TODAY)
 
     assert found == []
-    assert notes == ["seat recommendations need at least 2 whole months of the claude.ai spend export in the 3 months to 2026-09; 1 is saved"]
+    assert notes == ["seat recommendations need at least 2 months of the claude.ai spend export "
+                     "(whole months to 2026-09, or 2026-10 from the 14th on); 1 is saved"]
 
 
 def test_bundles_cover_the_smallest_month_biggest_first() -> None:
@@ -318,3 +320,67 @@ def test_someone_whose_seat_the_ledger_changed_isnt_judged_on_months_spent_on_th
 
     # On Premium now, with extra usage from months on Standard: no downgrade, no new upgrade.
     assert [item.action for item in again if item.person == "heavy@example.com"] == []
+
+
+def test_an_upgrade_isnt_recommended_once_the_latest_months_extra_usage_has_stopped(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    save_usage(folder, JULY, [*NORMAL_MONTH, ("heavy@example.com", 4000, 90000, "150")])
+    save_usage(folder, AUGUST, [*NORMAL_MONTH, ("heavy@example.com", 4500, 95000, "375")])
+    save_usage(folder, SEPTEMBER, [*NORMAL_MONTH, ("heavy@example.com", 3000, 70000, "0")])
+
+    assert "heavy@example.com" not in found_in(folder)
+
+
+def test_two_weeks_into_a_month_it_counts_scaled_to_a_whole_month(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    save_usage(folder, AUGUST, [*NORMAL_MONTH, ("heavy@example.com", 3000, 70000, "150")])
+    save_usage(folder, SEPTEMBER, [*NORMAL_MONTH, ("heavy@example.com", 4500, 95000, "180")])
+    # $75 through Oct 15 is $155 over October's 31 days, above the $100 Premium gap.
+    save_usage(folder, OCTOBER, [*NORMAL_MONTH, ("heavy@example.com", 2000, 40000, "75")], through=date(2026, 10, 15))
+
+    found, notes = find_recommendations(folder, load_settings(folder), SEPTEMBER, date(2026, 10, 16))
+    upgrade = next(item for item in found if item.action == UPGRADE)
+
+    assert upgrade.basis == "2026-08 to 2026-10"
+    assert upgrade.baseline_usd == Decimal("161.67")
+    assert "2026-10 counts through 2026-10-15, scaled to a whole month" in notes
+
+
+def test_the_page_lists_what_the_rules_find_with_people_in_the_person_view(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    three_months(folder)
+
+    savings = build_dashboard(folder, load_settings(folder), OCTOBER, date(2026, 10, 5))["savings"]
+
+    assert isinstance(savings, dict)
+    upgrade = next(item for item in savings["open"] if item["action"] == UPGRADE)
+    assert (upgrade["person"], upgrade["monthly_cents"], upgrade["at_most"]) == ("heavy@example.com", 4000, True)
+    assert savings["about_people"] == 0
+
+
+def test_the_team_view_lists_only_company_wide_savings_and_counts_the_rest(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    three_months(folder)
+    settings = json.loads((folder / SETTINGS_FILE_NAME).read_text(encoding="utf-8"))
+    (folder / SETTINGS_FILE_NAME).write_text(json.dumps({**settings, "visibility": "team"}), encoding="utf-8")
+
+    savings = build_dashboard(folder, load_settings(folder), OCTOBER, date(2026, 10, 5))["savings"]
+
+    assert isinstance(savings, dict)
+    assert [item["action"] for item in savings["open"]] == [BUNDLES]
+    assert savings["about_people"] == 4
+    assert "@" not in json.dumps(savings)
+
+
+def test_the_page_doesnt_offer_a_recommendation_the_ledger_marks_declined(tmp_path: Path) -> None:
+    folder = company(tmp_path)
+    three_months(folder)
+    found, _ = find_recommendations(folder, load_settings(folder), SEPTEMBER, TODAY)
+    ledger, added = add_new([], found)
+    upgrade = next(item for item in added if item.action == UPGRADE)
+    write_ledger(folder, decide(ledger, upgrade.id, DECLINED, TODAY, ""))
+
+    savings = build_dashboard(folder, load_settings(folder), OCTOBER, date(2026, 10, 5))["savings"]
+
+    assert isinstance(savings, dict)
+    assert UPGRADE not in [item["action"] for item in savings["open"]]

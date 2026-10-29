@@ -63,7 +63,7 @@ class KnownChange:
 @dataclass(frozen=True)
 class Settings:
     company_name: str = ""
-    visibility: Visibility = "team"
+    visibility: Visibility = "person"
     # vendor -> seat type -> plan, e.g. seats["anthropic"]["premium"]
     seats: Mapping[str, Mapping[str, SeatPlan]] = field(default_factory=dict)
     alerts: AlertThresholds = field(default_factory=AlertThresholds)
@@ -97,7 +97,7 @@ def parse_settings(raw: object) -> Settings:
     _reject_unknown_keys(top, TOP_LEVEL_KEYS, "the settings file")
     return Settings(
         company_name=_text(top.get("company_name", ""), "company_name"),
-        visibility=_visibility(top.get("visibility", "team")),
+        visibility=_visibility(top.get("visibility", "person")),
         seats=_seats(top.get("seats", {})),
         alerts=_alerts(top.get("alerts", {})),
         known_changes=_known_changes(top.get("known_changes", [])),

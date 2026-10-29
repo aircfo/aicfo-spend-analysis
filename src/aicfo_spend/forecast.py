@@ -10,6 +10,8 @@ Next month = seats x price + extra usage + API + the operator's known changes.
   average lags every step. Spend no current key carries is left out, because a deleted key
   doesn't spend again.
 - Known changes, from settings, add what history can't show, like a new project's key.
+- Once this month is three weeks in, it stands in as the newest month, scaled to a whole
+  month: API spend moves in steps, and a step taken this month shouldn't wait a month to count.
 """
 
 from __future__ import annotations
@@ -42,6 +44,8 @@ from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_EXTRA_USAGE, PRODUCTS
 HISTORY_MONTHS = 3
 # The API forecast is the newest complete month alone; see the module's note.
 API_HISTORY_MONTHS = 1
+# From this day of the month on, the month so far, scaled up, is a better guide than last month.
+RUN_RATE_FROM_DAY = 21
 USAGE_PRODUCTS = (PRODUCT_EXTRA_USAGE, PRODUCT_API)
 CENT = Decimal("0.01")
 
@@ -57,6 +61,9 @@ class Forecast:
     # The known changes added, each with the team it was added to, kept apart from the notes so a
     # shared view can say them without the operator's own words or an unfolded team.
     known_changes: list[tuple[str, KnownChange]] = field(default_factory=list)
+    # For each usage product whose newest month is this month so far, scaled to a whole month:
+    # the last day that month's downloads reach.
+    run_rate: dict[str, date] = field(default_factory=dict)
 
 
 def known_change_note(team: str, change: KnownChange, with_note: bool = True) -> str:
@@ -82,11 +89,22 @@ def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast
 
     candidates = _recent_complete_months(as_of)
     spends = {month: build_month(workspace, month, settings) for month in candidates}
+    current = Month.of(as_of)
+    if current not in spends:
+        spends[current] = build_month(workspace, current, settings)
     history: dict[str, list[Month]] = {}
+    run_rate: dict[str, date] = {}
+    scale: dict[Month, Decimal] = {}
     for product in USAGE_PRODUCTS:
         months = sorted(month for month in candidates if _has_whole_month(spends[month], product))
-        if product == PRODUCT_API:
-            months = months[-API_HISTORY_MONTHS:]
+        covered = spends[current].coverage.get(product)
+        # Only downloads from before as_of count, so a replay of a past date sees what that date saw.
+        if (current not in candidates and covered and covered[0] == current.first_day
+                and RUN_RATE_FROM_DAY <= covered[1].day and covered[1] < as_of):
+            months.append(current)
+            run_rate[product] = covered[1]
+            scale[current] = Decimal(current.last_day.day) / Decimal(covered[1].day)
+        months = months[-API_HISTORY_MONTHS:] if product == PRODUCT_API else months[-HISTORY_MONTHS:]
         history[product] = months
         if not months:
             notes.append(f"no complete month of {product} is saved before {as_of}, so it's forecast at $0")
@@ -99,7 +117,7 @@ def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast
             for team, amounts in totals_by(product_rows, lambda row: row.team).items():
                 name = spellings.setdefault(team.casefold(), team)
                 team_amounts = by_team.setdefault(name, {product_name: ZERO for product_name in PRODUCTS})
-                team_amounts[product] += amounts[product] / len(months)
+                team_amounts[product] += amounts[product] * scale.get(month, Decimal(1)) / len(months)
     applied: list[tuple[str, KnownChange]] = []
     for change in settings.known_changes:
         if change.month != target:
@@ -110,7 +128,9 @@ def forecast_after(workspace: Path, settings: Settings, as_of: date) -> Forecast
     # Rounded to cents per team, so the rows people see add up to the total they see.
     rounded = {team: {product: amount.quantize(CENT, ROUND_HALF_UP) for product, amount in amounts.items()}
                for team, amounts in by_team.items()}
-    return Forecast(target, as_of, rounded, history, notes, applied)
+    return Forecast(target, as_of, rounded, history, notes, applied, {
+        product: through for product, through in run_rate.items() if current in history[product]
+    })
 
 
 def describe_forecast(forecast: Forecast) -> str:
@@ -121,6 +141,8 @@ def describe_forecast(forecast: Forecast) -> str:
         months = forecast.history[product]
         if months:
             span = months[0].label if len(months) == 1 else f"{months[0].label} to {months[-1].label}"
+            if product in forecast.run_rate:
+                span += f" ({months[-1].label} through {forecast.run_rate[product]}, scaled to a whole month)"
             if product == PRODUCT_API:
                 lines.append(f"{PRODUCT_HEADINGS[product]}: each team's spend on current keys in {span}.")
             else:

@@ -13,7 +13,7 @@ import os
 import statistics
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
@@ -27,7 +27,7 @@ from aicfo_spend.raw_store import saved_files
 from aicfo_spend.report import ZERO, MonthSpend, aligned, build_month, dollars, month_directory, total, untied_so_far
 from aicfo_spend.settings import AlertThresholds, Settings
 from aicfo_spend.sources.people import read_people_file
-from aicfo_spend.spend_table import UNASSIGNED
+from aicfo_spend.spend_table import PRODUCT_API, PRODUCT_SEATS, PRODUCTS, UNASSIGNED
 
 PROJECTION_WINDOW_DAYS = 14
 SPIKE_HISTORY_DAYS = 28
@@ -42,6 +42,10 @@ class Plan:
     total: Decimal
     made_as_of: date
     saved_on: date
+    # Seats, extra usage and API, so the page can say which of them moved spend off plan.
+    # Empty for a plan saved before plans kept it.
+    by_product: dict[str, Decimal] = field(default_factory=dict)
+    by_team: dict[str, Decimal] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -54,6 +58,9 @@ class Pace:
     plan: Plan | None
     alerts: list[str]
     notes: list[str]
+    # The whole company's spend so far and month-end projection for each product.
+    so_far_by_product: dict[str, Decimal] = field(default_factory=dict)
+    projected_by_product: dict[str, Decimal] = field(default_factory=dict)
 
 
 def pace_of(
@@ -78,9 +85,13 @@ def pace_of(
 
     so_far: dict[str, Decimal] = defaultdict(lambda: ZERO)
     projected: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    product_so_far: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    product_projected: dict[str, Decimal] = defaultdict(lambda: ZERO)
     for row in seats:
         so_far[name_of(row.team)] += row.amount_usd
         projected[name_of(row.team)] += row.amount_usd
+        product_so_far[PRODUCT_SEATS] += row.amount_usd
+        product_projected[PRODUCT_SEATS] += row.amount_usd
 
     previous = month.previous_month()
     previous_directory = month_directory(workspace, previous, people_file, [])
@@ -102,6 +113,8 @@ def pace_of(
             average = sum((history[day].get(team, ZERO) for day in window), ZERO) / len(window)
             so_far[team] += series.latest.get(team, ZERO)
             projected[team] += series.latest.get(team, ZERO) + average * days_left
+            product_so_far[product] += series.latest.get(team, ZERO)
+            product_projected[product] += series.latest.get(team, ZERO) + average * days_left
     # Counted in full but never projected or checked for spikes: it's mostly spend on keys
     # deleted during the month, which moves out of a team's numbers rather than adding to them.
     untied, untied_notes = untied_so_far(workspace, month)
@@ -109,6 +122,8 @@ def pace_of(
     if untied:
         so_far[name_of(UNASSIGNED)] += untied
         projected[name_of(UNASSIGNED)] += untied
+        product_so_far[PRODUCT_API] += untied
+        product_projected[PRODUCT_API] += untied
     if len(set(through.values())) > 1:
         reached = ", ".join(f"{product} through {end}" for product, end in through.items())
         notes.append(f"the downloads reach different days ({reached}), so spikes are checked up to the earlier one")
@@ -121,7 +136,8 @@ def pace_of(
         notes.append(plan_note)
     else:
         alerts += _over_pace(month, sum(rounded_projected.values(), ZERO), plan, settings.alerts)
-    return Pace(month, through, _cents(so_far), rounded_projected, plan, alerts, notes)
+    return Pace(month, through, _cents(so_far), rounded_projected, plan, alerts, notes,
+                _cents(product_so_far), _cents(product_projected))
 
 
 def plan_for(
@@ -153,13 +169,15 @@ def plan_for(
             "so over pace isn't checked"
         )
     by_team = {team: total(amounts) for team, amounts in forecast.by_team.items()}
-    plan = Plan(sum(by_team.values(), ZERO), made_as_of, today)
+    by_product = {product: sum((amounts[product] for amounts in forecast.by_team.values()), ZERO) for product in PRODUCTS}
+    plan = Plan(sum(by_team.values(), ZERO), made_as_of, today, by_product, by_team)
     document = {
         "month": month.label,
         "made_as_of": made_as_of.isoformat(),
         "saved_on": today.isoformat(),
         "total_usd": f"{plan.total:f}",
         "by_team": {team: f"{amount:f}" for team, amount in sorted(by_team.items())},
+        "by_product": {product: f"{amount:f}" for product, amount in by_product.items()},
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     # Written beside the final name, then renamed, so a crash can't leave half a plan.
@@ -291,8 +309,14 @@ def _read_plan(path: Path) -> Plan:
     if not all(isinstance(value, str) for value in fields):
         raise InputError(problem)
     total_text, made_text, saved_text = (str(value) for value in fields)
+    products = document.get("by_product", {})
+    teams = document.get("by_team", {})
+    if not all(isinstance(part, dict) and all(isinstance(value, str) for value in part.values()) for part in (products, teams)):
+        raise InputError(problem)
     try:
-        return Plan(Decimal(total_text), date.fromisoformat(made_text), date.fromisoformat(saved_text))
+        return Plan(Decimal(total_text), date.fromisoformat(made_text), date.fromisoformat(saved_text),
+                    {str(product): Decimal(value) for product, value in products.items()},
+                    {str(team): Decimal(value) for team, value in teams.items()})
     except (InvalidOperation, ValueError):
         raise InputError(problem) from None
 

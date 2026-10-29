@@ -26,6 +26,18 @@ from aicfo_spend.forecast import USAGE_PRODUCTS, Forecast, forecast_after, known
 from aicfo_spend.months import Month
 from aicfo_spend.other_vendors import OtherAiSpend, other_ai_spend
 from aicfo_spend.pace import Pace, pace_of
+from aicfo_spend.raw_store import RAMP_PEOPLE, saved_files, snapshot_for
+from aicfo_spend.recommendations import (
+    BUNDLES,
+    DECLINED,
+    DONE,
+    UPGRADE,
+    PersonMonth,
+    find_recommendations,
+    months_read,
+    outcomes,
+    read_ledger,
+)
 from aicfo_spend.report import (
     ZERO,
     Amounts,
@@ -40,6 +52,7 @@ from aicfo_spend.report import (
 )
 from aicfo_spend.settings import Settings
 from aicfo_spend.sources.people import PeopleFileRow, read_people_file
+from aicfo_spend.sources.ramp import read_people
 from aicfo_spend.spend_table import PRODUCT_EXTRA_USAGE, PRODUCTS, UNASSIGNED, SpendRow
 from aicfo_spend.usage import (
     MonthUsage,
@@ -54,8 +67,6 @@ from aicfo_spend.usage import totals_by as usage_totals_by
 DASHBOARD_FILE_NAME = "dashboard.json"
 OTHER_SMALL_TEAMS = "Other (small teams)"
 # A product only a person or two used would point at them, so the team view folds it too.
-OTHER_PRODUCTS = "Other products"
-OTHER_MODELS = "Other models"
 MIN_PEOPLE_PER_TEAM = 3
 EMAIL = re.compile(r"[^\s@,;:()]+@[^\s@,;:()]+\.[A-Za-z]+")
 
@@ -105,11 +116,14 @@ def build_dashboard(workspace: Path, settings: Settings, month: Month, today: da
         },
         "spend": _spend_section(spend, rows, show_people),
         "change_from_last_month": change,
-        "pace": _pace_section(pace),
+        "pace": _pace_section(pace, *_plan_split(workspace, settings, pace, team_name)),
         "forecast": _forecast_section(forecast, team_name, usage.seat_holders),
+        "history": _history_section(workspace, settings, month, previous),
         "alerts": pace.alerts,
         "notes": notes if show_people else [without_emails(note) for note in notes],
-        "seat_types": _seat_types(settings, read_people_file(workspace)),
+        "seat_types": _seat_types(settings, read_people_file(workspace), usage),
+        "savings": _savings_section(workspace, settings, month, today, show_people),
+        "people_names": _people_names(workspace, month) if show_people else {},
         "usage": _usage_section(usage, team_name, show_people),
         "other_ai_vendors": _other_ai_section(other_ai_spend(workspace, month, settings)),
         "bills": _bills_section([previous, spend], read_bills(workspace, settings)),
@@ -227,7 +241,15 @@ def _spend_section(spend: MonthSpend, rows: list[SpendRow], show_people: bool) -
     }
     if show_people:
         by_person = totals_by((row for row in rows if row.person), lambda row: row.person)
-        section["by_person"] = _table("person", by_person, sorted(by_person, key=lambda person: -total(by_person[person])))
+        # A person's team is the one their own seats and usage go to; an API key can belong to another.
+        teams: dict[str, str] = {}
+        for row in sorted(rows, key=lambda row: bool(row.api_key)):
+            if row.person:
+                teams.setdefault(row.person, row.team)
+        section["by_person"] = [
+            {**entry, "team": teams.get(str(entry["person"]), "")}
+            for entry in _table("person", by_person, sorted(by_person, key=lambda person: -total(by_person[person])))
+        ]
         # Spend no current key carries is in Unassigned by reason; this table is the keys themselves.
         api_rows = sorted((row for row in rows if row.api_key), key=lambda row: -row.amount_usd)
         section["api_keys"] = [
@@ -252,7 +274,25 @@ def _change_section(
     return section
 
 
-def _pace_section(pace: Pace) -> Json:
+def _plan_split(
+    workspace: Path, settings: Settings, pace: Pace, team_name: Callable[[str], str]
+) -> tuple[dict[str, Decimal], dict[str, Decimal]]:
+    """The plan by product and by team, teams named as the page shows them. A plan saved before
+    plans kept the product split gets it from the same forecast replayed, which matches unless
+    downloads were revised since."""
+    if pace.plan is None:
+        return {}, {}
+    by_product = pace.plan.by_product
+    if not by_product:
+        replay = forecast_after(workspace, settings, pace.plan.made_as_of)
+        by_product = {product: sum((amounts[product] for amounts in replay.by_team.values()), ZERO) for product in PRODUCTS}
+    by_team: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    for team, amount in pace.plan.by_team.items():
+        by_team[team_name(team)] += amount
+    return by_product, dict(by_team)
+
+
+def _pace_section(pace: Pace, plan_by_product: dict[str, Decimal], plan_by_team: dict[str, Decimal]) -> Json:
     teams = sorted((team for team in pace.projected if team != UNASSIGNED), key=lambda team: -pace.projected[team])
     if UNASSIGNED in pace.projected:
         teams.append(UNASSIGNED)
@@ -268,11 +308,21 @@ def _pace_section(pace: Pace) -> Json:
         "so_far_cents": sum(cents(amount) for amount in pace.so_far.values()),
         "on_pace_for_cents": sum(cents(amount) for amount in pace.projected.values()),
         "plan": plan,
+        "by_product": [
+            {"product": product, "so_far_cents": cents(pace.so_far_by_product.get(product, ZERO)),
+             "on_pace_for_cents": cents(pace.projected_by_product.get(product, ZERO)),
+             "plan_cents": cents(plan_by_product[product]) if product in plan_by_product else None}
+            for product in PRODUCTS
+        ],
         "by_team": [
             {"team": team, "so_far_cents": cents(pace.so_far.get(team, ZERO)),
-             "on_pace_for_cents": cents(pace.projected[team])}
+             "on_pace_for_cents": cents(pace.projected[team]),
+             "plan_cents": cents(plan_by_team[team]) if team in plan_by_team else (0 if plan_by_team else None)}
             for team in teams
         ],
+        # Teams the plan expected that have no spend this month.
+        "planned_only": [{"team": team, "plan_cents": cents(amount)} for team, amount in sorted(plan_by_team.items())
+                         if team not in pace.projected],
     }
 
 
@@ -294,6 +344,8 @@ def _forecast_section(forecast: Forecast, team_name: Callable[[str], str], seat_
         "averaged_over": {product: [month.label for month in forecast.history[product]] for product in USAGE_PRODUCTS},
         "seat_holders": dict(sorted(holders.items())),
         "known_changes": _known_change_cents(forecast, team_name),
+        # Products whose newest month is this month so far, scaled to a whole month, and the day it reaches.
+        "run_rate": {product: through.isoformat() for product, through in forecast.run_rate.items()},
     }
 
 
@@ -309,21 +361,15 @@ def _known_change_cents(forecast: Forecast, team_name: Callable[[str], str]) -> 
     }
 
 
-def _fold_few_people(rows: list[UsageRow], name_of: Callable[[UsageRow], str], other: str) -> Callable[[str], str]:
-    """Names safe to share in the team view: a product or model fewer than 3 people used folds into
-    `other`, and while `other` holds 1 or 2 people the least used name joins it, as small teams do."""
+def _shared_names(rows: list[UsageRow], name_of: Callable[[UsageRow], str]) -> set[str]:
+    """The products or models safe to name in the team view: those at least 3 people used.
+    The rest are left out rather than grouped, since a group of 1 or 2 still points at them, and
+    folding a well-used product in to make the group big enough would hide that product."""
     people: dict[str, set[str]] = defaultdict(set)
     for row in rows:
         if row.requests:
             people[name_of(row)].add(row.person)
-    named = {name for name, persons in people.items() if len(persons) >= MIN_PEOPLE_PER_TEAM}
-
-    def in_other() -> set[str]:
-        return set().union(*(persons for name, persons in people.items() if name not in named))
-
-    while named and 0 < len(in_other()) < MIN_PEOPLE_PER_TEAM:
-        named.remove(min(named, key=lambda name: (len(people[name]), name)))
-    return lambda name: name if name in named else other
+    return {name for name, persons in people.items() if len(persons) >= MIN_PEOPLE_PER_TEAM}
 
 
 def _usage_section(usage: MonthUsage, team_name: Callable[[str], str], show_people: bool) -> Json | None:
@@ -336,13 +382,14 @@ def _usage_section(usage: MonthUsage, team_name: Callable[[str], str], show_peop
         holders_by_team[team_name(team)].append(person)
     by_team = usage_totals_by(usage.rows, lambda row: team_name(row.team))
     teams = sorted({*by_team, *holders_by_team}, key=lambda team: (team == UNASSIGNED, -by_team.get(team, Totals()).fresh_tokens))
-    product_name: Callable[[str], str] = str
-    model_name: Callable[[str], str] = str
+    product_rows = model_rows = usage.rows
     if not show_people:
-        product_name = _fold_few_people(usage.rows, lambda row: row.product, OTHER_PRODUCTS)
-        model_name = _fold_few_people(usage.rows, lambda row: row.model, OTHER_MODELS)
-    by_product = usage_totals_by(usage.rows, lambda row: product_name(row.product))
-    by_model = usage_totals_by(usage.rows, lambda row: model_name(row.model))
+        products = _shared_names(usage.rows, lambda row: row.product)
+        models = _shared_names(usage.rows, lambda row: row.model)
+        product_rows = [row for row in usage.rows if row.product in products]
+        model_rows = [row for row in usage.rows if row.model in models]
+    by_product = usage_totals_by(product_rows, lambda row: row.product)
+    by_model = usage_totals_by(model_rows, lambda row: row.model)
     share = top_share(usage)
     section: Json = {
         "covers": {"start": usage.covers[0].isoformat(), "end": usage.covers[1].isoformat()},
@@ -357,12 +404,17 @@ def _usage_section(usage: MonthUsage, team_name: Callable[[str], str], show_peop
         ],
         "by_product": [
             {"product": product, "people": len(totals.people), **_usage_cells(totals)}
-            for product, totals in sorted(by_product.items(), key=lambda item: (item[0] == OTHER_PRODUCTS, -item[1].fresh_tokens))
+            for product, totals in sorted(by_product.items(), key=lambda item: -item[1].fresh_tokens)
         ],
         "by_model": [
             {"model": model, **_usage_cells(totals)}
-            for model, totals in sorted(by_model.items(), key=lambda item: (item[0] == OTHER_MODELS, -item[1].fresh_tokens))
+            for model, totals in sorted(by_model.items(), key=lambda item: -item[1].fresh_tokens)
         ],
+        # How many products and models the team view leaves out for having fewer than 3 people.
+        "left_out": {
+            "products": len({row.product for row in usage.rows if row.requests} - set(by_product)),
+            "models": len({row.model for row in usage.rows if row.requests} - set(by_model)),
+        },
     }
     if show_people:
         by_person = usage_totals_by(usage.rows, lambda row: row.person)
@@ -381,16 +433,90 @@ def _usage_cells(totals: Totals) -> Json:
             "cache_read_tokens": totals.cache_read_tokens, "extra_usage_cents": cents(totals.extra_usd)}
 
 
-def _seat_types(settings: Settings, people_file: list[PeopleFileRow]) -> Json:
-    """Each vendor's seat types with their price, how many were bought and how many are held: the
-    Seats tab offers the types, and the Forecast tab's scenario fills empty seats before buying more."""
+def _seat_types(settings: Settings, people_file: list[PeopleFileRow], usage: MonthUsage) -> Json:
+    """Each vendor's seat types with their price, how many were bought, held, and used this month:
+    the Seats tab offers the types and shows how much of each is used, and the Forecast tab's
+    scenario fills empty seats before buying more. Only Claude seats have usage to count."""
     held = Counter((row.vendor, row.seat_type) for row in people_file if row.vendor)
+    using = {row.person for row in usage.rows if row.requests} if usage.covers else set()
+    active = Counter((row.vendor, row.seat_type) for row in people_file if row.vendor and row.email in using)
     return {
         vendor: [
-            {"seat_type": seat_type, "bought": plan.bought, "held": held[(vendor, seat_type)], "price_cents": cents(plan.price_usd)}
+            {"seat_type": seat_type, "bought": plan.bought, "held": held[(vendor, seat_type)],
+             "active": active[(vendor, seat_type)] if vendor == "anthropic" and usage.covers else None,
+             "price_cents": cents(plan.price_usd)}
             for seat_type, plan in sorted(plans.items())
         ]
         for vendor, plans in sorted(settings.seats.items())
+    }
+
+
+def _history_section(workspace: Path, settings: Settings, month: Month, previous: MonthSpend) -> list[Json]:
+    """The three months before this one, oldest first, for the Forecast tab's chart: each month's
+    total by product, and whether every usage product was saved for the whole month."""
+    spends = [previous]
+    while len(spends) < 3:
+        spends.append(build_month(workspace, spends[-1].month.previous_month(), settings))
+    history: list[Json] = []
+    for spend in reversed(spends):
+        if not spend.coverage:
+            continue
+        by_product = {product: sum((row.amount_usd for row in spend.rows if row.product == product), ZERO) for product in PRODUCTS}
+        history.append({
+            "month": spend.month.label,
+            "total_cents": sum(cents(amount) for amount in by_product.values()),
+            **{f"{product.replace(' ', '_')}_cents": cents(amount) for product, amount in by_product.items()},
+            "whole": all(end == spend.month.last_day for _, end in spend.coverage.values()),
+        })
+    return history
+
+
+def _people_names(workspace: Path, month: Month) -> dict[str, str]:
+    """Each person's name for the person view: from Ramp's people list, or people.csv where it names them."""
+    snapshot = snapshot_for(saved_files(workspace, RAMP_PEOPLE), month)
+    names = {email: person.name for email, person in (read_people(snapshot.path) if snapshot else {}).items() if person.name}
+    names.update({row.email: row.name for row in read_people_file(workspace) if row.name})
+    return dict(sorted(names.items()))
+
+
+def _savings_section(workspace: Path, settings: Settings, month: Month, today: date, show_people: bool) -> Json:
+    """What the seat rules recommend now, and what done recommendations have saved.
+
+    The rules read the whole months before this one and this month so far. A recommendation
+    the ledger already marks done or declined isn't offered again. The team view keeps the
+    company-wide ones and says only how many name a person.
+    """
+    found, notes = find_recommendations(workspace, settings, month.previous_month(), today)
+    # The months the rules read, as numbers, so the page can say why in a few words.
+    months, _ = months_read(workspace, month.previous_month())
+
+    def history(person: str) -> list[Json]:
+        if person:
+            return [{"month": read.label, "requests": by_person.get(person, PersonMonth()).requests,
+                     "extra_cents": cents(by_person.get(person, PersonMonth()).extra_usd)} for read, by_person in months]
+        return [{"month": read.label, "requests": sum(use.requests for use in by_person.values()),
+                 "extra_cents": cents(sum((use.extra_usd for use in by_person.values()), ZERO))} for read, by_person in months]
+
+    ledger = read_ledger(workspace)
+    decided = {(item.person, item.action) for item in ledger if item.status in (DONE, DECLINED)}
+    open_items = [item for item in found if (item.person, item.action) not in decided]
+    shown = open_items if show_people else [item for item in open_items if not item.person]
+    results = outcomes(workspace, settings, ledger, today)
+    return {
+        "open": [
+            {"person": item.person, "action": item.action, "from_seat": item.from_seat, "to_seat": item.to_seat,
+             "monthly_cents": cents(item.monthly_usd) if item.monthly_usd is not None else None,
+             "at_most": item.action == UPGRADE, "why": item.why, "months": history(item.person)}
+            for item in sorted(shown, key=lambda item: (-(item.monthly_usd or ZERO), item.action != BUNDLES))
+        ],
+        "about_people": len(open_items) - len(shown),
+        "done": [
+            {"person": result.recommendation.person if show_people else "", "action": result.recommendation.action,
+             "saved_cents": cents(result.saved_usd), "months": result.months, "problem": result.problem}
+            for result in results
+        ] if show_people else [],
+        "saved_cents": sum(cents(result.saved_usd) for result in results),
+        "notes": notes,
     }
 
 

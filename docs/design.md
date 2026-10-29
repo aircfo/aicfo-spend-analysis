@@ -112,7 +112,7 @@ Spend says what AI cost; usage says who relies on it. The claude.ai spend export
 
 - **Fresh tokens measure use.** Prompt tokens are uncached input plus cache reads and writes, and cache reads were 96% of airCFO's in September 2026: cheap, and little sign of work. So use is requests and fresh tokens (uncached input, cache writes and output), with cache reads kept apart.
 - **What's shown:** how many Claude seat holders used Claude; the share of fresh tokens the busiest tenth of people used, once there are 10 people; and use by team, product and model beside extra usage, since a model's share of the work and its share of the cost can differ a lot.
-- **Privacy:** the team view folds teams as spend does, and folds a product or model fewer than 3 people used into "Other products" or "Other models", since it would point at them. Like "Other (small teams)", each Other holds at least 3 people: while it holds fewer, the least used named one joins it. The person view adds each person, seat holders who never used Claude included.
+- **Privacy:** the person view, the default, lists each person, seat holders who never used Claude included. The team view folds teams as spend does and leaves out a product or model fewer than 3 people used, saying how many it left out: a group of 1 or 2 would still point at them, and folding a well-used product in to make the group big enough would hide it (an earlier rule folded Claude Code, 12 people, to cover two 1-person products).
 - **API usage** by model and token type is in Ramp's AI token usage, credited to each key's owner; it isn't read yet.
 
 ## Other AI vendors
@@ -133,9 +133,9 @@ The numbers are only as good as their match with what the vendors charged, so ea
 
 ## Seat recommendations
 
-The money a seat review finds is small next to the bill, so the tool keeps it honest: each recommendation is written down when it's made, and once it's done the tool reports what it actually saved. `aicfo-spend recommend <folder> [month]` reads the last three whole months of the claude.ai spend export (at least two are needed). Each rule must hold in at least two of them, so one odd month doesn't move a seat:
+The money a seat review finds is small next to the bill, so the tool keeps it honest: each recommendation is written down when it's made, and once it's done the tool reports what it actually saved. `aicfo-spend recommend <folder> [month]` reads the last three months of the claude.ai spend export: the whole months up to `month`, then the month after it so far, scaled to a whole month, once two weeks of it are saved, so a recommendation reflects how someone uses Claude now (at least two months are needed). Each rule must hold in at least two of them, so one odd month doesn't move a seat:
 
-- **Upgrade Standard to Premium:** extra usage above the price gap, and an average above it too, so the saving (average extra usage less the gap) is positive. Premium includes 5 times Standard's usage, which Anthropic doesn't state in tokens, so the saving is at most this much.
+- **Upgrade Standard to Premium:** extra usage above the price gap, in the latest month too, and an average above it, so the saving (average extra usage less the gap) is positive. The latest month matters: on airCFO's data, someone with $149 and $376 of extra usage in August and September had none in October, and Premium would have been money wasted. Premium includes 5 times Standard's usage, which Anthropic doesn't state in tokens, so the saving is at most this much.
 - **Downgrade Premium to Standard:** no extra usage at all, and no more fresh tokens than some Standard holder used that month without paying extra. It saves the gap.
 - **Reclaim:** no requests in either of the last two whole months read, nor in any month since, as far as each is saved. It saves the seat's price once seats bought goes down; on yearly billing, at renewal.
 - **Check in:** under 50 requests a month. A conversation, with no dollar figure.
@@ -143,7 +143,7 @@ The money a seat review finds is small next to the bill, so the tool keeps it ho
 
 The ledger is `recommendations.csv` in the company's folder: one row per recommendation with its id (R1, R2, …), when it was made, the months it read, who, what, the expected saving a month, why, and its status. `recommend` adds only what's new: a person and action already open or done isn't added again, and a declined one comes back 90 days after it was declined. Someone whose seat a done upgrade or downgrade changed during the months read is left out of the upgrade and downgrade rules, and out of what a Standard seat is taken to cover, since part of their months were on the old seat; a seat changed outside the ledger isn't seen. `aicfo-spend decide <folder> <id> done|declined` records the decision. For a done one, the saving counts whole months after the month it was done: a reclaim or downgrade saves its price each month the roster still shows the change, and only once settings show fewer of its seats bought than when it was made, since an emptied seat is still paid for (it says which is missing); an upgrade saves how far the person's extra usage fell below its average before, less the gap, in every whole month since; bundles are counted as estimated, and the credit receipts in `bills.csv` show them. ChatGPT seats aren't judged yet, since the engine has no ChatGPT usage.
 
-The ledger names people and their use, so it's for the operator only: it stays in the folder and never goes on the shared page, whatever the visibility setting.
+The page's Savings tab shows what the rules find now, leaving out anything the ledger marks done or declined, with what done ones have saved. It names people in the person view, the default; the team view shows only company-wide ones, such as credit bundles, and how many more name someone. The ledger itself stays in the folder.
 
 ## Forecast and alerts
 
@@ -152,6 +152,7 @@ The forecast is arithmetic anyone can redo by hand, and it stands in for a budge
 - **This month:** seats + usage so far + the last 14 days' average daily usage × days left. `aicfo-spend pace <folder>` prints it by team. API spend not tied to a current key is added as it stands, never projected and never checked for spikes: it's mostly spend on keys deleted during the month, so on the day of a deletion it moves out of a team's numbers rather than adding new spend.
 - **Next month:** seats × price + extra usage + API + known changes.
   - **Extra usage:** each team's average over the last 3 complete months, over the months that have a whole month of it, so a source saved only recently isn't diluted by months it wasn't saved for.
+  - **This month, once three weeks in:** from the 21st, this month so far, scaled to a whole month, stands in as the newest month for both. Without it, airCFO's November forecast on Oct 29 was built from September alone and came out at $3,598, below October's $4,447 on pace, because October's API had stepped up fivefold. Only downloads from before the forecast's date count, so a replay sees what that day saw.
   - **API:** last complete month's spend on current keys. On airCFO's twelve months of Ramp history (Nov 2025 to Oct 2026), last month's API spend missed the next by 27% on average, the 3-month average by 43%: API spend moves in steps as keys start and projects end, and an average lags each one. Spend no current key carries is left out, since a deleted key doesn't spend again.
   - **Known changes:** what history can't show, like a new project's key or a tool being retired, listed in settings as `known_changes` (month, team, product, dollars, note) and named in the forecast's notes. The team view names the change's folded team and leaves out the note, which is the operator's own words and may name someone.
   - `aicfo-spend forecast <folder>` prints it.
@@ -211,14 +212,14 @@ legacy/        the v0.3.0 scripts, removed as they're replaced
 
 ## Privacy
 
-Shared outputs show teams; whoever runs the tool can turn on the person view.
+Shared outputs show people by default; whoever runs the tool can switch to teams only. The owner decided on 2026-10-29 that transparency about who uses AI and what it costs matters more at this stage than keeping individuals out of view.
 
-- **Teams by default.** Dashboard data and summaries roll people up to teams before they're written; person detail stays in the company's folder.
+- **People by default.** Dashboard data names each person with their spend, use and seat recommendations. With `"visibility": "team"`, dashboard data and summaries roll people up to teams before they're written, and person detail stays in the company's folder.
 - **The seats roster names people, never their spend.** The page's Seats tab lists each person's name, email, team and seat types, so people can correct their seats where they look at the numbers. Anyone who can open the page sees it, and anyone given edit access can change a seat (decided 2026-10-28; limiting who reads it is one access rule on the page's database, `read: "admin"` on `seats`, if a company wants that later).
 - **Small teams fold together.** A one-person team is a person, so shared outputs fold teams under 3 people into "Other (small teams)". A team keeps its name only if at least 3 people spent in it both this month and last month, the two months compared; a key's owner counts as someone who spent in the key's team. "Other" holds at least 3 people too: while it holds fewer, the smallest named team joins it. Spikes are judged on the folded teams, and notes name only folded teams.
 
 `aicfo-spend dashboard <folder> [month]` writes the shared numbers to `out/<month>/dashboard.json`: the month by team, vendor and Unassigned reason, the change from last month, the pace, next month's forecast, the alert drafts, the notes, and each vendor's seat types with how many were bought, which the Seats tab offers. Amounts are whole cents, so no money passes through a float on its way to a chart. In the team view it also leaves out API key names, which often name their owner, and replaces any email in a note. The person view adds each person and each key. Unassigned shows in both views by reason and never by name, since it's the list of things to fix. Totals are the sums of the rounded rows, so the page adds up. A file for last month that can't be read stops the dashboard with an error naming it, because the forecast and the pace read last month too.
-- **Seat recommendations are the operator's.** `recommendations.csv` names people and their use, so it never goes on the shared page.
+- **Seat recommendations follow the view.** In the team view, a recommendation that names someone stays off the page.
 - **Company data never enters a repo.** Test files are made up.
 - **A privacy scan runs before every commit**, checking the change against real names from the people list and the spend export.
 
@@ -263,12 +264,12 @@ The test and release workflows need a code owner's approval.
 | Other AI vendors | Claude proposes them from Ramp's spend by vendor at setup, the operator confirms; shown apart from the teams, totals and forecast (decided 2026-10-29) |
 | An API key's cost category | Its Ramp `Cost category` tag, else settings' `api_cost_categories`, else Uncategorized; Claude proposes categories at setup and the operator confirms them (decided 2026-10-29) |
 | Paid seats nobody uses | Unassigned, as the signal to reclaim them; seats bought come from settings |
-| Seat recommendations | Rules over the last three whole months, each holding in two; kept in an operator-only ledger that reports what done ones saved (decided 2026-10-29) |
-| Who sees what | Team and person views; shared outputs show teams, and teams under 3 people fold into "Other" |
+| Seat recommendations | Rules over the last three months, this month so far counting from two weeks in, each holding in two and upgrades in the latest month too; a ledger reports what done ones saved; shown on the Savings tab (decided 2026-10-29) |
+| Who sees what | People by default, for transparency; teams only on request, with teams under 3 people folded into "Other" (changed to people by default 2026-10-29) |
 | Checking spend against bills | `bills.csv`, filled by Claude from Ramp's charges and receipts each month; seats and invoices must tie within $1 or 0.5%, while prepaid credits show bought beside used (decided 2026-10-29) |
 | Budgets | None; the forecast is the yardstick |
 | Department-head sign-off | Not in v1 |
-| Next month's API forecast | Last complete month's spend on current keys, plus known changes (it beat the 3-month average 27% to 43% on airCFO's history) |
+| Next month's API forecast | Last complete month's spend on current keys, plus known changes (it beat the 3-month average 27% to 43% on airCFO's history); from the 21st, this month so far scaled to a whole month (decided 2026-10-29) |
 | What-if for next month | A scenario on the Forecast tab, in the viewer's browser only: new hires by team, Premium share, extra usage, API, new API spend and seat prices; certain changes go in `known_changes` (decided 2026-10-29) |
 | This month's projection | Seats + usage so far + the last 14 days' average daily usage × days left |
 | Alert thresholds | Spike over twice the 28-day median and $25 above it; pace 25% over the forecast; all editable in settings |
@@ -276,7 +277,7 @@ The test and release workflows need a code owner's approval.
 | Excel workbooks | An optional `[excel]` extra |
 | Where the skill lives | In this repo, beside the engine, so one release carries both (moved from `claude-startup-finance` on 2026-10-28) |
 | How the skill gets the tool | Runs the engine it shipped with; a skill folder copied on its own downloads the pinned release instead |
-| The shared page | One airCFO-branded page in tabs: Overview, Spend, Unassigned, Forecast, People (person view only) and Seats. The seats roster is its Seats tab, kept in the page's own database, replacing a separate Claude Doc so there's one link (decided 2026-10-28) |
+| The shared page | One airCFO-branded page in tabs: Overview, Spend, Usage, Forecast, Seats and Savings. The Overview opens with the verdict and the reason for it, then four numbers, spend vs. plan by team, savings opportunities and top spenders; money is in whole dollars except in the bill check. The seats roster is the Seats tab, kept in the page's own database, so there's one link (tabs decided 2026-10-28, layout redone 2026-10-29 after the owner's review) |
 | What an install gets | The release tag of the current version, named in the marketplace file; never the default branch |
 | Settings file | JSON (`aicfo-spend.json`), readable by Python 3.10 with no add-ons |
 | Marketplace listing | This repo is its own one-plugin marketplace, and no other marketplace lists it. The v0.3.0 skill is deleted from `claude-startup-finance`, since few if any outside installs use it (decided 2026-10-28) |
