@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 - The dashboard is redone for a finance lead reading it mid-month. The Overview opens with the month's verdict and the reason for it ("All of the overage is API…"), then four numbers, spend vs. plan by team, the biggest savings opportunities and the top spenders. Spend puts every team against plan in one table; Usage leads with use and extra usage per person and names models plainly ("Opus 5.5"); Forecast shows monthly spend as a chart, with the what-if in its own section right below it; Seats shows how many seats were used this month; a new Savings tab lists every opportunity and what done ones saved. Money is in whole dollars except in the bill check, and the explanatory paragraphs and notes panels are gone (the notes are under "About this data").
 - People are shown by default (`"visibility": "person"`), with seat recommendations on the page. `"team"` still rolls everything up to teams.
-- From the 21st, next month's forecast uses this month so far, scaled to a whole month, as its newest month, so a step up in API spend counts before the month ends. On airCFO's data it moved November's forecast from $3,598, below October's pace, to $4,292.
+- From the 21st, next month's forecast uses this month so far, scaled to a whole month, as its newest month, so a step up in API spend counts before the month ends.
 - Seat recommendations count this month so far, scaled, once two weeks are saved, and an upgrade needs the latest month's extra usage above the price gap too, so a stale recommendation drops off.
 - Setup saves the two whole months before this one from the claude.ai export, so recommendations and the forecast have history from the first refresh.
 - The plan records its split by product and team, so the page can say what moved spend off plan; an older plan gets the split from the same forecast replayed.
@@ -34,7 +34,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Changed
 
-- Next month's API forecast is last complete month's spend on current keys, not the 3-month average. On airCFO's twelve months of Ramp history it missed by 27% on average against 43%: API spend moves in steps an average lags. Spend no current key carries is left out, since a deleted key doesn't spend again.
+- Next month's API forecast is last complete month's spend on current keys, not the 3-month average. API spend moves in steps, and an average lags each one, so last month misses the next by less in practice. Spend no current key carries is left out, since a deleted key doesn't spend again.
 - `roster_to_people.py` reads the Seats tab as ArtifactData saves it, one file per person, so no converter is needed.
 - `save` refuses a claude.ai export whose file name says it covers other days than `--start` and `--end`.
 - `init` on a folder already in use says what it holds, its saved downloads and published dashboard included, and that nothing was changed.
@@ -97,7 +97,7 @@ The first release that installs as a Claude plugin, the engine and the skill tog
 
 ### Added
 
-- `ramp-provider-totals`: Ramp's own total for each vendor, saved beside the per-key spend for the same days. API spend Ramp counts but can't tie to a current key, usually because a key was deleted or rotated during the month, now shows as Unassigned with the reason "API spend not tied to a current key", so the totals match Ramp's. `pace` adds it to the month so far as it stands; it isn't projected or checked for spikes, because a deleted key's spend moves rather than recurs. On airCFO's real data that was $192 of OpenAI's $302 in October.
+- `ramp-provider-totals`: Ramp's own total for each vendor, saved beside the per-key spend for the same days. API spend Ramp counts but can't tie to a current key, usually because a key was deleted or rotated during the month, now shows as Unassigned with the reason "API spend not tied to a current key", so the totals match Ramp's. `pace` adds it to the month so far as it stands; it isn't projected or checked for spikes, because a deleted key's spend moves rather than recurs.
 - Notes when a vendor's keys add up to more than Ramp's total by over $1 (a copying mistake in the saved per-key answer), when Ramp's total has a vendor none of whose keys spent, and when a forecast averages months saved without Ramp's totals.
 
 ### Changed

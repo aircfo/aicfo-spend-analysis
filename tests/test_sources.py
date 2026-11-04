@@ -61,9 +61,9 @@ def test_names_the_key_whose_cost_it_cannot_read(tmp_path: Path) -> None:
 
 
 def test_reads_ramps_total_for_each_vendor_exactly(tmp_path: Path) -> None:
-    path = write(tmp_path / "totals.json", ramp_totals_answer(OPENAI="301.63515561", ANTHROPIC="706.7936648"))
+    path = write(tmp_path / "totals.json", ramp_totals_answer(OPENAI="250.12345678", ANTHROPIC="612.3456789"))
 
-    assert read_provider_totals(path) == {"openai": Decimal("301.63515561"), "anthropic": Decimal("706.7936648")}
+    assert read_provider_totals(path) == {"openai": Decimal("250.12345678"), "anthropic": Decimal("612.3456789")}
 
 
 def test_adds_up_a_vendors_rows_when_ramp_splits_them_by_day(tmp_path: Path) -> None:

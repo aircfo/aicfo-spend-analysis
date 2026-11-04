@@ -4,7 +4,7 @@ The claude.ai spend export lists everyone who used Claude in its days, $0 of ext
 included, with their requests and tokens, so it measures use within seats as well as beyond
 them. Usage isn't money, so it stays out of the spend table and has a table of its own.
 
-Most prompt tokens are cache reads (96% of airCFO's in September 2026), which are cheap and
+Most prompt tokens are usually cache reads, which are cheap and
 say little about how much work was done. So use is measured in requests and in fresh tokens:
 uncached input, cache writes and output. Cache reads are kept, but apart.
 """

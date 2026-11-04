@@ -125,7 +125,7 @@ def _bill(record: dict[str, str | None], where: str, vendors: list[str]) -> Bill
         raise InputError(f"{where}: product must be one of {', '.join(PRODUCTS)}, not {cell('product')!r}")
     amount = _dollars(cell("amount_usd"), f"{where}: amount_usd")
     if amount is None:
-        raise InputError(f"{where}: amount_usd must be a dollar amount like 1540.00, not {cell('amount_usd')!r}")
+        raise InputError(f"{where}: amount_usd must be a dollar amount like 1200.00, not {cell('amount_usd')!r}")
     months_text = cell("months") or "1"
     if not months_text.isdigit() or int(months_text) < 1:
         raise InputError(f"{where}: months must be a whole number of months the bill pays for, like 1 or 12, not {months_text!r}")
@@ -151,7 +151,7 @@ def _dollars(text: str, where: str) -> Decimal | None:
     try:
         return Decimal(text.replace("$", "").replace(",", ""))
     except InvalidOperation:
-        raise InputError(f"{where} must be a dollar amount like 1540.00, not {text!r}") from None
+        raise InputError(f"{where} must be a dollar amount like 1200.00, not {text!r}") from None
 
 
 def check_bills(spend: MonthSpend, bills: list[Bill]) -> list[BillCheck]:
