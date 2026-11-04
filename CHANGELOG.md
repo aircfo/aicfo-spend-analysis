@@ -15,7 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ### Fixed
 
-- The team view no longer folds a well-used product into "Other products" to cover one used by 1 or 2 people; it leaves the small one out and says so. Claude Code (12 people) had disappeared this way.
+- The team view no longer folds a well-used product into "Other products" to cover one used by 1 or 2 people; it leaves the small one out and says so. A product as widely used as Claude Code could disappear this way.
 
 ## [0.3.2] — 2026-10-29
 
