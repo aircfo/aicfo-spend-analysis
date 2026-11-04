@@ -4,11 +4,9 @@ Next month = seats x price + extra usage + API + the operator's known changes.
 
 - Extra usage is each team's average over the last three complete months, or over as many
   as have a whole month of it, so a source that started recently isn't diluted.
-- API is the last complete month's spend on current keys. On airCFO's twelve months of
-  Ramp history, last month's API spend missed the next by 27% on average, against 43% for
-  the three-month average: API spend moves in steps (a key starts, a project ends), and an
-  average lags every step. Spend no current key carries is left out, because a deleted key
-  doesn't spend again.
+- API is the last complete month's spend on current keys, not the three-month average:
+  API spend moves in steps (a key starts, a project ends), and an average lags every step.
+  Spend no current key carries is left out, because a deleted key doesn't spend again.
 - Known changes, from settings, add what history can't show, like a new project's key.
 - Once this month is three weeks in, it stands in as the newest month, scaled to a whole
   month: API spend moves in steps, and a step taken this month shouldn't wait a month to count.

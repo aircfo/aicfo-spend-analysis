@@ -2,7 +2,7 @@
 """Check a closed month's dashboard figures against Anthropic's invoices.
 
 Usage:
-  python3 reconcile.py <workspace root> <YYYY-MM> [--seats 1540.00] [--overage 1448.69] [--api 195.28]
+  python3 reconcile.py <workspace root> <YYYY-MM> [--seats 1200.00] [--overage 450.00] [--api 125.00]
 
 Pass the amounts from the invoices (before tax): --seats and --overage from the
 claude.ai Team invoice (seat subscription line(s) and the extra-usage line),
