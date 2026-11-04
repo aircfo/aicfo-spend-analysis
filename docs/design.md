@@ -112,7 +112,7 @@ Spend says what AI cost; usage says who relies on it. The claude.ai spend export
 
 - **Fresh tokens measure use.** Prompt tokens are uncached input plus cache reads and writes, and most of them are usually cache reads: cheap, and little sign of work. So use is requests and fresh tokens (uncached input, cache writes and output), with cache reads kept apart.
 - **What's shown:** how many Claude seat holders used Claude; the share of fresh tokens the busiest tenth of people used, once there are 10 people; and use by team, product and model beside extra usage, since a model's share of the work and its share of the cost can differ a lot.
-- **Privacy:** the person view, the default, lists each person, seat holders who never used Claude included. The team view folds teams as spend does and leaves out a product or model fewer than 3 people used, saying how many it left out: a group of 1 or 2 would still point at them, and folding a well-used product in to make the group big enough would hide it (an earlier rule folded Claude Code, 12 people, to cover two 1-person products).
+- **Privacy:** the person view, the default, lists each person, seat holders who never used Claude included. The team view folds teams as spend does and leaves out a product or model fewer than 3 people used, saying how many it left out: a group of 1 or 2 would still point at them, and folding a well-used product in to make the group big enough would hide it (an earlier rule folded a widely used product like Claude Code in to cover two 1-person products).
 - **API usage** by model and token type is in Ramp's AI token usage, credited to each key's owner; it isn't read yet.
 
 ## Other AI vendors
